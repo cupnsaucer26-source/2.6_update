@@ -2,7 +2,7 @@
 
 // --- DATA STORE ---
 const CROPS = [
-  { id: 'all', name: 'All Crops', icon: 'fa-wheat-field' },
+  { id: 'all', name: 'All Crops', icon: 'fa-wheat-awn' },
   { id: 'Paddy/Rice', name: 'Paddy / Rice', icon: 'fa-seedling' },
   { id: 'Wheat', name: 'Wheat', icon: 'fa-wheat-awn' },
   { id: 'Cotton', name: 'Cotton', icon: 'fa-cloud' },
@@ -36,11 +36,22 @@ const CATEGORIES = [
   'Nematicide'
 ];
 
+// Product rows in the database still carry the original ./assets/pN.png paths,
+// which are 1024x1024 JPEGs of roughly 430KB each. The .webp copies beside them
+// are the same pictures at the size they are actually displayed, ~12KB. Map the
+// bundled defaults across as they are rendered so stored rows get the small
+// file without a data migration; anything else (a CMS upload, a remote URL) is
+// passed through untouched.
+function productImage(product) {
+  const src = (product && product.image) || './assets/p1.webp';
+  return src.replace(/\.\/assets\/(p[1-4])\.png$/, './assets/$1.webp');
+}
+
 const IMG = {
-  fungicide: './assets/p1.png',
-  insecticide: './assets/p2.png',
-  biostim: './assets/p3.png',
-  herbicide: './assets/p4.png',
+  fungicide: './assets/p1.webp',
+  insecticide: './assets/p2.webp',
+  biostim: './assets/p3.webp',
+  herbicide: './assets/p4.webp',
 };
 
 
@@ -648,7 +659,8 @@ const TRANSLATIONS = {
     lang_label: 'Language',
     showing_products: 'Showing',
     of_products: 'of',
-    products_label: 'products'
+    products_label: 'products',
+    nav_ai_scanner: 'AI Leaf Doctor'
   }
 };
 
@@ -657,16 +669,18 @@ let currentLang =
   localStorage.getItem('sathya_bio_lang') || 'en';
 
 
-function t(key) {
+// The translation for key, or undefined when no dictionary has it.
+function translationFor(key) {
   const dict =
     TRANSLATIONS[currentLang] ||
     TRANSLATIONS['en'];
 
-  return (
-    dict[key] ||
-    TRANSLATIONS['en'][key] ||
-    key
-  );
+  return dict[key] || TRANSLATIONS['en'][key];
+}
+
+
+function t(key) {
+  return translationFor(key) || key;
 }
 
 
@@ -708,8 +722,12 @@ function applyTranslations() {
       const key =
         el.getAttribute('data-i18n');
 
+      // Keep the text shipped in the HTML, so a key missing from TRANSLATIONS
+      // shows that text instead of the raw key.
+      if (el.dataset.i18nDefault === undefined) el.dataset.i18nDefault = el.textContent;
+
       el.textContent =
-        t(key);
+        translationFor(key) || el.dataset.i18nDefault;
     });
 
 
@@ -720,8 +738,10 @@ function applyTranslations() {
       const key =
         el.getAttribute('data-i18n-placeholder');
 
+      if (el.dataset.i18nPlaceholderDefault === undefined) el.dataset.i18nPlaceholderDefault = el.placeholder;
+
       el.placeholder =
-        t(key);
+        translationFor(key) || el.dataset.i18nPlaceholderDefault;
     });
 }
 
@@ -774,6 +794,15 @@ async function syncCartFromServer() {
 
   try {
     const res = await fetch('/api/cart', { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401) {
+      // Expired or revoked session: fall back to being a guest.
+      localStorage.removeItem('sathya_token');
+      localStorage.removeItem('sathya_user');
+      cart = loadGuestCart();
+      updateCartUI();
+      checkStorefrontAuth();
+      return;
+    }
     const json = await res.json();
     const serverCart = json.success && Array.isArray(json.data) ? json.data : [];
 
@@ -800,7 +829,6 @@ async function syncCartFromServer() {
 
 let cart = [];
 
-
 let currentCropFilter = 'all';
 let currentDiseaseFilter = 'all';
 let currentCategoryFilter = 'All';
@@ -818,7 +846,7 @@ function initApp() {
   initCatalog();
 
   initCart();
-
+  initAdvisorySignup();
   initChatbot();
 
   initSoilUpload();
@@ -851,17 +879,51 @@ function initApp() {
 
   fetchLiveCatalogOptions();
 
+  applyCertificationSettings();
   initPreloaderAndWelcomePoster();
 }
 
+// Two initialisers need the CMS settings, and each was fetching them
+// separately - two round trips on a phone for one payload. Share a single
+// in-flight promise so the request happens once per page load.
+let cmsSettingsRequest = null;
+function loadCmsSettings() {
+  if (!cmsSettingsRequest) {
+    cmsSettingsRequest = fetch('/api/cms')
+      .then(response => (response.ok ? response.json() : null))
+      .then(json => (json && json.data) || {})
+      .catch(() => ({})); // local CMS settings remain available offline
+  }
+  return cmsSettingsRequest;
+}
+
+async function applyCertificationSettings() {
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem('sathya_cms') || '{}'); } catch { return; }
+  settings = { ...settings, ...(await loadCmsSettings()) };
+
+  const title = document.getElementById('certificationsTitle');
+  const subtitle = document.getElementById('certificationsSubtitle');
+  if (title && settings.certificationsTitle) title.textContent = settings.certificationsTitle;
+  if (subtitle) {
+    subtitle.textContent = settings.certificationsSubtitle || '';
+    subtitle.style.display = settings.certificationsSubtitle ? 'block' : 'none';
+  }
+
+  for (let index = 1; index <= 5; index += 1) {
+    const image = document.getElementById(`certification${index}Image`);
+    const label = document.getElementById(`certification${index}Label`);
+    if (image && settings[`certification${index}Image`]) image.src = settings[`certification${index}Image`];
+    if (label && settings[`certification${index}Label`]) {
+      label.textContent = settings[`certification${index}Label`];
+      if (image) image.alt = settings[`certification${index}Label`];
+    }
+  }
+}
 
 function initPreloaderAndWelcomePoster() {
-
-  const preloader =
-    document.getElementById(
-      'appPreloader'
-    );
-
+  const preloader = document.getElementById('appPreloader');
+  applyWelcomePosterSettings();
   setTimeout(() => {
 
     if (preloader) {
@@ -879,22 +941,46 @@ function initPreloaderAndWelcomePoster() {
   }, 1400);
 }
 
+async function applyWelcomePosterSettings() {
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem('sathya_cms') || '{}'); } catch { return; }
+  settings = { ...settings, ...(await loadCmsSettings()) };
+  const user = (() => { try { return JSON.parse(localStorage.getItem('sathya_user') || 'null'); } catch { return null; } })();
+  if (settings.popupAudience === 'farmer' && user?.role !== 'farmer') return;
+  const seen = localStorage.getItem('sathya_popup_seen') === '1';
+  if (settings.popupBehavior === 'firstVisit' && seen) return;
+  if (settings.popupBehavior === 'returning' && !seen) return;
+  const image = document.getElementById('welcomePosterImage');
+  if (image && settings.popupImage) {
+    image.src = settings.popupImage;
+    image.style.display = 'block';
+  }
+  localStorage.setItem('sathya_popup_seen', '1');
+}
 
-// Ensure execution even if DOMContentLoaded already fired
-
-if (
-  document.readyState === 'interactive' ||
-  document.readyState === 'complete'
-) {
-
-  initApp();
-
-} else {
-
-  document.addEventListener(
-    'DOMContentLoaded',
-    initApp
-  );
+function initAdvisorySignup() {
+  const form = document.getElementById('advisorySignupForm');
+  if (!form) return;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const phone = form.querySelector('input[type="tel"]')?.value.trim();
+    const crop = form.querySelector('select')?.value;
+    const button = form.querySelector('button');
+    if (!phone || !crop) return;
+    if (button) button.disabled = true;
+    try {
+      const response = await fetch('/api/advisory/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, crop })
+      });
+      if (!response.ok) throw new Error('Subscription failed');
+      form.innerHTML = '<div style="padding:12px; color:#16a34a; font-weight:600;">Thank you! Your advisory subscription is confirmed.</div>';
+    } catch {
+      if (button) button.disabled = false;
+      alert('Unable to save your advisory subscription. Please try again.');
+    }
+  });
 }
 
 
@@ -1578,7 +1664,7 @@ function renderProducts() {
             <div class="product-img-box">
 
               <img
-                src="${p.image || './assets/p1.png'}"
+                src="${productImage(p)}"
                 alt="${p.name}"
               />
 
@@ -1850,7 +1936,7 @@ function renderTrendingProducts() {
           <div class="product-img-box">
 
             <img
-              src="${p.image}"
+              src="${productImage(p)}"
               alt="${p.name}"
             />
 
@@ -2431,7 +2517,7 @@ function updateCartUI() {
           <div class="cart-item">
 
             <img
-              src="${item.image}"
+              src="${productImage(item)}"
               alt="${item.name}"
             />
 
@@ -2699,7 +2785,7 @@ function openProductModal(productId) {
                   >
 
                     <img
-                      src="${rel.image}"
+                      src="${productImage(rel)}"
                       style="
                         width: 60px;
                         height: 60px;
@@ -2783,7 +2869,7 @@ function openProductModal(productId) {
       >
 
         <img
-          src="${p.image}"
+          src="${productImage(p)}"
           style="
             width: 100%;
             max-height: 140px;
@@ -3219,7 +3305,7 @@ function renderProducts() {
     <div class="product-card">
       <span class="discount-tag">${p.discount || 'Special Offer'}</span>
       <div class="product-img-box">
-        <img src="${p.image || './assets/p1.png'}" alt="${p.name}" />
+        <img loading="lazy" decoding="async" src="${productImage(p)}" alt="${p.name}" />
       </div>
       <div class="card-content">
         <span class="product-category-tag">${p.category}</span>
@@ -3271,7 +3357,7 @@ function renderTrendingProducts() {
     <div class="product-card">
       <span class="discount-tag">${p.discount}</span>
       <div class="product-img-box">
-        <img src="${p.image}" alt="${p.name}" />
+        <img loading="lazy" decoding="async" src="${productImage(p)}" alt="${p.name}" />
       </div>
       <div class="card-content">
         <span class="product-category-tag">${p.category}</span>
@@ -3349,13 +3435,16 @@ window.filterByCrop = function(crop) {
 // --- SHOPPING CART ---
 // The storefront may run inside an iframe on "/", so navigate the top window.
 function goToCartPage() {
-  saveCart();
-  window.top.location.href = '/farmer/cart';
+  // Persist first so checkout.html reads the same cart (server for signed-in
+  // users, sathya_cart_guest for guests), then hand off to the checkout page.
+  Promise.resolve(saveCart()).finally(() => {
+    window.top.location.href = '/checkout.html';
+  });
 }
 
 function initCart() {
   const cartTrigger = document.getElementById('cartTrigger');
-  const cartDrawer = document.getElementById('cartDrawer');
+  const cartDrawer = document.getElementById('cartOverlay');
   const cartClose = document.getElementById('cartCloseBtn');
   const checkoutBtn = document.getElementById('checkoutBtn');
 
@@ -3422,7 +3511,7 @@ function updateCartUI() {
 
   cartContainer.innerHTML = cart.map((item, idx) => `
     <div class="cart-item">
-      <img src="${item.image}" alt="${item.name}" />
+      <img loading="lazy" decoding="async" src="${productImage(item)}" alt="${item.name}" />
       <div style="flex-grow: 1;">
         <h4 style="font-size: 0.9rem; line-height: 1.2;">${item.name}</h4>
         <span style="font-size: 0.78rem; color: var(--text-muted);">${item.selectedPack} | ₹${item.price}</span>
@@ -3474,7 +3563,7 @@ function openProductModal(productId) {
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px;">
           ${relatedProducts.map(rel => `
             <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; padding: 8px; text-align: center; cursor: pointer;" onclick="openProductModal('${rel.id}')">
-              <img src="${rel.image}" style="width: 60px; height: 60px; object-fit: contain; margin: 0 auto 4px;" />
+              <img loading="lazy" decoding="async" src="${productImage(rel)}" style="width: 60px; height: 60px; object-fit: contain; margin: 0 auto 4px;" />
               <h5 style="font-size: 0.75rem; color: var(--text-main); margin-bottom: 2px; line-height: 1.2; height: 2.4em; overflow: hidden;">${rel.name}</h5>
               <span style="font-size: 0.82rem; font-weight: 800; color: var(--primary-dark);">₹${rel.price}</span>
             </div>
@@ -3487,7 +3576,7 @@ function openProductModal(productId) {
   container.innerHTML = `
     <div style="display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; margin-bottom: 16px;">
       <div style="background: #f8fafc; border-radius: 12px; padding: 10px; text-align: center; border: 1px solid var(--border-light);">
-        <img src="${p.image}" style="width: 100%; max-height: 140px; object-fit: contain; margin: 0 auto;" />
+        <img loading="lazy" decoding="async" src="${productImage(p)}" style="width: 100%; max-height: 140px; object-fit: contain; margin: 0 auto;" />
       </div>
       <div>
         <span style="background: #ecfdf5; color: var(--primary); padding: 3px 8px; border-radius: 12px; font-weight: 700; font-size: 0.75rem; border: 1px solid #34d399;">${p.category}</span>
@@ -3783,7 +3872,7 @@ function initExpertBooking() {
 
   grid.innerHTML = EXPERTS.map(exp => `
     <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; display: flex; gap: 14px; align-items: center;">
-      <img src="${exp.avatar}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);" />
+      <img loading="lazy" decoding="async" src="${exp.avatar}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);" />
       <div>
         <h4 style="font-size: 0.95rem; color: var(--primary-dark);">${exp.name}</h4>
         <span style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px;">${exp.title}</span>
@@ -3938,6 +4027,20 @@ function ensureFieldErrorStyles() {
     .sb-input-valid {
       border-color: #16a34a !important;
     }
+    .sb-password-rules {
+      list-style: none;
+      margin: 6px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 2px;
+      font-size: 0.74rem;
+      color: #6b7280;
+      line-height: 1.35;
+    }
+    .sb-password-rules li.ok {
+      color: #16a34a;
+      font-weight: 600;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -4000,15 +4103,57 @@ function validatePhoneField(el) {
   return true;
 }
 
-function validatePasswordField(el) {
-  const v = el.value;
-  if (!v) { clearField(el); return false; }
-  if (v.length < 6) {
-    setFieldError(el, `At least 6 characters (${v.length}/6).`);
-    return false;
+// Farmer password rules. The server enforces the same rules in
+// server/security.js (passwordRules) - keep the two in step.
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password12', 'password123', 'passw0rd', 'admin123', 'admin1234', 'welcome1',
+  'welcome123', 'qwerty123', 'qwertyuiop', 'asdfghjkl', 'iloveyou', 'abc12345', 'abcd1234', 'india123',
+  'farmer123', 'sathyabio', 'sathya123', '12345678', '123456789', '1234567890', '11111111', '00000000',
+  '87654321', 'test1234', 'letmein1',
+]);
+
+function farmerPasswordChecks(password, phone) {
+  return [
+    { label: 'At least 8 characters', ok: password.length >= 8 },
+    { label: 'At least one letter (a-z)', ok: /[A-Za-z]/.test(password) },
+    { label: 'At least one number (0-9)', ok: /\d/.test(password) },
+    {
+      label: 'Not a common password or your mobile number',
+      ok: password.length > 0 && !COMMON_PASSWORDS.has(password.toLowerCase()) && !(phone && password.includes(phone)),
+    },
+  ];
+}
+
+// Shows the password rules under the field, ticking each one off as it is met,
+// so people know what to type before they are told it is wrong.
+function renderPasswordChecklist(el) {
+  ensureFieldErrorStyles();
+  let list = el.parentElement?.querySelector('.sb-password-rules');
+  if (!list) {
+    list = document.createElement('ul');
+    list.className = 'sb-password-rules';
+    list.setAttribute('aria-live', 'polite');
+    el.insertAdjacentElement('afterend', list);
   }
-  setFieldValid(el);
-  return true;
+
+  const phone = document.getElementById('regPhone')?.value?.trim() || '';
+  const checks = farmerPasswordChecks(el.value, phone);
+  list.replaceChildren(...checks.map(check => {
+    const item = document.createElement('li');
+    if (check.ok) item.className = 'ok';
+    item.textContent = `${check.ok ? '✓' : '○'} ${check.label}`;
+    return item;
+  }));
+  return checks.every(check => check.ok);
+}
+
+function validatePasswordField(el) {
+  const ok = renderPasswordChecklist(el);
+  el.parentElement?.querySelector('.sb-field-error, .sb-field-ok')?.remove();
+  el.classList.remove('sb-input-invalid');
+  el.removeAttribute('aria-invalid');
+  el.classList.toggle('sb-input-valid', ok);
+  return ok;
 }
 
 function validateNameField(el) {
@@ -4054,7 +4199,12 @@ function initFormValidation() {
 
   const regPassword = document.getElementById('regPassword');
   if (regPassword) {
+    regPassword.addEventListener('focus', () => renderPasswordChecklist(regPassword));
     regPassword.addEventListener('input', () => validatePasswordField(regPassword));
+    // "Not your mobile number" depends on the number, so refresh the list when it changes.
+    regPhone?.addEventListener('input', () => {
+      if (regPassword.parentElement?.querySelector('.sb-password-rules')) validatePasswordField(regPassword);
+    });
   }
 
   const regName = document.getElementById('regName');
@@ -4090,6 +4240,7 @@ function initFormValidation() {
 window.clearStorefrontFieldErrors = function() {
   ['regName', 'regPhone', 'regPassword', 'loginIdentifier', 'loginPassword']
     .forEach(id => clearField(document.getElementById(id)));
+  document.querySelectorAll('.sb-password-rules').forEach(list => list.remove());
 };
 
 function openModal(id) {
@@ -4139,7 +4290,7 @@ async function fetchLiveProducts() {
 
 async function fetchLiveCatalogOptions() {
   try {
-    const res = await fetch('/api/catalog/options');
+    const res = await fetch('/api/catalog-options');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (!json.success) return;
@@ -4169,7 +4320,10 @@ function checkStorefrontAuth() {
   const adminLink = document.getElementById('adminPortalLink');
 
   if (user) {
-    if (accountSub) accountSub.textContent = user.crop || user.role.toUpperCase();
+    const role = user.role || 'farmer';
+    const crop = user.crop || user.primaryCrop || 'All Crops';
+    const acreage = user.acreage || user.landAcres || 1;
+    if (accountSub) accountSub.textContent = crop;
     if (accountTitle) accountTitle.textContent = (user.name ? user.name.split(' ')[0] : 'Farmer') + ' ▾';
     if (accountIcon) {
       accountIcon.className = 'fa-solid fa-circle-check action-icon';
@@ -4178,7 +4332,12 @@ function checkStorefrontAuth() {
 
     if (greeting) {
       greeting.style.display = 'inline-block';
-      greeting.innerHTML = `<i class="fa-solid fa-leaf"></i> Welcome, <strong>${user.name}</strong> (${user.crop || user.role})`;
+      // Built from nodes, not HTML, because the name and crop are user-entered text.
+      const leaf = document.createElement('i');
+      leaf.className = 'fa-solid fa-leaf';
+      const name = document.createElement('strong');
+      name.textContent = user.name || 'Farmer';
+      greeting.replaceChildren(leaf, ' Welcome, ', name, ` (${crop})`);
     }
 
     // Populate logged in modal view
@@ -4193,13 +4352,10 @@ function checkStorefrontAuth() {
     if (nameEl) nameEl.textContent = user.name;
 
     if (roleBadge) {
-      roleBadge.textContent = user.role === 'farmer'
-        ? `🌾 ${user.crop || 'Crop'} Farmer`
-        : `🛡️ ${user.role.toUpperCase()} Staff`;
+      roleBadge.textContent = role === 'farmer' ? `🌾 ${crop} Farmer` : `🛡️ ${role.toUpperCase()} Staff`;
     }
-
-    if (phoneEl) phoneEl.textContent = user.phone || 'Verified Customer';
-    if (cropEl) cropEl.textContent = `${user.crop || 'All Crops'} (${user.acreage || 1} Acres)`;
+    if (phoneEl) phoneEl.textContent = user.phone || user.mobile || 'Verified Customer';
+    if (cropEl) cropEl.textContent = `${crop} (${acreage} Acres)`;
     if (locEl) locEl.textContent = `${user.village || 'Farm'}, ${user.district || 'Tamil Nadu'}`;
 
     if (adminLink) {
@@ -4224,6 +4380,25 @@ function checkStorefrontAuth() {
     if (loggedOutView) loggedOutView.style.display = 'block';
   }
 }
+
+window.addEventListener('storage', event => {
+  if (event.key === 'sathya_user' || event.key === 'sathya_token') checkStorefrontAuth();
+});
+
+// The admin Products page (src/pages/admin/Products.jsx) announces changes on this channel.
+if ('BroadcastChannel' in window) {
+  new BroadcastChannel('sathya_catalog').addEventListener('message', event => {
+    if (event.data === 'products-changed') {
+      fetchLiveProducts();
+      fetchLiveCatalogOptions();
+    }
+  });
+}
+
+// Admin may be working in another browser, where the channel can't reach; catch up on return to this tab.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') fetchLiveProducts();
+});
 
 window.handleAccountClick = function() {
   checkStorefrontAuth();
@@ -4313,9 +4488,9 @@ window.submitStorefrontLogin = async function(e) {
     // Carry anything added as a guest into this user's own cart before leaving.
     await syncCartFromServer();
 
-    // Send each role to its own portal (mirrors ROLE_HOME in the React app).
+    // Staff roles each have their own portal. Farmers have no separate portal
+    // any more - they shop, and stay, on the storefront homepage.
     const ROLE_HOME = {
-      farmer: '/farmer',
       admin: '/admin',
       employee: '/employee',
       delivery: '/delivery',
@@ -4393,7 +4568,10 @@ window.submitStorefrontRegister = async function(e) {
   else if (!validatePhoneField(phoneEl)) { firstBad = firstBad || phoneEl; }
 
   if (!password) { setFieldError(passEl, 'Please create a password.'); firstBad = firstBad || passEl; }
-  else if (!validatePasswordField(passEl)) { firstBad = firstBad || passEl; }
+  else if (!validatePasswordField(passEl)) {
+    setFieldError(passEl, 'Your password does not meet all the rules above.');
+    firstBad = firstBad || passEl;
+  }
 
   if (firstBad) {
     firstBad.focus();
@@ -4919,4 +5097,20 @@ function startStorefrontOtpTimer(seconds) {
 
     render();
   }, 1000);
+}
+
+// ---------------------------------------------------------------------------
+// Bootstrap.
+//
+// This must stay the LAST thing in the file. The script is deferred, so by the
+// time it runs document.readyState is already "interactive" and initApp() is
+// called on the spot. Anywhere earlier in the file that call would happen
+// before the top-level let/const declarations below it had initialised, and
+// the first one it touched would throw a TDZ error and abort the rest of the
+// script.
+// ---------------------------------------------------------------------------
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }

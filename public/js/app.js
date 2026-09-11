@@ -2,7 +2,7 @@
 
 // --- DATA STORE ---
 const CROPS = [
-  { id: 'all', name: 'All Crops', icon: 'fa-wheat-field' },
+  { id: 'all', name: 'All Crops', icon: 'fa-wheat-awn' },
   { id: 'Paddy/Rice', name: 'Paddy / Rice', icon: 'fa-seedling' },
   { id: 'Wheat', name: 'Wheat', icon: 'fa-wheat-awn' },
   { id: 'Cotton', name: 'Cotton', icon: 'fa-cloud' },
@@ -659,7 +659,8 @@ const TRANSLATIONS = {
     lang_label: 'Language',
     showing_products: 'Showing',
     of_products: 'of',
-    products_label: 'products'
+    products_label: 'products',
+    nav_ai_scanner: 'AI Leaf Doctor'
   }
 };
 
@@ -668,16 +669,18 @@ let currentLang =
   localStorage.getItem('sathya_bio_lang') || 'en';
 
 
-function t(key) {
+// The translation for key, or undefined when no dictionary has it.
+function translationFor(key) {
   const dict =
     TRANSLATIONS[currentLang] ||
     TRANSLATIONS['en'];
 
-  return (
-    dict[key] ||
-    TRANSLATIONS['en'][key] ||
-    key
-  );
+  return dict[key] || TRANSLATIONS['en'][key];
+}
+
+
+function t(key) {
+  return translationFor(key) || key;
 }
 
 
@@ -719,8 +722,12 @@ function applyTranslations() {
       const key =
         el.getAttribute('data-i18n');
 
+      // Keep the text shipped in the HTML, so a key missing from TRANSLATIONS
+      // shows that text instead of the raw key.
+      if (el.dataset.i18nDefault === undefined) el.dataset.i18nDefault = el.textContent;
+
       el.textContent =
-        t(key);
+        translationFor(key) || el.dataset.i18nDefault;
     });
 
 
@@ -731,8 +738,10 @@ function applyTranslations() {
       const key =
         el.getAttribute('data-i18n-placeholder');
 
+      if (el.dataset.i18nPlaceholderDefault === undefined) el.dataset.i18nPlaceholderDefault = el.placeholder;
+
       el.placeholder =
-        t(key);
+        translationFor(key) || el.dataset.i18nPlaceholderDefault;
     });
 }
 
@@ -785,6 +794,15 @@ async function syncCartFromServer() {
 
   try {
     const res = await fetch('/api/cart', { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401) {
+      // Expired or revoked session: fall back to being a guest.
+      localStorage.removeItem('sathya_token');
+      localStorage.removeItem('sathya_user');
+      cart = loadGuestCart();
+      updateCartUI();
+      checkStorefrontAuth();
+      return;
+    }
     const json = await res.json();
     const serverCart = json.success && Array.isArray(json.data) ? json.data : [];
 
@@ -4009,6 +4027,20 @@ function ensureFieldErrorStyles() {
     .sb-input-valid {
       border-color: #16a34a !important;
     }
+    .sb-password-rules {
+      list-style: none;
+      margin: 6px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 2px;
+      font-size: 0.74rem;
+      color: #6b7280;
+      line-height: 1.35;
+    }
+    .sb-password-rules li.ok {
+      color: #16a34a;
+      font-weight: 600;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -4071,15 +4103,57 @@ function validatePhoneField(el) {
   return true;
 }
 
-function validatePasswordField(el) {
-  const v = el.value;
-  if (!v) { clearField(el); return false; }
-  if (v.length < 6) {
-    setFieldError(el, `At least 6 characters (${v.length}/6).`);
-    return false;
+// Farmer password rules. The server enforces the same rules in
+// server/security.js (passwordRules) - keep the two in step.
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password12', 'password123', 'passw0rd', 'admin123', 'admin1234', 'welcome1',
+  'welcome123', 'qwerty123', 'qwertyuiop', 'asdfghjkl', 'iloveyou', 'abc12345', 'abcd1234', 'india123',
+  'farmer123', 'sathyabio', 'sathya123', '12345678', '123456789', '1234567890', '11111111', '00000000',
+  '87654321', 'test1234', 'letmein1',
+]);
+
+function farmerPasswordChecks(password, phone) {
+  return [
+    { label: 'At least 8 characters', ok: password.length >= 8 },
+    { label: 'At least one letter (a-z)', ok: /[A-Za-z]/.test(password) },
+    { label: 'At least one number (0-9)', ok: /\d/.test(password) },
+    {
+      label: 'Not a common password or your mobile number',
+      ok: password.length > 0 && !COMMON_PASSWORDS.has(password.toLowerCase()) && !(phone && password.includes(phone)),
+    },
+  ];
+}
+
+// Shows the password rules under the field, ticking each one off as it is met,
+// so people know what to type before they are told it is wrong.
+function renderPasswordChecklist(el) {
+  ensureFieldErrorStyles();
+  let list = el.parentElement?.querySelector('.sb-password-rules');
+  if (!list) {
+    list = document.createElement('ul');
+    list.className = 'sb-password-rules';
+    list.setAttribute('aria-live', 'polite');
+    el.insertAdjacentElement('afterend', list);
   }
-  setFieldValid(el);
-  return true;
+
+  const phone = document.getElementById('regPhone')?.value?.trim() || '';
+  const checks = farmerPasswordChecks(el.value, phone);
+  list.replaceChildren(...checks.map(check => {
+    const item = document.createElement('li');
+    if (check.ok) item.className = 'ok';
+    item.textContent = `${check.ok ? '✓' : '○'} ${check.label}`;
+    return item;
+  }));
+  return checks.every(check => check.ok);
+}
+
+function validatePasswordField(el) {
+  const ok = renderPasswordChecklist(el);
+  el.parentElement?.querySelector('.sb-field-error, .sb-field-ok')?.remove();
+  el.classList.remove('sb-input-invalid');
+  el.removeAttribute('aria-invalid');
+  el.classList.toggle('sb-input-valid', ok);
+  return ok;
 }
 
 function validateNameField(el) {
@@ -4125,7 +4199,12 @@ function initFormValidation() {
 
   const regPassword = document.getElementById('regPassword');
   if (regPassword) {
+    regPassword.addEventListener('focus', () => renderPasswordChecklist(regPassword));
     regPassword.addEventListener('input', () => validatePasswordField(regPassword));
+    // "Not your mobile number" depends on the number, so refresh the list when it changes.
+    regPhone?.addEventListener('input', () => {
+      if (regPassword.parentElement?.querySelector('.sb-password-rules')) validatePasswordField(regPassword);
+    });
   }
 
   const regName = document.getElementById('regName');
@@ -4161,6 +4240,7 @@ function initFormValidation() {
 window.clearStorefrontFieldErrors = function() {
   ['regName', 'regPhone', 'regPassword', 'loginIdentifier', 'loginPassword']
     .forEach(id => clearField(document.getElementById(id)));
+  document.querySelectorAll('.sb-password-rules').forEach(list => list.remove());
 };
 
 function openModal(id) {
@@ -4210,7 +4290,7 @@ async function fetchLiveProducts() {
 
 async function fetchLiveCatalogOptions() {
   try {
-    const res = await fetch('/api/catalog/options');
+    const res = await fetch('/api/catalog-options');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (!json.success) return;
@@ -4252,7 +4332,12 @@ function checkStorefrontAuth() {
 
     if (greeting) {
       greeting.style.display = 'inline-block';
-      greeting.innerHTML = `<i class="fa-solid fa-leaf"></i> Welcome, <strong>${user.name || 'Farmer'}</strong> (${crop})`;
+      // Built from nodes, not HTML, because the name and crop are user-entered text.
+      const leaf = document.createElement('i');
+      leaf.className = 'fa-solid fa-leaf';
+      const name = document.createElement('strong');
+      name.textContent = user.name || 'Farmer';
+      greeting.replaceChildren(leaf, ' Welcome, ', name, ` (${crop})`);
     }
 
     // Populate logged in modal view
@@ -4298,6 +4383,21 @@ function checkStorefrontAuth() {
 
 window.addEventListener('storage', event => {
   if (event.key === 'sathya_user' || event.key === 'sathya_token') checkStorefrontAuth();
+});
+
+// The admin Products page (src/pages/admin/Products.jsx) announces changes on this channel.
+if ('BroadcastChannel' in window) {
+  new BroadcastChannel('sathya_catalog').addEventListener('message', event => {
+    if (event.data === 'products-changed') {
+      fetchLiveProducts();
+      fetchLiveCatalogOptions();
+    }
+  });
+}
+
+// Admin may be working in another browser, where the channel can't reach; catch up on return to this tab.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') fetchLiveProducts();
 });
 
 window.handleAccountClick = function() {
@@ -4468,7 +4568,10 @@ window.submitStorefrontRegister = async function(e) {
   else if (!validatePhoneField(phoneEl)) { firstBad = firstBad || phoneEl; }
 
   if (!password) { setFieldError(passEl, 'Please create a password.'); firstBad = firstBad || passEl; }
-  else if (!validatePasswordField(passEl)) { firstBad = firstBad || passEl; }
+  else if (!validatePasswordField(passEl)) {
+    setFieldError(passEl, 'Your password does not meet all the rules above.');
+    firstBad = firstBad || passEl;
+  }
 
   if (firstBad) {
     firstBad.focus();

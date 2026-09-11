@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import axios from 'axios'
 import toast from 'react-hot-toast'
 
 const DEFAULT_CONTENT = {
@@ -39,10 +40,13 @@ export default function AdminCMS() {
     setSaving(true)
     localStorage.setItem('sathya_cms', JSON.stringify(merged))
     try {
-      await fetch('/api/cms', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(merged) })
-    } catch { /* offline — localStorage persisted */ }
-    toast.success('Content published live! ✅')
-    setSaving(false)
+      await axios.put('/api/cms', merged)
+      toast.success('Content published live! ✅')
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to publish content to server')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const fields = [

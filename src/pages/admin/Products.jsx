@@ -8,6 +8,14 @@ import {
 
 const DEFAULT_CATEGORIES = ['Fungicide', 'Insecticide', 'Herbicide', 'Bio-Stimulant', 'Fertilizer', 'Nematicide', 'Adjuvant']
 
+// Tells open storefront tabs (public/js/app.js listens on the same channel) to reload products.
+const notifyStorefront = () => {
+  if (!('BroadcastChannel' in window)) return
+  const channel = new BroadcastChannel('sathya_catalog')
+  channel.postMessage('products-changed')
+  channel.close()
+}
+
 export default function AdminProducts() {
   const [products, setProducts] = useState([])
   const [users, setUsers] = useState([])
@@ -54,7 +62,7 @@ export default function AdminProducts() {
 
   const fetchCatalogOptions = async () => {
     try {
-      const { data } = await axios.get('/api/catalog/options')
+      const { data } = await axios.get('/api/catalog-options')
       if (data.success) setCatalogOptions(data.data)
     } catch (err) {
       console.error('Error loading catalog options:', err)
@@ -212,6 +220,7 @@ export default function AdminProducts() {
         const { data } = await axios.put(`/api/products/${isEditing}`, payload)
         if (data.success) {
           toast.success(data.message || 'Product updated successfully in DB! 🌿')
+          notifyStorefront()
           fetchProducts()
           fetchCatalogOptions()
           setModalOpen(false)
@@ -220,6 +229,7 @@ export default function AdminProducts() {
         const { data } = await axios.post('/api/products', payload)
         if (data.success) {
           toast.success(data.message || 'New product added and live on customer storefront! ✨')
+          notifyStorefront()
           fetchProducts()
           fetchCatalogOptions()
           setModalOpen(false)
@@ -241,6 +251,7 @@ export default function AdminProducts() {
       const { data } = await axios.delete(`/api/products/${id}`)
       if (data.success) {
         toast.success(`"${name}" removed from catalog and database`)
+        notifyStorefront()
         fetchProducts()
       }
     } catch (err) {

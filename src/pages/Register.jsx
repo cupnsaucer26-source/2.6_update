@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
+import PasswordChecklist from '../components/PasswordChecklist'
+import { isPasswordValid, passwordPlaceholder } from '../utils/passwordRules'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -13,7 +15,7 @@ export default function Register() {
   const timerRef = useRef(null)
   const [form, setForm] = useState({
     name: '', email: '', phone: '', password: '', confirmPassword: '',
-    village: '', district: '', state: 'Tamil Nadu', landAcres: ''
+    crop: 'Paddy / Rice', acreage: 3, village: '', district: '', state: 'Tamil Nadu'
   })
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -31,10 +33,6 @@ export default function Register() {
     if (!/^[6-9]/.test(form.phone)) return 'An Indian mobile number must start with 6, 7, 8 or 9.'
     if (form.phone.length < 10) return `Enter all 10 digits (${form.phone.length}/10).`
     return ''
-  }
-  const passwordError = () => {
-    if (!form.password) return ''
-    return form.password.length < 6 ? `At least 6 characters (${form.password.length}/6).` : ''
   }
   const confirmError = () => {
     if (!form.confirmPassword) return ''
@@ -70,8 +68,8 @@ export default function Register() {
 
   const handleSendOtp = async (e) => {
     e.preventDefault()
+    if (!isPasswordValid(form.password, { phone: form.phone.trim() })) { toast.error('Your password does not meet all the rules listed under it'); return }
     if (form.password !== form.confirmPassword) { toast.error('Passwords do not match'); return }
-    if (form.password.length < 6) { toast.error('Password must be at least 6 characters'); return }
     if (!/^\d{10}$/.test(form.phone.trim())) { toast.error('Enter a valid 10-digit WhatsApp number'); return }
 
     setLoading(true)
@@ -147,7 +145,7 @@ export default function Register() {
             <p className="login-subtitle">Register to access our product store, crop advisory, and order tracking</p>
 
             <form onSubmit={handleSendOtp}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-grid-2col">
                 <div className="form-group">
                   <label className="form-label">Full Name *</label>
                   <input className="form-input" placeholder="Your name" value={form.name} onChange={set('name')} required />
@@ -173,7 +171,7 @@ export default function Register() {
                 <input className="form-input" type="email" placeholder="your@email.com" value={form.email} onChange={set('email')} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-grid-2col">
                 <div className="form-group">
                   <label className="form-label">Village / Town</label>
                   <input className="form-input" placeholder="Village name" value={form.village} onChange={set('village')} />
@@ -184,24 +182,33 @@ export default function Register() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-grid-2col">
                 <div className="form-group">
-                  <label className="form-label">State</label>
-                  <select className="form-select" value={form.state} onChange={set('state')}>
-                    {['Tamil Nadu','Karnataka','Andhra Pradesh','Telangana','Kerala','Maharashtra','Gujarat','Punjab','Haryana','Rajasthan','Uttar Pradesh','Madhya Pradesh','Bihar','West Bengal','Odisha'].map(s => <option key={s}>{s}</option>)}
+                  <label className="form-label">Primary Crop *</label>
+                  <select className="form-select" value={form.crop} onChange={set('crop')}>
+                    {['Paddy / Rice', 'Cotton', 'Tomato', 'Wheat', 'Sugarcane', 'Corn / Maize', 'Citrus / Fruits', 'Grapes / Fruits', 'Potato', 'All Crops'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Farm Size (Acres)</label>
-                  <input className="form-input" type="number" placeholder="e.g. 5" value={form.landAcres} onChange={set('landAcres')} min="0.5" step="0.5" />
+                  <input className="form-input" type="number" placeholder="e.g. 5" value={form.acreage} onChange={set('acreage')} min="0.5" step="0.5" />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">State</label>
+                <select className="form-select" value={form.state} onChange={set('state')}>
+                  {['Tamil Nadu','Karnataka','Andhra Pradesh','Telangana','Kerala','Maharashtra','Gujarat','Punjab','Haryana','Rajasthan','Uttar Pradesh','Madhya Pradesh','Bihar','West Bengal','Odisha'].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+
+              <div className="form-grid-2col">
                 <div className="form-group">
                   <label className="form-label">Password *</label>
-                  <input className="form-input" type="password" placeholder="Min 6 characters" value={form.password} onChange={set('password')} required minLength={6} />
-                  <FieldError message={passwordError()} />
+                  <input className="form-input" type="password" placeholder={passwordPlaceholder('farmer')} value={form.password} onChange={set('password')} required autoComplete="new-password" />
+                  <PasswordChecklist password={form.password} phone={form.phone} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Confirm Password *</label>

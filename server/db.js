@@ -5,7 +5,9 @@
  * original JSON-file engine, but safe for Vercel's read-only filesystem.
  */
 
+import crypto from 'node:crypto';
 import mongoose from 'mongoose';
+import { hashPassword, isPasswordHash, passwordProblems, weakPasswordMessage } from './security.js';
 
 // ================= CONNECTION (serverless-safe, cached across invocations) =================
 
@@ -82,6 +84,22 @@ const settingsSchema = new mongoose.Schema(
   { strict: false, minimize: false }
   );
 
+// Razorpay order ids are single-use: a replayed or double-submitted payment can
+// never produce a second order. Older orders without one are left out of the index.
+orderSchema.index(
+  { razorpayOrderId: 1 },
+  { unique: true, partialFilterExpression: { razorpayOrderId: { $type: 'string' } } }
+);
+
+// Short-lived server state (OTP codes, rate-limit counters, checkout sessions).
+// Kept in MongoDB rather than process memory so it survives across serverless
+// instances; MongoDB deletes each record once purgeAt has passed.
+const ephemeralSchema = new mongoose.Schema(
+  { _id: String, value: mongoose.Schema.Types.Mixed, purgeAt: Date },
+  { strict: false, minimize: false, versionKey: false }
+);
+ephemeralSchema.index({ purgeAt: 1 }, { expireAfterSeconds: 0 });
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
@@ -94,6 +112,23 @@ const ChatRecord = mongoose.models.ChatRecord || mongoose.model('ChatRecord', ch
 const Cart = mongoose.models.Cart || mongoose.model('Cart', cartSchema);
 const WishlistItem = mongoose.models.WishlistItem || mongoose.model('WishlistItem', wishlistItemSchema);
 const Settings = mongoose.models.Settings || mongoose.model('Settings', settingsSchema);
+const Ephemeral = mongoose.models.Ephemeral || mongoose.model('Ephemeral', ephemeralSchema);
+
+export const USER_ROLES = ['farmer', 'admin', 'employee', 'delivery', 'billing'];
+
+// Human-readable ids with enough randomness that records created in the same
+// millisecond (or by concurrent serverless instances) cannot collide.
+export function newId(prefix) {
+    const time = Date.now().toString(36).toUpperCase();
+    const random = crypto.randomInt(0, 36 ** 4).toString(36).toUpperCase().padStart(4, '0');
+    return `${prefix}-${time}${random}`;
+}
+
+function inputError(code, message) {
+    const err = new Error(message);
+    err.code = code;
+    return err;
+}
 
 // ================= SERIALIZATION HELPERS =================
 
@@ -104,6 +139,15 @@ function serialize(doc) {
     const obj = typeof doc.toObject === 'function' ? doc.toObject() : doc;
     const { _id, __v, ...rest } = obj;
     return { id: _id, ...rest };
+}
+
+// Users never leave the database layer with their password unless the caller
+// explicitly needs it to check a login.
+function serializeUser(doc, { includePassword = false } = {}) {
+    const user = serialize(doc);
+    if (!user || includePassword) return user;
+    const { password, ...safe } = user;
+    return safe;
 }
 
 // Strips Mongo's _id/__v without adding an `id` field - used for records
@@ -630,7 +674,9 @@ async function seedIfEmpty() {
 
   console.log('Seeding Sathya Bio database with initial demo data...');
 
-  await User.insertMany(INITIAL_USERS.map(u => ({ ...u, _id: u.id })));
+  await User.insertMany(
+        await Promise.all(INITIAL_USERS.map(async u => ({ ...u, _id: u.id, password: await hashPassword(u.password) })))
+  );
     await Product.insertMany(INITIAL_PRODUCTS.map(p => ({ ...p, _id: p.id })));
     await Order.insertMany(INITIAL_ORDERS.map(o => ({ ...o, _id: o.id })));
     await AdvisorySubscriber.insertMany(INITIAL_ADVISORY_SUBSCRIBERS.map(a => ({ ...a, _id: a.id })));
@@ -661,7 +707,7 @@ class DatabaseManager {
 
   async getUsers(filters = {}) {
         await connectDB();
-        let result = (await User.find({}).lean()).map(serialize);
+        let result = (await User.find({}).lean()).map(u => serializeUser(u));
 
       if (filters.role && filters.role !== 'all') {
               result = result.filter(u => u.role.toLowerCase() === filters.role.toLowerCase());
@@ -697,20 +743,24 @@ class DatabaseManager {
         });
   }
 
-  async getUserById(id) {
-        if (!id) return null;
+  async getUserById(id, options = {}) {
+        if (!id || typeof id !== 'string') return null;
         await connectDB();
         const u = await User.findById(id).lean();
-        return serialize(u);
+        return serializeUser(u, options);
   }
 
-  async getUserByIdentifier(identifier) {
+  async getUserByIdentifier(identifier, options = {}) {
         // Coerce defensively: callers may pass a non-string from a JSON body.
         if (!identifier || typeof identifier !== 'string') return null;
         await connectDB();
         const clean = identifier.trim().toLowerCase();
-        const users = (await User.find({}).lean()).map(serialize);
-        const matches = users.filter(u => u.phone === clean || u.email?.toLowerCase() === clean);
+        if (!clean) return null;
+        const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Fetch only the matching accounts instead of loading every user.
+        const matches = (await User.find({
+                $or: [{ phone: clean }, { email: new RegExp(`^${escaped}$`, 'i') }]
+        }).lean()).map(u => serializeUser(u, options));
 
         // Legacy data can hold several accounts on one number; the newest one wins.
         matches.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
@@ -750,8 +800,11 @@ class DatabaseManager {
       const fields = await this.getProfileFields();
         const editableFields = new Set(fields.filter(field => field.editable).map(field => field.id));
         const allowed = {};
+        // Even if an admin configures a profile field with one of these ids, a
+        // user must never be able to change them from their own profile.
+        const reserved = new Set(['id', '_id', 'password', 'role', 'status', 'phone', 'createdBy', 'createdAt']);
         for (const [key, value] of Object.entries(profileUpdates || {})) {
-                if (editableFields.has(key)) allowed[key] = value;
+                if (editableFields.has(key) && !reserved.has(key)) allowed[key] = value;
         }
 
       const existingProfile = (user.toObject().profile) || {};
@@ -762,7 +815,7 @@ class DatabaseManager {
         user.set('updatedAt', new Date().toISOString());
         await user.save();
 
-      return serialize(user.toObject());
+      return serializeUser(user.toObject());
   }
 
   async createUser(userData) {
@@ -780,15 +833,26 @@ class DatabaseManager {
             }
         }
 
-        const id = `USR-${Date.now().toString().slice(-4)}`;
+        const role = userData.role || 'farmer';
+        if (!USER_ROLES.includes(role)) {
+            throw inputError('INVALID_ROLE', 'Unknown user role.');
+        }
+        // Never fall back to a shared default password.
+        const passwordIssues = passwordProblems(userData.password, { role, phone });
+        if (passwordIssues.length) {
+            throw inputError('WEAK_PASSWORD', weakPasswordMessage(passwordIssues));
+        }
+
+        const id = newId('USR');
         const newUser = {
                 _id: id,
                 id,
                 name: userData.name || 'New User',
-                phone: userData.phone || '',
+                // Omitted rather than '' so the unique phone index ignores email-only accounts.
+                phone: phone || undefined,
                 email: userData.email || '',
-                password: userData.password || 'password123',
-                role: userData.role || 'farmer',
+                password: await hashPassword(userData.password),
+                role,
                 crop: userData.crop || 'All Crops',
                 acreage: Number(userData.acreage) || 0,
                 village: userData.village || 'Farm Village',
@@ -802,7 +866,7 @@ class DatabaseManager {
         };
 
       const created = await User.create(newUser);
-        return serialize(created.toObject());
+        return serializeUser(created.toObject());
   }
 
   async updateUser(id, updates) {
@@ -810,9 +874,32 @@ class DatabaseManager {
         const user = await User.findById(id);
         if (!user) return null;
 
-      user.set({ ...updates, updatedAt: new Date().toISOString() });
+      const { _id, id: _ignoredId, password, ...rest } = updates || {};
+        if (rest.role !== undefined && !USER_ROLES.includes(rest.role)) {
+            throw inputError('INVALID_ROLE', 'Unknown user role.');
+        }
+        if (typeof password === 'string' && password !== '') {
+            if (isPasswordHash(password)) {
+                rest.password = password;
+            } else {
+                const passwordIssues = passwordProblems(password, {
+                    role: rest.role || user.get('role'),
+                    phone: rest.phone ?? user.get('phone')
+                });
+                if (passwordIssues.length) {
+                    throw inputError('WEAK_PASSWORD', weakPasswordMessage(passwordIssues));
+                }
+                rest.password = await hashPassword(password);
+            }
+        }
+        if (rest.phone === '') {
+            delete rest.phone;
+            user.set('phone', undefined);
+        }
+
+      user.set({ ...rest, updatedAt: new Date().toISOString() });
         await user.save();
-        return serialize(user.toObject());
+        return serializeUser(user.toObject());
   }
 
   // Removes every account holding this number. Used for whitelisted test
@@ -944,7 +1031,7 @@ class DatabaseManager {
 
   async createProduct(prodData) {
         await connectDB();
-        const id = prodData.id || `sb-${Date.now().toString().slice(-4)}`;
+        const id = newId('sb');
 
       let targetUserName = 'All Users (General Catalog)';
         if (prodData.targetUserId && prodData.targetUserId !== 'all') {
@@ -1134,6 +1221,56 @@ class DatabaseManager {
         return order ? serialize(order) : null;
   }
 
+  async getOrderByRazorpayId(razorpayOrderId) {
+        if (!razorpayOrderId) return null;
+        await connectDB();
+        const order = await Order.findOne({ razorpayOrderId: String(razorpayOrderId) }).lean();
+        return order ? serialize(order) : null;
+  }
+
+  // A customer's orders: those placed from their account, plus any placed as a
+  // guest with their verified mobile number.
+  async getOrdersForCustomer(user) {
+        await connectDB();
+        const match = [{ userId: user.id }];
+        if (user.phone) match.push({ customerPhone: user.phone });
+        const orders = (await Order.find({ $or: match }).lean()).map(serialize);
+        orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return orders;
+  }
+
+  async getProductsByIds(ids) {
+        await connectDB();
+        const unique = [...new Set((ids || []).map(String))];
+        return (await Product.find({ _id: { $in: unique } }).lean()).map(serialize).map(normalizeProduct);
+  }
+
+  // Takes stock for every line or for none: if one line cannot be covered, the
+  // lines already taken are put back. Returns the id of the product that ran out.
+  async reserveStock(lines) {
+        await connectDB();
+        const taken = [];
+        for (const line of lines) {
+            const result = await Product.updateOne(
+                { _id: line.id, stock: { $gte: line.qty } },
+                { $inc: { stock: -line.qty }, $set: { updatedAt: new Date().toISOString() } }
+            );
+            if (!result.modifiedCount) {
+                await this.releaseStock(taken);
+                return { ok: false, productId: line.id };
+            }
+            taken.push(line);
+        }
+        return { ok: true };
+  }
+
+  async releaseStock(lines) {
+        await connectDB();
+        for (const line of lines) {
+            await Product.updateOne({ _id: line.id }, { $inc: { stock: line.qty } });
+        }
+  }
+
   // ---- CART (one document per user, _id = userId) ----
 
   async getCart(userId) {
@@ -1157,7 +1294,7 @@ class DatabaseManager {
 
   async createOrder(orderData) {
         await connectDB();
-        const id = `SB-ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+        const id = newId('SB-ORD');
         const newOrder = {
                 _id: id,
                 id,
@@ -1173,15 +1310,55 @@ class DatabaseManager {
                 paymentStatus: orderData.paymentStatus || 'Pending',
                 paymentId: orderData.paymentId || null,
                 razorpayOrderId: orderData.razorpayOrderId || null,
+                stockShortfall: orderData.stockShortfall === true,
                 deliveryStatus: orderData.deliveryStatus || 'Confirmed',
+                expectedDeliveryDate: orderData.expectedDeliveryDate || null,
                 assignedDeliveryBoy: orderData.assignedDeliveryBoy || 'Karthik Raja',
                 deliveryBoyPhone: orderData.deliveryBoyPhone || '9345678901',
-                otp: Math.floor(1000 + Math.random() * 9000).toString(),
+                otp: crypto.randomInt(1000, 10000).toString(),
                 createdAt: new Date().toISOString()
         };
 
       const created = await Order.create(newOrder);
         return serialize(created.toObject());
+  }
+
+  // Atomically marks an order notification as being sent, so concurrent callers
+  // (checkout callback and webhook) can never both send it. A send stuck for 5
+  // minutes (e.g. the function was killed) may be claimed again.
+  async claimOrderNotification(orderId, kind, { resend = false, maxAttempts = 3 } = {}) {
+        await connectDB();
+        const path = `notifications.${kind}`;
+        const now = new Date();
+        const staleBefore = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
+
+        const filter = {
+            _id: String(orderId),
+            $or: [{ [`${path}.status`]: { $ne: 'sending' } }, { [`${path}.attemptedAt`]: { $lt: staleBefore } }]
+        };
+        if (!resend) {
+            filter[`${path}.status`] = { $ne: 'sent' };
+            filter[`${path}.attempts`] = { $not: { $gte: maxAttempts } };
+        }
+
+        const result = await Order.updateOne(filter, {
+            $set: { [`${path}.status`]: 'sending', [`${path}.attemptedAt`]: now.toISOString() },
+            $inc: { [`${path}.attempts`]: 1 }
+        });
+        return result.modifiedCount === 1;
+  }
+
+  async recordOrderNotification(orderId, kind, status, error = '') {
+        await connectDB();
+        const path = `notifications.${kind}`;
+        const now = new Date().toISOString();
+        const set = {
+            [`${path}.status`]: status,
+            [`${path}.updatedAt`]: now,
+            [`${path}.error`]: status === 'failed' ? String(error).slice(0, 200) : ''
+        };
+        if (status === 'sent') set[`${path}.sentAt`] = now;
+        await Order.updateOne({ _id: String(orderId) }, { $set: set });
   }
 
   async updateOrder(id, updates) {
@@ -1287,6 +1464,96 @@ class DatabaseManager {
         await connectDB();
         const records = await ChatRecord.find({}).lean();
         return records.map(stripMongoFields);
+  }
+
+  async getWishlistForOwner(ownerId) {
+        if (!ownerId) return [];
+        await connectDB();
+        const items = await WishlistItem.find({ $or: [{ key: ownerId }, { userId: ownerId }] }).lean();
+        return items.map(serialize);
+  }
+
+  // ================= ADMIN DASHBOARD =================
+
+  async getAdminStats() {
+        await connectDB();
+        // "Today" is the business day in India (UTC+5:30), not the server's UTC day.
+        const IST_OFFSET_MS = 330 * 60 * 1000;
+        const DAY_MS = 24 * 60 * 60 * 1000;
+        const dayStartIso = new Date(Math.floor((Date.now() + IST_OFFSET_MS) / DAY_MS) * DAY_MS - IST_OFFSET_MS).toISOString();
+
+        const [orders, totalProducts, activeProducts, subscribers, openTickets, wishlistSaves] = await Promise.all([
+            Order.find({}, { total: 1, paymentStatus: 1, deliveryStatus: 1, createdAt: 1 }).lean(),
+            Product.countDocuments({}),
+            Product.countDocuments({ stock: { $gt: 0 } }),
+            AdvisorySubscriber.countDocuments({}),
+            Ticket.countDocuments({ status: { $nin: ['Closed', 'Resolved'] } }),
+            WishlistItem.countDocuments({})
+        ]);
+
+        const paid = orders.filter(o => o.paymentStatus === 'Paid');
+        return {
+            totalRevenue: Math.round(paid.reduce((sum, o) => sum + (Number(o.total) || 0), 0) * 100) / 100,
+            paidOrders: paid.length,
+            totalOrders: orders.length,
+            ordersToday: orders.filter(o => String(o.createdAt || '') >= dayStartIso).length,
+            totalProducts,
+            activeProducts,
+            subscribers,
+            openTickets,
+            wishlistSaves,
+            pendingDeliveries: orders.filter(o => !['Delivered', 'Cancelled'].includes(o.deliveryStatus)).length
+        };
+  }
+
+  // ================= EPHEMERAL STATE =================
+
+  async kvGet(key) {
+        await connectDB();
+        const doc = await Ephemeral.findById(key).lean();
+        // MongoDB's TTL sweep only runs about once a minute, so check expiry here too.
+        return doc && doc.purgeAt > new Date() ? doc.value : null;
+  }
+
+  async kvSet(key, value, ttlMs) {
+        await connectDB();
+        await Ephemeral.replaceOne(
+            { _id: key },
+            { _id: key, value, purgeAt: new Date(Date.now() + ttlMs) },
+            { upsert: true }
+        );
+        return value;
+  }
+
+  async kvDelete(key) {
+        await connectDB();
+        await Ephemeral.deleteOne({ _id: key });
+  }
+
+  // Atomically adds 1 to a numeric field inside the value. With upsert (the
+  // default) a missing record is created; otherwise a missing record returns 0.
+  async kvIncrement(key, field, ttlMs, { upsert = true } = {}) {
+        await connectDB();
+        const doc = await Ephemeral.findOneAndUpdate(
+            upsert ? { _id: key } : { _id: key, purgeAt: { $gt: new Date() } },
+            { $inc: { [`value.${field}`]: 1 }, $setOnInsert: { purgeAt: new Date(Date.now() + ttlMs) } },
+            { upsert, returnDocument: 'after', lean: true }
+        );
+        return Number(doc?.value?.[field]) || 0;
+  }
+
+  // Moves a record to a new status only if it is still in the expected one, so
+  // two concurrent requests can never both claim it.
+  async kvTransition(key, fromStatus, toStatus, extra = {}) {
+        await connectDB();
+        const set = { 'value.status': toStatus };
+        for (const [field, value] of Object.entries(extra)) set[`value.${field}`] = value;
+        const doc = await Ephemeral.findOneAndUpdate(
+            { _id: key, purgeAt: { $gt: new Date() }, 'value.status': fromStatus },
+            { $set: set },
+            { returnDocument: 'after', lean: true }
+        );
+        return doc ? doc.value : null;
   }
 }
 

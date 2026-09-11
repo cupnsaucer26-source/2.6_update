@@ -6,17 +6,24 @@ import { useAuth } from '../../context/AuthContext'
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [wishlistTotal, setWishlistTotal] = useState(0)
-  useEffect(() => { axios.get('/api/admin/wishlist-summary').then(({ data }) => setWishlistTotal(data.total || 0)).catch(() => {}) }, [])
+  const [stats, setStats] = useState(null)
+  const [statsError, setStatsError] = useState(false)
+  useEffect(() => {
+    axios.get('/api/admin/stats')
+      .then(({ data }) => setStats(data.data))
+      .catch(() => setStatsError(true))
+  }, [])
 
-  const stats = [
-    { label: 'Total Revenue', value: '₹0', change: 'No sales yet', color: 'green', icon: '💰' },
-    { label: 'Orders Today', value: '0', change: 'No orders yet', color: 'blue', icon: '📦' },
-    { label: 'Active Products', value: '0', change: 'Catalog is empty', color: 'yellow', icon: '🌿' },
-    { label: 'Subscribers', value: '0', change: 'No subscribers yet', color: 'orange', icon: '📩' },
-    { label: 'Wishlist Saves', value: String(wishlistTotal), change: 'Customer interest', color: 'purple', icon: '❤️' },
-    { label: 'Open Tickets', value: '0', change: 'Nothing needs attention', color: 'red', icon: '🎫' },
-    { label: 'Pending Deliveries', value: '0', change: 'No deliveries yet', color: 'teal', icon: '🚚' },
+  const show = value => (stats ? String(value ?? 0) : statsError ? '—' : '…')
+  const note = text => (stats ? text : statsError ? 'Could not load' : 'Loading')
+  const statCards = [
+    { label: 'Total Revenue', value: stats ? `₹${Number(stats.totalRevenue || 0).toLocaleString('en-IN')}` : show(), change: note(`${stats?.paidOrders ?? 0} paid orders`), color: 'green', icon: '💰' },
+    { label: 'Orders Today', value: show(stats?.ordersToday), change: note(`${stats?.totalOrders ?? 0} orders in total`), color: 'blue', icon: '📦' },
+    { label: 'Active Products', value: show(stats?.activeProducts), change: note(`${stats?.totalProducts ?? 0} in catalog, in stock`), color: 'yellow', icon: '🌿' },
+    { label: 'Subscribers', value: show(stats?.subscribers), change: note('Advisory sign-ups'), color: 'orange', icon: '📩' },
+    { label: 'Wishlist Saves', value: show(stats?.wishlistSaves), change: note('Customer interest'), color: 'purple', icon: '❤️' },
+    { label: 'Open Tickets', value: show(stats?.openTickets), change: note('Awaiting a reply'), color: 'red', icon: '🎫' },
+    { label: 'Pending Deliveries', value: show(stats?.pendingDeliveries), change: note('Not yet delivered'), color: 'teal', icon: '🚚' },
   ]
 
   const quickLinks = [
@@ -47,23 +54,20 @@ export default function AdminDashboard() {
         <div>
           <div className="eyebrow">Executive overview</div>
           <h1>Admin dashboard</h1>
-          <p>Welcome back, {user?.name}. Your workspace is ready for its first records.</p>
+          <p>Welcome back, {user?.name}.</p>
         </div>
         <div className="hero-badge-row">
-          <span className="badge badge-gray">No activity yet</span>
-          <span className="badge badge-blue">Awaiting records</span>
+          {stats && <span className="badge badge-blue">{stats.totalOrders ? `${stats.totalOrders} orders recorded` : 'No orders yet'}</span>}
         </div>
       </div>
 
       <div className="stat-grid">
-        {stats.map(s => (
+        {statCards.map(s => (
           <div key={s.label} className={`stat-card ${s.color}`}>
             <div className={`stat-icon ${s.color}`}>{s.icon}</div>
             <div className="stat-value">{s.value}</div>
             <div className="stat-label">{s.label}</div>
-            <div className={`stat-change ${s.change.startsWith('+') ? 'positive' : 'negative'}`}>
-              {s.change.startsWith('+') ? '↑' : '↓'} {s.change} this week
-            </div>
+            <div className="stat-change">{s.change}</div>
           </div>
         ))}
       </div>
