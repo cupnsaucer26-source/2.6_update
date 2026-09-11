@@ -1699,10 +1699,29 @@ window.filterByCrop = function(cropId) {
   renderProducts();
 };
 
+window.toggleMobileFilterDrawer = function(open) {
+  const panel = document.getElementById('sidebarPanel');
+  const overlay = document.getElementById('sidebarPanelOverlay');
+  if (!panel || !overlay) return;
+  const isOpen = open !== undefined ? open : !panel.classList.contains('active');
+  if (isOpen) {
+    panel.classList.add('active');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  } else {
+    panel.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+};
+
 window.filterByCategory = function(category) {
   currentCategoryFilter = category;
   const sel = document.getElementById('categorySelect');
   if (sel) sel.value = category;
+  document.querySelectorAll('.mobile-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === category);
+  });
   renderProducts();
 };
 
@@ -1711,9 +1730,12 @@ window.resetCatalogFilters = function() {
   currentDiseaseFilter = 'all';
   currentCategoryFilter = 'All';
   searchQuery = '';
-  document.getElementById('headerSearchInput').value = '';
-  document.getElementById('categorySelect').value = 'All';
-  document.getElementById('diseaseSelect').value = 'all';
+  if (document.getElementById('headerSearchInput')) document.getElementById('headerSearchInput').value = '';
+  if (document.getElementById('categorySelect')) document.getElementById('categorySelect').value = 'All';
+  if (document.getElementById('diseaseSelect')) document.getElementById('diseaseSelect').value = 'all';
+  document.querySelectorAll('.mobile-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === 'All');
+  });
   renderProducts();
 };
 
@@ -1731,6 +1753,23 @@ function renderProducts() {
 
   const countEl = document.getElementById('productCount');
   if (countEl) countEl.textContent = filtered.length;
+
+  const mobileCountEl = document.getElementById('mobileCatalogCount');
+  if (mobileCountEl) mobileCountEl.textContent = `${filtered.length} Products`;
+  const mobileFilterBadge = document.getElementById('mobileFilterCountBadge');
+  if (mobileFilterBadge) {
+    let activeFilterCount = 0;
+    if (currentCropFilter !== 'all') activeFilterCount++;
+    if (currentDiseaseFilter !== 'all') activeFilterCount++;
+    if (currentCategoryFilter !== 'All') activeFilterCount++;
+    if (searchQuery !== '') activeFilterCount++;
+    if (activeFilterCount > 0) {
+      mobileFilterBadge.textContent = activeFilterCount;
+      mobileFilterBadge.style.display = 'inline-flex';
+    } else {
+      mobileFilterBadge.style.display = 'none';
+    }
+  }
 
   if (filtered.length === 0) {
     grid.innerHTML = `

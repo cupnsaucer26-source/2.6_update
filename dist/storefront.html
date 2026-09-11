@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/responsive.css">
 </head>
-<body>
+<body id="top">
   <!-- SITE CONTENT (loads before React) -->
   
   <!-- TICKER DISPLAY -->
@@ -516,9 +516,35 @@
         <p class="section-subtitle" data-i18n="catalog_subtitle">Filter chemicals by target crop, plant disease, or product category</p>
       </div>
 
+      <!-- MOBILE CATALOG QUICK CONTROLS (HORIZONTAL CHIPS + FILTER DRAWER BUTTON) -->
+      <div class="mobile-catalog-header">
+        <div class="mobile-category-chips-scroll" id="mobileCategoryChipsScroll">
+          <button class="mobile-cat-chip active" data-cat="All" onclick="filterByCategory('All')">All</button>
+          <button class="mobile-cat-chip" data-cat="Fungicide" onclick="filterByCategory('Fungicide')">🌿 Fungicides</button>
+          <button class="mobile-cat-chip" data-cat="Insecticide" onclick="filterByCategory('Insecticide')">🐛 Insecticides</button>
+          <button class="mobile-cat-chip" data-cat="Bio-Stimulant" onclick="filterByCategory('Bio-Stimulant')">⚡ Bio-Stimulants</button>
+          <button class="mobile-cat-chip" data-cat="Herbicide" onclick="filterByCategory('Herbicide')">🌾 Herbicides</button>
+          <button class="mobile-cat-chip" data-cat="Nematicide" onclick="filterByCategory('Nematicide')">🪱 Nematicides</button>
+        </div>
+        <div class="mobile-filter-bar-row">
+          <button class="mobile-filter-drawer-btn" onclick="toggleMobileFilterDrawer(true)">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Filters &amp; Sort</span>
+            <span class="mobile-filter-count-badge" id="mobileFilterCountBadge" style="display:none;">0</span>
+          </button>
+          <span class="mobile-catalog-count" id="mobileCatalogCount">Showing products...</span>
+        </div>
+      </div>
+      <div class="sidebar-panel-overlay" id="sidebarPanelOverlay" onclick="toggleMobileFilterDrawer(false)"></div>
+
       <div class="shop-layout">
         <!-- SIDEBAR FILTER PANEL -->
-        <aside class="sidebar-panel">
+        <aside class="sidebar-panel" id="sidebarPanel">
+          <div class="mobile-filter-drawer-header">
+            <h4><i class="fa-solid fa-sliders"></i> Filter &amp; Sort Products</h4>
+            <button class="mobile-filter-drawer-close" onclick="toggleMobileFilterDrawer(false)" aria-label="Close filters">&times;</button>
+          </div>
+
           <div class="filter-title"><i class="fa-solid fa-filter"></i> <span data-i18n="filter_title">Store Filters</span></div>
 
           <div class="filter-section">
@@ -539,6 +565,11 @@
           <button class="btn btn-outline" style="width: 100%; justify-content: center; font-size: 0.82rem;" onclick="resetFilters()">
             <i class="fa-solid fa-rotate-left"></i> <span data-i18n="reset_filters">Reset All Filters</span>
           </button>
+
+          <div class="mobile-filter-drawer-footer">
+            <button class="btn btn-outline" onclick="resetFilters(); toggleMobileFilterDrawer(false);" style="flex: 1; justify-content: center;">Reset</button>
+            <button class="btn btn-primary" onclick="toggleMobileFilterDrawer(false);" style="flex: 1.5; justify-content: center;">Apply Filters</button>
+          </div>
         </aside>
 
         <!-- MAIN PRODUCTS LISTING GRID -->
@@ -550,6 +581,7 @@
         </div>
       </div>
     </div>
+  </section>
   <!-- TRENDING & RELATED PRODUCTS RECOMMENDATIONS SECTION -->
   <section class="section" id="relatedProductsSection" style="padding: 40px 0; background: #ffffff;">
     <div class="container">
@@ -566,7 +598,7 @@
   <!-- SOIL TEST DOCUMENT ANALYSIS SECTION -->
   <section class="section" id="soil" style="background: var(--bg-section);">
     <div class="container">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
+      <div class="soil-grid">
         <div>
           <h2 class="section-title" data-i18n="soil_title">Soil Test Report Analyzer</h2>
           <p style="color: var(--text-muted); margin-bottom: 16px;" data-i18n="soil_desc">
@@ -596,7 +628,7 @@
         <p class="section-subtitle" data-i18n="n8n_subtitle">See how automated N8N workflows assist farmers via WhatsApp 24/7</p>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+      <div class="n8n-grid">
         <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 20px;">
           <h4 style="margin-bottom: 12px; color: var(--primary-dark);"><i class="fa-solid fa-diagram-project"></i> N8N Workflow Graph</h4>
           <div class="n8n-flow-container" id="n8nNodesContainer"></div>
@@ -636,7 +668,7 @@
         <p class="section-subtitle" data-i18n="experts_subtitle">1-on-1 consultation calls with senior agricultural scientists</p>
       </div>
 
-      <div id="expertsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;"></div>
+      <div id="expertsGrid" class="experts-grid"></div>
     </div>
   </section>
 
@@ -647,7 +679,7 @@
         <h2 class="section-title">Trusted by 15,000+ Indian Farmers</h2>
         <p class="section-subtitle">Real results from paddy, cotton, tomato, and fruit growers</p>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+      <div class="testimonials-grid">
         <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-sm);">
           <div style="color: var(--accent-amber); margin-bottom: 8px;">★★★★★</div>
           <p style="font-size: 0.88rem; font-style: italic; color: var(--text-main); line-height: 1.5;">"Sathya Bio BlastShield 75 WP completely saved my 5-acre paddy crop from neck blast after heavy rain. High quality product!"</p>
@@ -1115,6 +1147,35 @@
       </div>
     </div>
   </div>
+
+  <!-- MOBILE BOTTOM NAVIGATION BAR (NATIVE APP STYLE) -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile Navigation">
+    <a href="#top" class="mobile-nav-item active" id="mobileNavHome">
+      <i class="fa-solid fa-house"></i>
+      <span>Home</span>
+    </a>
+    <a href="#categoriesSection" class="mobile-nav-item" id="mobileNavCategories">
+      <i class="fa-solid fa-layer-group"></i>
+      <span>Categories</span>
+    </a>
+    <button class="mobile-nav-item" data-modal-target="photoScannerModal" id="mobileNavDoctor" aria-label="AI Leaf Doctor">
+      <i class="fa-solid fa-camera-retro"></i>
+      <span>AI Doctor</span>
+    </button>
+    <a href="https://wa.me/919442562423?text=Hello%20Sathya%20Bio%20Expert%2C%20I%20need%20crop%20advice" target="_blank" rel="noopener" class="mobile-nav-item mobile-nav-wa" id="mobileNavWhatsApp" aria-label="WhatsApp Support">
+      <i class="fa-brands fa-whatsapp"></i>
+      <span>WhatsApp</span>
+    </a>
+    <button class="mobile-nav-item" id="mobileNavCart" onclick="document.getElementById('cartOverlay')?.classList.add('active');" aria-label="Shopping Cart">
+      <i class="fa-solid fa-bag-shopping"></i>
+      <span class="mobile-badge" id="mobileCartBadge">0</span>
+      <span>Cart</span>
+    </button>
+    <button class="mobile-nav-item" data-modal-target="authModal" id="mobileNavAccount" aria-label="Account">
+      <i class="fa-solid fa-user"></i>
+      <span>Account</span>
+    </button>
+  </nav>
 
   <!-- JavaScript Application Engine -->
   <script src="./js/app.js" defer></script>

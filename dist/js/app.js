@@ -2399,6 +2399,10 @@ function updateCartUI() {
     cartBadge.textContent =
       totalItems;
   }
+  const mobileCartBadge = document.getElementById('mobileCartBadge');
+  if (mobileCartBadge) {
+    mobileCartBadge.textContent = totalItems;
+  }
 
 
   const subtotal =
@@ -3242,6 +3246,24 @@ function renderProducts() {
   if (counter) {
     counter.textContent = `${t('showing_products')} ${filtered.length} ${t('of_products')} ${PESTICIDES.length} ${t('products_label')}`;
   }
+  const mobileCountEl = document.getElementById('mobileCatalogCount');
+  if (mobileCountEl) {
+    mobileCountEl.textContent = `${filtered.length} Products`;
+  }
+  const mobileFilterBadge = document.getElementById('mobileFilterCountBadge');
+  if (mobileFilterBadge) {
+    let activeFilterCount = 0;
+    if (currentCropFilter !== 'all') activeFilterCount++;
+    if (currentDiseaseFilter !== 'all') activeFilterCount++;
+    if (currentCategoryFilter !== 'All') activeFilterCount++;
+    if (searchQuery !== '') activeFilterCount++;
+    if (activeFilterCount > 0) {
+      mobileFilterBadge.textContent = activeFilterCount;
+      mobileFilterBadge.style.display = 'inline-flex';
+    } else {
+      mobileFilterBadge.style.display = 'none';
+    }
+  }
 
   if (filtered.length === 0) {
     container.innerHTML = `
@@ -3365,6 +3387,22 @@ function renderTrendingProducts() {
   });
 }
 
+window.toggleMobileFilterDrawer = function(open) {
+  const panel = document.getElementById('sidebarPanel');
+  const overlay = document.getElementById('sidebarPanelOverlay');
+  if (!panel || !overlay) return;
+  const isOpen = open !== undefined ? open : !panel.classList.contains('active');
+  if (isOpen) {
+    panel.classList.add('active');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  } else {
+    panel.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+};
+
 window.resetFilters = function() {
   currentCropFilter = 'all';
   currentDiseaseFilter = 'all';
@@ -3378,6 +3416,9 @@ window.resetFilters = function() {
   if (ds) ds.value = 'all';
   if (cats) cats.value = 'All';
   if (hs) hs.value = '';
+  document.querySelectorAll('.mobile-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === 'All');
+  });
   renderProducts();
 };
 
@@ -3387,6 +3428,9 @@ window.filterByCategory = function(cat) {
   currentCategoryFilter = cat;
   const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) categorySelect.value = cat;
+  document.querySelectorAll('.mobile-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === cat);
+  });
   renderProducts();
   document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
 };
@@ -3458,6 +3502,8 @@ function updateCartUI() {
 
   const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
   if (cartBadge) cartBadge.textContent = totalItems;
+  const mobileCartBadge = document.getElementById('mobileCartBadge');
+  if (mobileCartBadge) mobileCartBadge.textContent = totalItems;
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   if (subtotalEl) subtotalEl.textContent = `₹${subtotal}`;
@@ -3541,7 +3587,7 @@ function openProductModal(productId) {
   }
 
   container.innerHTML = `
-    <div style="display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; margin-bottom: 16px;">
+    <div class="product-modal-hero" style="display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; margin-bottom: 16px;">
       <div style="background: #f8fafc; border-radius: 12px; padding: 10px; text-align: center; border: 1px solid var(--border-light);">
         <img loading="lazy" decoding="async" src="${productImage(p)}" style="width: 100%; max-height: 140px; object-fit: contain; margin: 0 auto;" />
       </div>
@@ -3573,9 +3619,9 @@ function openProductModal(productId) {
         <div><strong>Dosage per Acre:</strong><br/>${p.dosage}</div>
       </div>
 
-      <div style="border-top: 1px solid var(--border-light); padding-top: 12px; display: flex; gap: 10px;">
-        <button class="btn btn-primary" onclick="addToCart('${p.id}'); closeModal('productModal');" style="flex: 1;"><i class="fa-solid fa-cart-plus"></i> Add to Cart</button>
-        <button class="btn btn-gold" onclick="window.open('https://api.whatsapp.com/send?text=Hi%20Sathya%20Bio!%20I%20want%20to%20order%20' + encodeURIComponent('${p.name}'), '_blank')"><i class="fa-brands fa-whatsapp"></i> Buy via WhatsApp</button>
+      <div class="product-modal-actions" style="border-top: 1px solid var(--border-light); padding-top: 12px; display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="addToCart('${p.id}'); closeModal('productModal');" style="flex: 1; justify-content: center;"><i class="fa-solid fa-cart-plus"></i> Add to Cart</button>
+        <button class="btn btn-gold" onclick="window.open('https://api.whatsapp.com/send?text=Hi%20Sathya%20Bio!%20I%20want%20to%20order%20' + encodeURIComponent('${p.name}'), '_blank')" style="justify-content: center;"><i class="fa-brands fa-whatsapp"></i> Buy via WhatsApp</button>
       </div>
 
       ${relatedHTML}
