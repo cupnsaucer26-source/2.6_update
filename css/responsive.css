@@ -21,10 +21,16 @@ html {
   text-size-adjust: 100%;
 }
 
-html,
-body {
+/* Only html gets overflow-x: hidden (it applies to the viewport). body must
+   not: hidden on both makes body a separate scroll container that swallows
+   touch scrolling on phones. clip trims sideways overflow without that. */
+html {
   max-width: 100%;
   overflow-x: hidden;
+}
+body {
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* Media and embeds must never exceed their column. */
@@ -369,8 +375,11 @@ pre {
     gap: 10px;
   }
 
+  /* 0 1 auto, not 1 1 auto: a growing logo took the whole first row and
+     pushed the icons onto a row of their own (a 195px sticky header on a
+     phone). Logo and icons now share row one; search is row two. */
   .logo-box {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
   }
 
@@ -413,6 +422,35 @@ pre {
    ============================================================ */
 
 @media (max-width: 768px) {
+  /* Compact sticky header: it stays on screen while scrolling, so every
+     pixel it takes is lost from the catalogue. */
+  .header-main {
+    padding: 8px 0;
+  }
+  .header-grid {
+    gap: 6px 8px;
+  }
+  .logo-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+  }
+  .logo-box {
+    gap: 8px;
+  }
+  .header-search {
+    margin-top: 0;
+  }
+  .header-search input {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .header-actions .action-item {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
   /* Safe-Area Padding for Bottom Nav Bar */
   body {
     padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
@@ -730,19 +768,69 @@ pre {
     flex-direction: column !important;
   }
 
-  /* Floating Buttons repositioned safely above bottom nav */
+  /* Welcome poster as a bottom sheet that fits the screen. The card was taller
+     than a phone with overflow hidden, so "Connect With Expert" / "Explore"
+     sat below the fold and could not be reached. The header stays put, the
+     body scrolls, and the close button is always visible. */
+  .modal-card.welcome-poster-card {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    max-height: 88vh !important;
+    max-height: 88dvh !important;
+  }
+  .welcome-poster-header {
+    flex: 0 0 auto;
+    height: 150px;
+  }
+  .welcome-poster-leaf {
+    font-size: 2.6rem;
+  }
+  /* In the shorter header the absolute badge landed on the tagline. */
+  .welcome-poster-badge {
+    position: static;
+    transform: none;
+    margin-top: 4px;
+    padding: 3px 12px;
+    font-size: 0.7rem;
+  }
+  .welcome-poster-header {
+    gap: 4px;
+  }
+  .welcome-poster-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .welcome-poster-title {
+    font-size: 1.12rem;
+    margin-bottom: 8px;
+  }
+  .welcome-poster-text {
+    font-size: 0.84rem;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .welcome-poster-features {
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  /* Floating Buttons repositioned safely above bottom nav. Back-to-top is
+     hidden on phones: it sat over the right column's "Add to Cart" button,
+     and the bottom nav's Home already returns to the top. */
   .chatbot-trigger-btn {
-    bottom: 74px !important;
-    right: 14px !important;
-    width: 50px !important;
-    height: 50px !important;
-    font-size: 1.3rem !important;
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 12px !important;
+    width: 46px !important;
+    height: 46px !important;
+    font-size: 1.2rem !important;
   }
   .back-to-top {
-    bottom: 134px !important;
-    right: 16px !important;
-    width: 38px !important;
-    height: 38px !important;
+    display: none !important;
   }
   .chatbot-window {
     bottom: 74px !important;

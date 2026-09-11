@@ -42,10 +42,24 @@ const CATEGORIES = [
 // bundled defaults across as they are rendered so stored rows get the small
 // file without a data migration; anything else (a CMS upload, a remote URL) is
 // passed through untouched.
+const FALLBACK_PRODUCT_IMAGE = './assets/p1.webp';
+
 function productImage(product) {
-  const src = (product && product.image) || './assets/p1.webp';
+  let src = String((product && product.image) || '').trim();
+  // Uploads saved as an empty "data:image/png;base64," are not images.
+  if (!src || /^data:image\/[\w+.-]+;base64,?$/i.test(src)) src = FALLBACK_PRODUCT_IMAGE;
   return src.replace(/\.\/assets\/(p[1-4])\.png$/, './assets/$1.webp');
 }
+
+// Any product/cart image that fails to load shows the placeholder instead of
+// broken-image alt text. Capture phase, because error events do not bubble.
+document.addEventListener('error', event => {
+  const img = event.target;
+  if (!(img instanceof HTMLImageElement) || img.dataset.fallbackApplied) return;
+  if (!img.closest('.product-img-box, .cart-item, .product-modal-hero, #productModalContent')) return;
+  img.dataset.fallbackApplied = '1';
+  img.src = FALLBACK_PRODUCT_IMAGE;
+}, true);
 
 const IMG = {
   fungicide: './assets/p1.webp',
@@ -939,39 +953,44 @@ async function applyCertificationSettings() {
 
 function initPreloaderAndWelcomePoster() {
   const preloader = document.getElementById('appPreloader');
-  applyWelcomePosterSettings();
+  const shouldShowPoster = applyWelcomePosterSettings();
   setTimeout(() => {
+    if (preloader) preloader.classList.add('hidden');
 
-    if (preloader) {
-      preloader.classList.add('hidden');
-    }
-
-    setTimeout(() => {
-
-      openModal(
-        'welcomePosterModal'
-      );
-
+    setTimeout(async () => {
+      // Never stack the poster on top of a window the visitor is already using
+      // (for example the sign-in modal opened by a checkout redirect).
+      if (await shouldShowPoster && !document.querySelector('.modal-overlay.active')) {
+        openModal('welcomePosterModal');
+      }
     }, 400);
-
   }, 1400);
 }
 
+// Resolves to whether the welcome poster should open on this page load.
 async function applyWelcomePosterSettings() {
   let settings = {};
-  try { settings = JSON.parse(localStorage.getItem('sathya_cms') || '{}'); } catch { return; }
+  try { settings = JSON.parse(localStorage.getItem('sathya_cms') || '{}'); } catch {}
   settings = { ...settings, ...(await loadCmsSettings()) };
   const user = (() => { try { return JSON.parse(localStorage.getItem('sathya_user') || 'null'); } catch { return null; } })();
-  if (settings.popupAudience === 'farmer' && user?.role !== 'farmer') return;
-  const seen = localStorage.getItem('sathya_popup_seen') === '1';
-  if (settings.popupBehavior === 'firstVisit' && seen) return;
-  if (settings.popupBehavior === 'returning' && !seen) return;
+  if (settings.popupAudience === 'farmer' && user?.role !== 'farmer') return false;
+  let seen = false;
+  try { seen = localStorage.getItem('sathya_popup_seen') === '1'; } catch {}
+  if (settings.popupBehavior === 'firstVisit' && seen) return false;
+  if (settings.popupBehavior === 'returning' && !seen) return false;
+  // At most once per browser session: showing it on every page load blocked
+  // the storefront each time a visitor came back from checkout or a product.
+  try {
+    if (sessionStorage.getItem('sathya_popup_session') === '1') return false;
+    sessionStorage.setItem('sathya_popup_session', '1');
+  } catch {}
   const image = document.getElementById('welcomePosterImage');
   if (image && settings.popupImage) {
     image.src = settings.popupImage;
     image.style.display = 'block';
   }
-  localStorage.setItem('sathya_popup_seen', '1');
+  try { localStorage.setItem('sathya_popup_seen', '1'); } catch {}
+  return true;
 }
 
 function initAdvisorySignup() {
@@ -2134,6 +2153,14 @@ function initModals() {
       const overlay = btn.closest('.modal-overlay');
       if (overlay) closeModal(overlay.id);
     });
+  });
+
+  // Escape closes the top-most open window (and the cart drawer).
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const open = [...document.querySelectorAll('.modal-overlay.active')].pop();
+    if (open) closeModal(open.id);
+    else document.getElementById('cartOverlay')?.classList.remove('active');
   });
 }
 

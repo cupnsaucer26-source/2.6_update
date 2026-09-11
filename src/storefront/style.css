@@ -41,14 +41,16 @@ html {
   text-size-adjust: 100%;
 }
 
+/* body uses overflow-x: clip, not hidden. With hidden on both html and body,
+   body became its own (zero-range) scroll container; combined with
+   touch-action / overscroll-behavior on body, finger swipes on phones never
+   reached the page and it looked frozen. clip hides sideways overflow without
+   creating a scroll container. */
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
   line-height: 1.6;
-  -webkit-overflow-scrolling: touch;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  touch-action: pan-y;
-  overscroll-behavior-y: none;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -518,7 +520,8 @@ button {
 
 /* E-COMMERCE MAIN HEADER */
 .header-main {
-  background: rgba(255, 255, 255, 0.97);
+  /* Solid: at 0.97 alpha, product cards ghosted through the sticky header. */
+  background: #ffffff;
   border-bottom: 1px solid rgba(16, 185, 129, 0.15);
   padding: 16px 0;
   position: sticky;
