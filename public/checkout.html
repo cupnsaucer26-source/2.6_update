@@ -148,12 +148,18 @@
     let user = null;
     try { user = JSON.parse(localStorage.getItem('sathya_user') || 'null'); } catch {}
 
-    // MANDATORY AUTH GUARD: Unauthenticated users are blocked from checkout
-    if (!token || !user) {
-      sessionStorage.setItem('sathya_auth_redirect_msg', 'Login or Sign Up is mandatory to access your basket and checkout. Please sign in.');
-      alert('Login or Sign Up is mandatory before accessing checkout. Redirecting you to sign in...');
-      window.top.location.href = '/index.html#login';
+    // MANDATORY AUTH GUARD: checkout is for signed-in customers only. The
+    // storefront (not /index.html, which is the React app in production) reads
+    // the message and opens its sign-in modal.
+    const LOGIN_MSG = 'Login or Sign Up is mandatory to access your basket and checkout. Please sign in.';
+    let redirecting = false;
+    function redirectToLogin(msg) {
+      if (redirecting) return;
+      redirecting = true;
+      try { sessionStorage.setItem('sathya_auth_redirect_msg', msg || LOGIN_MSG); } catch {}
+      window.top.location.replace('/storefront.html#login');
     }
+    if (!token || !user) redirectToLogin(LOGIN_MSG);
 
     const itemsEl = document.getElementById('items');
     const totalsEl = document.getElementById('totals');
@@ -177,22 +183,15 @@
     }
 
     async function loadCart() {
-      if (!token || !user) {
-        sessionStorage.setItem('sathya_auth_redirect_msg', 'Login or Sign Up is mandatory to access your basket and checkout. Please sign in.');
-        window.top.location.href = '/index.html#login';
-        return [];
-      }
       try {
         const res = await fetch('/api/cart', { headers: authHeaders() });
         if (res.status === 401) {
-          // Expired or revoked session: redirect to login
+          // Expired or revoked session: clear it and send the customer to sign in.
           localStorage.removeItem('sathya_token');
           localStorage.removeItem('sathya_user');
           token = null;
           user = null;
-          sessionStorage.setItem('sathya_auth_redirect_msg', 'Your session expired. Please sign in again to access checkout.');
-          alert('Your session expired. Please sign in again to access checkout.');
-          window.top.location.href = '/index.html#login';
+          redirectToLogin('Your session expired. Please sign in again to access checkout.');
           return [];
         }
         const json = await res.json();
@@ -306,12 +305,7 @@
 
     // --- Cash on delivery: no payment gateway, order recorded straight away ---
     codBtn.addEventListener('click', async () => {
-      if (!token || !user) {
-        sessionStorage.setItem('sathya_auth_redirect_msg', 'Login or Sign Up is mandatory to place an order. Please sign in.');
-        alert('Login or Sign Up is mandatory to place an order. Redirecting to sign in...');
-        window.top.location.href = '/index.html#login';
-        return;
-      }
+      if (!token || !user) return redirectToLogin('Login or Sign Up is mandatory to place an order. Please sign in.');
       const details = customerDetails();
       if (!details) return;
       codBtn.disabled = true;
@@ -336,12 +330,7 @@
 
     // --- Razorpay: the server prices the cart and verifies the signature ---
     payBtn.addEventListener('click', async () => {
-      if (!token || !user) {
-        sessionStorage.setItem('sathya_auth_redirect_msg', 'Login or Sign Up is mandatory to place an order. Please sign in.');
-        alert('Login or Sign Up is mandatory to place an order. Redirecting to sign in...');
-        window.top.location.href = '/index.html#login';
-        return;
-      }
+      if (!token || !user) return redirectToLogin('Login or Sign Up is mandatory to place an order. Please sign in.');
       const details = customerDetails();
       if (!details) return;
       if (!window.Razorpay) { alert('Payment library did not load. Please refresh and try again.'); return; }
@@ -404,7 +393,7 @@
       form.address.value = [user.village, user.district, user.state].filter(Boolean).join(', ');
     }
 
-    loadCart().then(loaded => { cart = loaded; render(); });
+    if (!redirecting) loadCart().then(loaded => { if (!redirecting) { cart = loaded; render(); } });
   </script>
   <footer style="background: var(--primary-dark); color: #ffffff; padding: 50px 0 20px;"><div class="container"><div class="footer-grid" style="gap: 30px; margin-bottom: 40px;"><div><div class="logo-text" style="color: #ffffff; font-size: 1.6rem; margin-bottom: 10px;">SATHYA <span style="color: var(--accent-gold);">BIO</span></div><p style="font-size: 0.85rem; color: #d1fae5; line-height: 1.6; margin-bottom: 16px;">Sathya Bio is India's leading digital platform for high-efficacy bio-pesticides, crop protection chemicals, and soil health fertilizers. Providing 100% bio-certified products with fast express dispatch to 15,000+ farmers across India.</p><div style="display: flex; gap: 12px; font-size: 1.2rem;"><a href="#" style="color: white;"><i class="fa-brands fa-whatsapp"></i></a><a href="#" style="color: white;"><i class="fa-brands fa-facebook"></i></a><a href="#" style="color: white;"><i class="fa-brands fa-youtube"></i></a><a href="#" style="color: white;"><i class="fa-brands fa-instagram"></i></a></div></div><div><h4 style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;">Store Categories</h4><ul style="list-style: none; font-size: 0.82rem; display: flex; flex-direction: column; gap: 8px; color: #d1fae5;"><li><a href="./index.html#catalog">Bio-Fungicides</a></li><li><a href="./index.html#catalog">Insecticides</a></li><li><a href="./index.html#catalog">Herbicides</a></li><li><a href="./index.html#catalog">Bio-Stimulants</a></li><li><a href="./index.html#catalog">Nematicides</a></li></ul></div><div><h4 style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;">Top Crops</h4><ul style="list-style: none; font-size: 0.82rem; display: flex; flex-direction: column; gap: 8px; color: #d1fae5;"><li><a href="./index.html#catalog">Paddy / Rice Care</a></li><li><a href="./index.html#catalog">Cotton Protection</a></li><li><a href="./index.html#catalog">Tomato &amp; Vegetables</a></li><li><a href="./index.html#catalog">Sugarcane Care</a></li><li><a href="./index.html#catalog">Horticulture &amp; Fruits</a></li></ul></div><div><h4 style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;">Customer Support</h4><p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 8px;"><i class="fa-solid fa-phone"></i> Toll Free: 1800-425-9999</p><p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 8px;"><i class="fa-solid fa-envelope"></i> support@sathyabio.com</p><p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 12px;"><i class="fa-solid fa-location-dot"></i> Sathya Bio Tech Park, Hyderabad, India</p><div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-size: 0.78rem;"><i class="fa-solid fa-lock" style="color: var(--accent-gold);"></i> 100% Secure Payment (UPI, COD, NetBanking)</div></div></div><div style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #a7f3d0;"><span>© 2026 Sathya Bio Agro Tech Ltd. All rights reserved. Inspired by BigHaat.</span><div style="display: flex; gap: 15px;"><span>Privacy Policy</span><span>Terms of Sale</span><span>Refund Policy</span></div></div></div></footer>
   <script>
