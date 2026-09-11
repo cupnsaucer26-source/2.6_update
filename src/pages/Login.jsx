@@ -7,11 +7,11 @@ import toast from 'react-hot-toast'
 import { Eye, EyeOff, Leaf, LogIn } from 'lucide-react'
 
 const ROLES = [
-  { key: 'farmer',   label: 'Farmer',   emoji: '👨‍🌾', hint: '9876543210' },
-  { key: 'admin',    label: 'Admin',    emoji: '🛡️', hint: '9123456789' },
-  { key: 'employee', label: 'Employee', emoji: '🏭', hint: '9234567890' },
-  { key: 'delivery', label: 'Delivery', emoji: '🚚', hint: '9345678901' },
-  { key: 'billing',  label: 'Billing',  emoji: '🧾', hint: '9456789012' },
+  { key: 'farmer',   label: 'Farmer',   emoji: '👨‍🌾' },
+  { key: 'admin',    label: 'Admin',    emoji: '🛡️' },
+  { key: 'employee', label: 'Employee', emoji: '🏭' },
+  { key: 'delivery', label: 'Delivery', emoji: '🚚' },
+  { key: 'billing',  label: 'Billing',  emoji: '🧾' },
 ]
 
 export default function Login() {
@@ -21,19 +21,21 @@ export default function Login() {
   const { t } = useLanguage()
   const [selectedRole, setSelectedRole] = useState('farmer')
   // Carried over when Register redirects an already-registered number here.
-  const [mobile, setMobile]             = useState(() => location.state?.identifier || '9876543210')
-  const [password, setPassword] = useState(() => (location.state?.identifier ? '' : 'password123'))
+  const [mobile, setMobile]             = useState(() => location.state?.identifier || '')
+  const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading]   = useState(false)
+
+  useEffect(() => {
+    if (location.state?.message) {
+      toast.error(location.state.message, { duration: 5000 })
+    }
+  }, [location.state])
 
   const roleInfo = ROLES.find(r => r.key === selectedRole)
 
   const handleRoleSelect = (role) => {
     setSelectedRole(role)
-    const r = ROLES.find(x => x.key === role)
-    setMobile(r.hint)
-    // Admin uses 'admin', all others use 'password123'
-    setPassword(role === 'admin' ? 'admin' : 'password123')
   }
 
   const handleSubmit = async (e) => {
@@ -87,10 +89,6 @@ export default function Login() {
             ))}
           </div>
 
-          {/* Demo hint */}
-          <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: '20px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            <strong style={{ color: 'var(--brand-400)' }}>Live DB credentials</strong> for {roleInfo?.label} role. Mobile: <code style={{ color: 'var(--brand-300)' }}>{roleInfo?.hint}</code> | Password: <code style={{ color: 'var(--brand-300)' }}>{roleInfo?.key === 'admin' ? 'admin' : 'password123'}</code>
-          </div>
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">

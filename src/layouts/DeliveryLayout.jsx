@@ -14,7 +14,7 @@ export default function DeliveryLayout() {
       <div className="main-content">
         <header className="topbar">
           <div className="topbar-left">
-            <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} style={{ display: 'flex' }}><Menu size={20} /></button>
+            <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} aria-label="Open navigation menu"><Menu size={20} /></button>
             <div>
               <div className="topbar-title">Dashboard</div>
               <div className="topbar-subtitle">Assigned Deliveries & OTP Verification</div>

@@ -29,7 +29,7 @@ export default function EmployeeLayout() {
       <div className="main-content employee-workspace">
         <header className="topbar">
           <div className="topbar-left">
-            <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} style={{ display: 'flex' }}><Menu size={20} /></button>
+            <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} aria-label="Open navigation menu"><Menu size={20} /></button>
             <div>
               <div className="topbar-title">Employee ERP Portal</div>
               <div className="topbar-subtitle">Inventory, Stock & Task Management</div>

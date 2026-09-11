@@ -5,6 +5,8 @@ import {
   Users as UsersIcon, UserPlus, Search, Key, Shield, Sprout,
   Edit2, Trash2, CheckCircle2, XCircle, RefreshCw, Eye, EyeOff, MapPin, Phone, Mail
 } from 'lucide-react'
+import PasswordChecklist from '../../components/PasswordChecklist'
+import { generateStrongPassword, isPasswordValid, passwordPlaceholder } from '../../utils/passwordRules'
 
 const ROLES = [
   { key: 'all', label: 'All Roles' },
@@ -93,7 +95,7 @@ export default function AdminUsers() {
       name: '',
       phone: '',
       email: '',
-      password: `sb${Math.floor(1000 + Math.random() * 9000)}`,
+      password: generateStrongPassword(),
       role: 'farmer',
       crop: 'Paddy / Rice',
       acreage: 3,
@@ -110,6 +112,10 @@ export default function AdminUsers() {
     e.preventDefault()
     if (!form.name || (!form.phone && !form.email) || !form.password) {
       toast.error('Please provide name, phone/email, and password')
+      return
+    }
+    if (!isPasswordValid(form.password, { role: form.role, phone: form.phone })) {
+      toast.error('Password does not meet the rules listed under it')
       return
     }
 
@@ -154,6 +160,9 @@ export default function AdminUsers() {
       const updates = { ...editForm }
       if (!updates.password) {
         delete updates.password // keep existing password if blank
+      } else if (!isPasswordValid(updates.password, { role: updates.role, phone: updates.phone })) {
+        toast.error('New password does not meet the rules listed under it')
+        return
       }
 
       const { data } = await axios.put(`/api/admin/users/${selectedUser.id}`, updates)
@@ -437,7 +446,7 @@ export default function AdminUsers() {
                 <Key size={20} color="var(--brand-400)" />
                 Create New Login Credentials
               </h2>
-              <button onClick={() => setCreateModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setCreateModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
               Create an account with login credentials for Sathya Bio. The user can immediately log in on <code>sathyambio.com</code> or staff portals.
@@ -481,22 +490,34 @@ export default function AdminUsers() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Login Password *</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--brand-400)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    {showPassword ? <EyeOff size={12} /> : <Eye size={12} />} {showPassword ? 'Hide' : 'Show'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setForm({ ...form, password: generateStrongPassword() }); setShowPassword(true) }}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--brand-400)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <RefreshCw size={12} /> Generate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--brand-400)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      {showPassword ? <EyeOff size={12} /> : <Eye size={12} />} {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                 </div>
                 <input
                   required
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter login password"
+                  placeholder={passwordPlaceholder(form.role)}
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
+                  autoComplete="new-password"
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--dark-900)', border: '1px solid var(--dark-700)', color: '#fff', letterSpacing: showPassword ? 'normal' : '2px' }}
                 />
+                <PasswordChecklist password={form.password} role={form.role} phone={form.phone} />
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>Copy this password before saving: it cannot be viewed again afterwards.</div>
               </div>
 
               <div>
@@ -616,7 +637,7 @@ export default function AdminUsers() {
                 <Edit2 size={18} color="var(--brand-400)" />
                   {viewOnly ? 'Customer Profile' : `Update User: ${selectedUser.name}`}
               </h2>
-              <button onClick={() => setEditModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setEditModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 
             {viewOnly && <div className="admin-customer-profile-summary">
@@ -659,11 +680,13 @@ export default function AdminUsers() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Enter new password if changing..."
+                  placeholder={`New password (${passwordPlaceholder(editForm.role)})`}
                   value={editForm.password}
                   onChange={e => setEditForm({ ...editForm, password: e.target.value })}
+                  autoComplete="new-password"
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--dark-900)', border: '1px solid var(--dark-700)', color: '#fff' }}
                 />
+                {editForm.password && <PasswordChecklist password={editForm.password} role={editForm.role} phone={editForm.phone} />}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

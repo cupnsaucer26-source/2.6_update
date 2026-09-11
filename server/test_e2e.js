@@ -21,13 +21,14 @@ async function runTests() {
     const adminLogin = await adminLoginRes.json();
     if (!adminLogin.success) throw new Error(`Admin login failed: ${adminLogin.message}`);
     console.log(`   ✅ Admin Logged In: ${adminLogin.user.name} (${adminLogin.user.role})`);
+    const adminAuth = { Authorization: `Bearer ${adminLogin.token}` };
 
     // 3. Admin Create New User Credentials
     console.log('\n3. Testing Admin Creating User Credentials for Farmer Annamalai...');
     const newUserPhone = `98421${Math.floor(10000 + Math.random() * 90000)}`;
     const createUserRes = await fetch(`${BASE_URL}/api/admin/users`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...adminAuth },
       body: JSON.stringify({
         name: 'Annamalai Gounder',
         phone: newUserPhone,
@@ -61,7 +62,7 @@ async function runTests() {
     console.log('\n5. Testing Admin Adding Product Targeted to Annamalai...');
     const newProductRes = await fetch(`${BASE_URL}/api/products`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...adminAuth },
       body: JSON.stringify({
         name: 'Sathya Bio CottonShield Ultra Max',
         category: 'Insecticide',
@@ -94,8 +95,8 @@ async function runTests() {
     }
 
     // 7. Test Admin User-Summary
-    console.log('\n7. Testing /api/admin/products/user-summary...');
-    const summaryRes = await fetch(`${BASE_URL}/api/admin/products/user-summary`);
+    console.log('\n7. Testing /api/user-product-summary...');
+    const summaryRes = await fetch(`${BASE_URL}/api/user-product-summary`, { headers: adminAuth });
     const summaryData = await summaryRes.json();
     const annamalaiSummary = summaryData.data.find(s => s.userId === createdUserId);
     console.log(`   ✅ User summary for Annamalai: Assigned=${annamalaiSummary?.assignedCount}, CropMatches=${annamalaiSummary?.cropMatchCount}`);
@@ -104,13 +105,42 @@ async function runTests() {
     console.log('\n8. Testing Product Update...');
     const updateRes = await fetch(`${BASE_URL}/api/products/${createdProductId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...adminAuth },
       body: JSON.stringify({ price: 820, stock: 115 })
     });
     const updateData = await updateRes.json();
     console.log(`   ✅ Product Updated: Price=₹${updateData.data.price}, Stock=${updateData.data.stock}`);
 
-    console.log('\n🎉 ALL 8 E2E TESTS PASSED SUCCESSFULLY!');
+    // 9. Test Order Placement & WhatsApp Order Confirmation Flow
+    console.log('\n9. Testing Order Placement with WhatsApp Order & Delivery Details...');
+    const orderRes = await fetch(`${BASE_URL}/api/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userLogin.token}` },
+      body: JSON.stringify({
+        customerName: 'Annamalai Gounder',
+        customerPhone: newUserPhone,
+        address: 'Plot 14, Cotton Valley Farm, Pollachi, Coimbatore, Tamil Nadu',
+        items: [{ id: createdProductId, qty: 1, selectedPack: '250g' }]
+      })
+    });
+    const orderData = await orderRes.json();
+    if (!orderData.success) throw new Error(`Order placement failed: ${orderData.message}`);
+    console.log(`   ✅ Order Placed: ID=${orderData.data.id}, Total=₹${orderData.data.total}`);
+    console.log(`   ✅ Delivery OTP Generated: ${orderData.data.otp}`);
+    console.log(`   ✅ Expected Delivery Date: ${orderData.data.expectedDeliveryDate}`);
+    console.log(`   ✅ WhatsApp Dispatch Triggered: status="${orderData.whatsapp}"`);
+
+    // 10. Test Customer Order Retrieval (Verifying Doorstep OTP and Status)
+    console.log('\n10. Testing Customer Order Tracking & Delivery Verification...');
+    const customerOrdersRes = await fetch(`${BASE_URL}/api/orders`, {
+      headers: { Authorization: `Bearer ${userLogin.token}` }
+    });
+    const customerOrders = await customerOrdersRes.json();
+    const placedOrder = customerOrders.data.find(o => o.id === orderData.data.id);
+    if (!placedOrder) throw new Error('Customer cannot retrieve placed order');
+    console.log(`   ✅ Customer sees order ${placedOrder.id} with delivery status "${placedOrder.deliveryStatus || placedOrder.status}"`);
+
+    console.log('\n🎉 ALL 10 E2E FULL-STACK & WHATSAPP TESTS PASSED SUCCESSFULLY!');
   } catch (err) {
     console.error('\n❌ TEST FAILED:', err.message);
     process.exit(1);
@@ -118,3 +148,4 @@ async function runTests() {
 }
 
 runTests();
+

@@ -3,20 +3,26 @@ import toast from 'react-hot-toast'
 import axios from 'axios'
 import { useAuth } from '../../context/AuthContext'
 
-const ASSIGNED = [
-  { id: 'ORD-002', farmer: 'Suresh Pillai', phone: '9751234567', address: 'No.5, Nehru St, Thanjavur - 613001', items: 'RootVigor Gold x1, BioNeem x2', amount: 1670, payMode: 'Prepaid', otp: '7834', status: 'Out for Delivery' },
-  { id: 'ORD-005', farmer: 'Ganesan A',     phone: '9632145678', address: '23, Kalaignar Nagar, Tiruchirappalli - 620001', items: 'BlastShield 75 WP x2', amount: 960, payMode: 'COD', otp: '2591', status: 'Assigned' },
-]
+// API orders use the store's field names; the cards below were written for these.
+const toDeliveryCard = order => ({
+  ...order,
+  farmer: order.farmer || order.customerName,
+  phone: order.phone || order.customerPhone,
+  amount: Number(order.amount ?? order.total ?? 0),
+  payMode: order.payMode || (order.paymentStatus === 'Paid' ? 'Prepaid' : 'COD'),
+  items: Array.isArray(order.items) ? order.items.map(item => `${item.name || 'Product'} x${item.qty || 1}`).join(', ') : order.items,
+  status: order.deliveryStatus || order.status,
+})
 
 export default function DeliveryDashboard() {
   const { user } = useAuth()
-  const [orders, setOrders] = useState(ASSIGNED)
+  const [orders, setOrders] = useState([])
   const [otpInputs, setOtpInputs] = useState({})
 
   useEffect(() => {
-    axios.get('/api/delivery/assigned').then(({ data }) => {
-      if (data.data?.length) setOrders(data.data)
-    }).catch(() => {})
+    axios.get('/api/delivery/assigned')
+      .then(({ data }) => setOrders((data.data || []).map(toDeliveryCard)))
+      .catch(() => toast.error('Could not load your deliveries.'))
   }, [])
 
   // The server is the authority on the OTP — never accept a delivery on the
@@ -28,7 +34,7 @@ export default function DeliveryDashboard() {
       return
     }
     axios.post('/api/delivery/verify-otp', { orderId: order.id, otp: entered }).then(({ data }) => {
-      setOrders(o => o.map(x => x.id === order.id ? { ...x, ...data.order, status: 'Delivered', deliveryStatus: 'Delivered' } : x))
+      setOrders(o => o.map(x => x.id === order.id ? { ...x, ...toDeliveryCard(data.order), status: 'Delivered', deliveryStatus: 'Delivered' } : x))
       toast.success(`✅ OTP verified! Order ${order.id} marked Delivered`)
     }).catch(err => {
       const message = err?.response?.data?.message
@@ -131,10 +137,12 @@ export default function DeliveryDashboard() {
             </div>}
 
             {order.status !== 'Delivered' && (
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <a href={`tel:+91${order.phone}`} className="btn btn-secondary btn-sm">📞 Call Farmer</a>
-                <a href={`https://maps.google.com/?q=${encodeURIComponent(order.address)}`} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">🗺️ Navigate</a>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' }}>
+              <div className="delivery-card-actions">
+                <div className="delivery-btn-group">
+                  <a href={`tel:+91${order.phone}`} className="btn btn-secondary btn-sm">📞 Call Farmer</a>
+                  <a href={`https://maps.google.com/?q=${encodeURIComponent(order.address)}`} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">🗺️ Navigate</a>
+                </div>
+                <div className="delivery-otp-row">
                   <input
                     className="form-input"
                     style={{ width: 120, padding: '8px 12px', fontSize: '0.9rem', letterSpacing: 6, textAlign: 'center' }}

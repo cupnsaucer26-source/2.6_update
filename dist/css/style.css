@@ -33,15 +33,22 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   font-family: 'Plus Jakarta Sans', sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   overflow-x: hidden;
   line-height: 1.6;
+  -webkit-overflow-scrolling: touch;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: pan-y;
+  overscroll-behavior-y: none;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -86,6 +93,8 @@ button {
   gap: 0;
   animation: tickerScroll 38s linear infinite;
   white-space: nowrap;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
 .ticker-track:hover {
   animation-play-state: paused;
@@ -470,13 +479,14 @@ button {
   cursor: pointer;
   z-index: 1400;
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(10px) translateZ(0);
   pointer-events: none;
-  transition: opacity 0.3s, transform 0.3s;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  will-change: transform, opacity;
 }
 .back-to-top.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) translateZ(0);
   pointer-events: all;
 }
 .back-to-top:hover {
@@ -508,15 +518,15 @@ button {
 
 /* E-COMMERCE MAIN HEADER */
 .header-main {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.97);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.15);
   padding: 16px 0;
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  transform: translateZ(0);
+  will-change: transform;
 }
 .header-grid {
   display: flex;
@@ -704,11 +714,10 @@ button {
   grid-template-columns: 1.2fr 0.8fr;
   gap: 40px;
   align-items: center;
-  backdrop-filter: blur(4px);
   padding: 30px;
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(16, 185, 129, 0.2);
   box-shadow: var(--shadow-md);
 }
 .hero-tag {
@@ -771,9 +780,24 @@ button {
   font-size: 1.2rem;
 }
 
-/* SECTION TITLES */
+/* SECTION TITLES & 60-120 FPS SCROLL CONTAINMENT */
 .section {
   padding: 60px 0;
+}
+
+#categoriesSection,
+#cropSection,
+#brandsSection,
+#soil,
+#n8n,
+#tickets,
+#experts,
+.testimonials-section,
+.newsletter-section,
+.site-footer,
+footer {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 550px;
 }
 .section-header {
   margin-bottom: 32px;
@@ -843,21 +867,25 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 22px;
+  contain: layout style;
 }
 .product-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
+  background: #ffffff;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  transition: var(--transition);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   display: flex;
   flex-direction: column;
   position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 380px;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 .product-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-4px);
   box-shadow: var(--shadow-hover);
   border-color: var(--primary-light);
 }
@@ -886,10 +914,11 @@ button {
   max-height: 160px;
   max-width: 100%;
   object-fit: contain;
-  transition: var(--transition);
+  transition: transform 0.25s ease;
+  will-change: transform;
 }
 .product-card:hover .product-img-box img {
-  transform: scale(1.06);
+  transform: scale(1.05);
 }
 .card-content {
   padding: 18px;
@@ -966,7 +995,30 @@ button {
   margin-top: auto;
 }
 
-/* SLIDE-OUT CART DRAWER */
+/* SLIDE-OUT CART DRAWER & BACKDROP OVERLAY */
+.cart-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 2490;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+  pointer-events: none;
+}
+.cart-drawer-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.cart-drawer-overlay.active .cart-drawer {
+  transform: translateX(0);
+  visibility: visible;
+}
 .cart-drawer {
   position: fixed;
   top: 0;
@@ -980,10 +1032,28 @@ button {
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: var(--transition);
+  visibility: hidden;
+  transition: transform 0.28s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0.28s ease;
+  will-change: transform;
+  pointer-events: auto;
 }
 .cart-drawer.active {
   transform: translateX(0);
+  visibility: visible;
+}
+.cart-close-btn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+.cart-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 .cart-header {
   background: var(--primary-dark);
@@ -1037,29 +1107,30 @@ button {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.72);
   z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: var(--transition);
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 .modal-overlay.active {
   opacity: 1;
+  visibility: visible;
   pointer-events: all;
 }
 .modal-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
+  background: #ffffff;
+  border: 1px solid rgba(16, 185, 129, 0.2);
   border-radius: var(--radius-lg);
   max-width: 650px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 30px;
   position: relative;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
@@ -1097,16 +1168,27 @@ button {
   cursor: pointer;
   z-index: 1500;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
-  /* Pulse ring */
-  animation: chatPulse 2.5s ease-in-out infinite;
+  transform: translateZ(0);
+}
+.chatbot-trigger-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #34d399;
+  opacity: 0;
+  animation: chatPulseGPU 2.5s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
 }
 .chatbot-trigger-btn:hover {
-  transform: scale(1.08);
+  transform: scale(1.08) translateZ(0);
   box-shadow: 0 12px 32px rgba(20, 83, 45, 0.55);
 }
-@keyframes chatPulse {
-  0%, 100% { box-shadow: 0 8px 24px rgba(20, 83, 45, 0.45), 0 0 0 0 rgba(5,150,105,0.45); }
-  50% { box-shadow: 0 8px 24px rgba(20, 83, 45, 0.45), 0 0 0 12px rgba(5,150,105,0); }
+@keyframes chatPulseGPU {
+  0%   { transform: scale(0.95); opacity: 0.8; }
+  50%  { transform: scale(1.28); opacity: 0; }
+  100% { transform: scale(1.28); opacity: 0; }
 }
 
 .chatbot-window {
@@ -1125,13 +1207,16 @@ button {
   overflow: hidden;
   /* Hidden by default */
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transform: translateY(24px) scale(0.96);
   transform-origin: bottom right;
-  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1), visibility 0.25s ease;
+  will-change: transform, opacity;
 }
 .chatbot-window.active {
   opacity: 1;
+  visibility: visible;
   pointer-events: all;
   transform: translateY(0) scale(1);
 }
@@ -1669,14 +1754,16 @@ button {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.15);
   background: #ffffff;
-  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s ease;
   min-height: 220px;
   display: flex;
   flex-direction: column;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .bento-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-4px);
   box-shadow: 0 20px 45px rgba(5, 150, 105, 0.22);
   border-color: var(--primary);
 }
@@ -1705,8 +1792,10 @@ button {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.6s ease;
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
   z-index: 1;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .bento-card:hover .bento-bg-img {
@@ -1817,6 +1906,7 @@ button {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  display: none !important;
 }
 .preloader-content {
   position: relative;
@@ -2011,9 +2101,8 @@ button {
   bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(52,211,153,0.15);
+  background: rgba(6, 78, 59, 0.88);
   color: #34d399;
-  backdrop-filter: blur(10px);
   padding: 5px 16px;
   border-radius: 20px;
   font-size: 0.75rem;
@@ -2147,20 +2236,20 @@ button {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.78);
   z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 .modal-overlay.active {
   opacity: 1;
+  visibility: visible;
   pointer-events: all;
 }
 .modal-card {
@@ -2209,5 +2298,452 @@ button {
   border-color: #ffffff;
   transform: scale(1.12);
 }
+
+/* ==========================================================================
+   ROLE SWITCHER BAR & BADGES
+   ========================================================================== */
+.role-switcher-bar {
+  background: linear-gradient(90deg, #064e3b 0%, #0f172a 100%);
+  color: #ffffff;
+  padding: 6px 0;
+  font-size: 0.78rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 1002;
+}
+.role-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.role-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+}
+.role-chip {
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.2s ease, background 0.2s ease;
+  white-space: nowrap;
+}
+.role-chip:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+.role-chip.active {
+  background: var(--accent-gold);
+  color: #0f172a;
+  border-color: var(--accent-gold);
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+}
+.role-active-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #a7f3d0;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   COMPACT MULTI-LANGUAGE SELECTOR
+   ========================================================================== */
+.compact-lang-picker {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  padding: 3px 8px;
+  gap: 6px;
+  color: #ffffff;
+}
+.compact-lang-select {
+  background: transparent;
+  color: #ffffff;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+}
+.compact-lang-select option {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   FULLSCREEN / MODAL ENTERPRISE PANELS (ADMIN, ERP, DELIVERY, POS, TICKETS)
+   ========================================================================== */
+.panel-modal-card {
+  max-width: 1100px;
+  width: 95%;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  max-height: 850px;
+}
+.panel-header {
+  background: linear-gradient(135deg, #064e3b 0%, #0f172a 100%);
+  color: #ffffff;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+}
+.panel-tabs {
+  display: flex;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+  padding: 6px 16px 0;
+  gap: 8px;
+}
+.panel-tab-btn {
+  padding: 10px 18px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s ease, background 0.2s ease;
+  white-space: nowrap;
+}
+.panel-tab-btn:hover {
+  color: var(--primary);
+  background: rgba(5, 150, 105, 0.06);
+  border-radius: 8px 8px 0 0;
+}
+.panel-tab-btn.active {
+  color: var(--primary-dark);
+  border-bottom-color: var(--primary);
+  background: #ffffff;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+}
+.panel-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background: #f8fafc;
+}
+.panel-tab-content {
+  display: none;
+}
+.panel-tab-content.active {
+  display: block;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   METRIC STATS CARDS & ERP TABLES
+   ========================================================================== */
+.stats-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.stat-widget {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.stat-widget-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.stat-widget-info h4 {
+  font-size: 0.78rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.stat-widget-info .val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* ERP / Data Tables */
+.enterprise-table-container {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  overflow-x: auto;
+}
+.enterprise-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.82rem;
+}
+.enterprise-table th {
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+  padding: 12px 14px;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+.enterprise-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+.enterprise-table tbody tr:hover {
+  background: #f8fafc;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.status-pill.green { background: #dcfce7; color: #15803d; }
+.status-pill.blue { background: #dbeafe; color: #1d4ed8; }
+.status-pill.amber { background: #fef3c7; color: #b45309; }
+.status-pill.red { background: #fee2e2; color: #b91c1c; }
+.status-pill.purple { background: #f3e8ff; color: #7e22ce; }
+
+/* ==========================================================================
+   LIVE CMS EDITING CONTROLS
+   ========================================================================== */
+.cms-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+}
+.cms-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #064e3b;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.cms-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 4px;
+}
+.cms-field input, .cms-field textarea, .cms-field select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.cms-field input:focus, .cms-field textarea:focus, .cms-field select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+}
+
+/* ==========================================================================
+   POS COUNTER BILLING & INVOICE
+   ========================================================================== */
+.pos-layout {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 768px) {
+  .pos-layout { grid-template-columns: 1fr; }
+}
+.pos-receipt-card {
+  background: #ffffff;
+  border: 2px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 20px;
+  font-family: 'Outfit', monospace, sans-serif;
+}
+.pos-receipt-header {
+  text-align: center;
+  border-bottom: 1px dashed #cbd5e1;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+.pos-line-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+.pos-total-row {
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 8px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--primary-dark);
+}
+
+/* Printable Tax Invoice Modal */
+@media print {
+  body * { visibility: hidden; }
+  #printInvoiceArea, #printInvoiceArea * { visibility: visible; }
+  #printInvoiceArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #ffffff;
+    padding: 20px;
+  }
+}
+
+/* ==========================================================================
+   WEEKLY ADVISORY CARD RESULTS
+   ========================================================================== */
+.advisory-result-card {
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  border: 2px solid #34d399;
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 16px;
+}
+.advisory-badge-pill {
+  background: #059669;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ==========================================================================
+   MOBILE BOTTOM NAVIGATION BAR
+   ========================================================================== */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid #e2e8f0;
+  display: none;
+  justify-content: space-around;
+  padding: 8px 6px;
+  z-index: 9999;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateZ(0);
+}
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex;
+  }
+  body {
+    padding-bottom: 65px;
+  }
+}
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: color 0.2s ease;
+  position: relative;
+}
+.mobile-nav-item i {
+  font-size: 1.15rem;
+}
+.mobile-nav-item.active, .mobile-nav-item:hover {
+  color: var(--primary);
+}
+.mobile-nav-item .mobile-badge {
+  position: absolute;
+  top: 0px;
+  right: 12px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 800;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 
 

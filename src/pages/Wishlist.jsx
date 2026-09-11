@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
+import { useAuth } from '../context/AuthContext'
 
 export default function Wishlist() {
+  const { user } = useAuth()
   const [items, setItems] = useState([])
-  const user = JSON.parse(localStorage.getItem('sathya_user') || 'null')
   const visitorId = localStorage.getItem('sathya_wishlist_visitor') || ''
 
+  // Signed-in customers are identified by their token; guests by the random
+  // visitor id this browser generated when they first saved a product.
   useEffect(() => {
-    const params = new URLSearchParams({ userId: user?.id || user?._id || visitorId, phone: user?.phone || user?.mobile || '' })
-    axios.get(`/api/wishlist?${params}`).then(({ data }) => setItems(data.data || [])).catch(() => setItems([]))
-  }, [user?.id, user?._id, user?.phone, user?.mobile, visitorId])
+    if (!user && !visitorId) {
+      setItems([])
+      return
+    }
+    const params = user ? '' : `?${new URLSearchParams({ visitorId })}`
+    axios.get(`/api/wishlist${params}`).then(({ data }) => setItems(data.data || [])).catch(() => setItems([]))
+  }, [user?.id, visitorId])
 
   return (
     <div className="store-section-page animate-fade-in">

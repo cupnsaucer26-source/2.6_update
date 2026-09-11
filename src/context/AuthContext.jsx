@@ -20,15 +20,6 @@ delivery: '/delivery',
 billing: '/billing',
 }
 
-const DEMO_USERS = {
-'9876543210': { _id: 'u1', name: 'Rameshwar Patel', mobile: '9876543210', role: 'farmer', landAcres: 5, crop: 'Paddy / Rice', village: 'Karur' },
-'9123456789': { _id: 'u2', name: 'Admin Officer', mobile: '9123456789', role: 'admin', email: 'admin@demo.com' },
-'9234567890': { _id: 'u3', name: 'Muthuvel K (QC)', mobile: '9234567890', role: 'employee', email: 'employee@demo.com', department: 'Quality Control', joinDate: '2023-01-15', lastLogin: null },
-'9345678901': { _id: 'u4', name: 'Karthik Raja', mobile: '9345678901', role: 'delivery', email: 'delivery@demo.com' },
-'9456789012': { _id: 'u5', name: 'Billing Operator #04', mobile: '9456789012', role: 'billing', email: 'billing@demo.com' },
-'9567890123': { _id: 'u6', name: 'Priya Sharma', mobile: '9567890123', role: 'employee', email: 'priya@demo.com', department: 'Operations', joinDate: '2023-06-20', lastLogin: null },
-}
-
 // Mock employees for admin view
 export const MOCK_EMPLOYEES = [
 { _id: 'u3', name: 'Muthuvel K (QC)', mobile: '9234567890', email: 'employee@demo.com', department: 'Quality Control', joinDate: '2023-01-15', lastLogin: '2024-09-02 14:30:00', status: 'active' },
@@ -46,62 +37,91 @@ export const getEmployeeDetails = (employeeId) => {
 return MOCK_EMPLOYEES.find(e => e._id === employeeId)
 }
 
-export function AuthProvider({ children }) {
-const [user, setUser] = useState(() => {
+const TOKEN_KEY = 'sathya_token'
+const USER_KEY = 'sathya_user'
+
+const readStoredUser = () => {
 try {
-const cached = localStorage.getItem('sathya_user')
+const cached = localStorage.getItem(USER_KEY)
 return cached ? JSON.parse(cached) : null
 } catch {
 return null
 }
-})
-const [token, setToken] = useState(() => localStorage.getItem('sathya_token'))
-const [loading, setLoading] = useState(false)
-
-// Set axios default header
-useEffect(() => {
-if (token) {
-axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-} else {
-delete axios.defaults.headers.common['Authorization']
 }
-}, [token])
+
+// Attach the current token to every API call at the moment it is sent. Setting
+// a default header from an effect was too late: pages fire their first
+// requests before the provider's effects have run.
+axios.interceptors.request.use(config => {
+const token = localStorage.getItem(TOKEN_KEY)
+if (token) config.headers.Authorization = `Bearer ${token}`
+return config
+})
+
+export function AuthProvider({ children }) {
+const [user, setUser] = useState(readStoredUser)
+const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
+// While a stored session is being confirmed with the server, protected pages wait.
+const [loading, setLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY))
+
+const saveSession = (nextToken, nextUser) => {
+localStorage.setItem(TOKEN_KEY, nextToken)
+localStorage.setItem(USER_KEY, JSON.stringify(nextUser))
+setToken(nextToken)
+setUser(nextUser)
+}
+
+const clearSession = () => {
+localStorage.removeItem(TOKEN_KEY)
+localStorage.removeItem(USER_KEY)
+setToken(null)
+setUser(null)
+}
+
+// A stored session may have expired, been revoked, or come from before tokens
+// were signed; the server is the only judge of that.
+useEffect(() => {
+if (!token) {
+setLoading(false)
+return
+}
+let cancelled = false
+axios.get('/api/auth/me')
+.then(({ data }) => {
+if (cancelled) return
+localStorage.setItem(USER_KEY, JSON.stringify(data.data))
+setUser(data.data)
+})
+.catch(err => {
+if (!cancelled && err.response?.status === 401) clearSession()
+})
+.finally(() => {
+if (!cancelled) setLoading(false)
+})
+return () => { cancelled = true }
+}, [])
+
+// Any API call rejected for a missing or stale session signs the user out, so
+// protected pages send them back to login instead of showing empty data.
+useEffect(() => {
+const interceptor = axios.interceptors.response.use(
+response => response,
+err => {
+const url = err.config?.url || ''
+if (err.response?.status === 401 && !url.startsWith('/api/auth/')) clearSession()
+return Promise.reject(err)
+}
+)
+return () => axios.interceptors.response.eject(interceptor)
+}, [])
 
 const login = async (identifier, password) => {
-// Accept both mobile number and email
-const cleanId = identifier.trim()
 try {
-const { data } = await axios.post('/api/auth/login', { identifier: cleanId, password })
-const userWithLogin = {
-...data.user,
-lastLogin: new Date().toLocaleString('en-IN'),
-loginCount: (data.user.loginCount || 0) + 1
-}
-localStorage.setItem('sathya_token', data.token)
-localStorage.setItem('sathya_user', JSON.stringify(userWithLogin))
-setToken(data.token)
-setUser(userWithLogin)
-return userWithLogin
+const { data } = await axios.post('/api/auth/login', { identifier: identifier.trim(), password })
+saveSession(data.token, data.user)
+return data.user
 } catch (err) {
-if (err.response?.data?.message) {
-throw new Error(err.response.data.message)
-}
-// Robust fallback for demo credentials or offline registered accounts
-if (DEMO_USERS[cleanId] && (password === 'demo1234' || password === 'admin' || password.length >= 4)) {
-const loggedUser = {
-...DEMO_USERS[cleanId],
-lastLogin: new Date().toLocaleString('en-IN'),
-loginCount: 1
-}
-const mockToken = `sathya_jwt_${loggedUser.role}_${Date.now()}`
-localStorage.setItem('sathya_token', mockToken)
-localStorage.setItem('sathya_user', JSON.stringify(loggedUser))
-setToken(mockToken)
-setUser(loggedUser)
-return loggedUser
-}
-
-throw new Error('Invalid mobile number/email or password.')
+throw new Error(err.response?.data?.message || 'Could not reach the server. Please try again.')
 }
 }
 
@@ -120,46 +140,15 @@ return data
 const register = async (payload) => {
 try {
 const { data } = await axios.post('/api/auth/register', payload)
-localStorage.setItem('sathya_token', data.token)
-localStorage.setItem('sathya_user', JSON.stringify(data.user))
-setToken(data.token)
-setUser(data.user)
+saveSession(data.token, data.user)
 return data.user
-} catch {
-// Robust local registration fallback
-const newUser = {
-_id: `farmer_${Date.now()}`,
-name: payload.name,
-email: payload.email.trim().toLowerCase(),
-phone: payload.phone,
-role: payload.role || 'farmer',
-village: payload.village || 'Local Farm',
-district: payload.district || '',
-state: payload.state || 'Tamil Nadu',
-landAcres: Number(payload.landAcres) || 1,
-password: payload.password
-}
-
-const registered = JSON.parse(localStorage.getItem('sathya_registered_users') || '[]')
-registered.push(newUser)
-localStorage.setItem('sathya_registered_users', JSON.stringify(registered))
-
-const { password: _, ...safeUser } = newUser
-const mockToken = `sathya_jwt_farmer_${Date.now()}`
-localStorage.setItem('sathya_token', mockToken)
-localStorage.setItem('sathya_user', JSON.stringify(safeUser))
-setToken(mockToken)
-setUser(safeUser)
-return safeUser
+} catch (err) {
+throw new Error(err.response?.data?.message || 'Could not reach the server. Please try again.')
 }
 }
 
 const logout = (showToast = true) => {
-localStorage.removeItem('sathya_token')
-localStorage.removeItem('sathya_user')
-setToken(null)
-setUser(null)
-delete axios.defaults.headers.common['Authorization']
+clearSession()
 if (showToast) toast.success('Logged out successfully')
 }
 

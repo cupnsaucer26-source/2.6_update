@@ -21,14 +21,16 @@ const FALLBACK_PRODUCT = {
   dosage: '250g per Acre'
 }
 
+// Signed-in customers are identified by their token on the server. Guests get
+// a random, unguessable visitor id so nobody can read another person's list.
 const getWishlistIdentity = () => {
-  const user = JSON.parse(localStorage.getItem('sathya_user') || 'null')
-  let visitorId = localStorage.getItem('sathya_wishlist_visitor')
-  if (!visitorId) {
-    visitorId = `visitor-${crypto.randomUUID?.() || Date.now()}`
+  let visitorId = localStorage.getItem('sathya_wishlist_visitor') || ''
+  if (!/^visitor-[A-Za-z0-9-]{16,80}$/.test(visitorId)) {
+    const random = crypto.randomUUID?.() || Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('')
+    visitorId = `visitor-${random}`
     localStorage.setItem('sathya_wishlist_visitor', visitorId)
   }
-  return { userId: user?.id || user?._id || visitorId, phone: user?.phone || user?.mobile || '' }
+  return { visitorId }
 }
 
 export default function ProductDetail() {

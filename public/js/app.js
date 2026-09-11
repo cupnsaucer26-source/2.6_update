@@ -2,7 +2,7 @@
 
 // --- DATA STORE ---
 const CROPS = [
-  { id: 'all', name: 'All Crops', icon: 'fa-wheat-field' },
+  { id: 'all', name: 'All Crops', icon: 'fa-wheat-awn' },
   { id: 'Paddy/Rice', name: 'Paddy / Rice', icon: 'fa-seedling' },
   { id: 'Wheat', name: 'Wheat', icon: 'fa-wheat-awn' },
   { id: 'Cotton', name: 'Cotton', icon: 'fa-cloud' },
@@ -659,7 +659,8 @@ const TRANSLATIONS = {
     lang_label: 'Language',
     showing_products: 'Showing',
     of_products: 'of',
-    products_label: 'products'
+    products_label: 'products',
+    nav_ai_scanner: 'AI Leaf Doctor'
   }
 };
 
@@ -668,16 +669,18 @@ let currentLang =
   localStorage.getItem('sathya_bio_lang') || 'en';
 
 
-function t(key) {
+// The translation for key, or undefined when no dictionary has it.
+function translationFor(key) {
   const dict =
     TRANSLATIONS[currentLang] ||
     TRANSLATIONS['en'];
 
-  return (
-    dict[key] ||
-    TRANSLATIONS['en'][key] ||
-    key
-  );
+  return dict[key] || TRANSLATIONS['en'][key];
+}
+
+
+function t(key) {
+  return translationFor(key) || key;
 }
 
 
@@ -719,8 +722,12 @@ function applyTranslations() {
       const key =
         el.getAttribute('data-i18n');
 
+      // Keep the text shipped in the HTML, so a key missing from TRANSLATIONS
+      // shows that text instead of the raw key.
+      if (el.dataset.i18nDefault === undefined) el.dataset.i18nDefault = el.textContent;
+
       el.textContent =
-        t(key);
+        translationFor(key) || el.dataset.i18nDefault;
     });
 
 
@@ -731,8 +738,10 @@ function applyTranslations() {
       const key =
         el.getAttribute('data-i18n-placeholder');
 
+      if (el.dataset.i18nPlaceholderDefault === undefined) el.dataset.i18nPlaceholderDefault = el.placeholder;
+
       el.placeholder =
-        t(key);
+        translationFor(key) || el.dataset.i18nPlaceholderDefault;
     });
 }
 
@@ -785,6 +794,15 @@ async function syncCartFromServer() {
 
   try {
     const res = await fetch('/api/cart', { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401) {
+      // Expired or revoked session: fall back to being a guest.
+      localStorage.removeItem('sathya_token');
+      localStorage.removeItem('sathya_user');
+      cart = loadGuestCart();
+      updateCartUI();
+      checkStorefrontAuth();
+      return;
+    }
     const json = await res.json();
     const serverCart = json.success && Array.isArray(json.data) ? json.data : [];
 
@@ -856,6 +874,7 @@ function initApp() {
   initBackToTop();
 
   checkStorefrontAuth();
+  checkUrlAuthTriggers();
 
   fetchLiveProducts();
 
@@ -864,6 +883,21 @@ function initApp() {
   applyCertificationSettings();
   initPreloaderAndWelcomePoster();
 }
+
+function checkUrlAuthTriggers() {
+  const hash = window.location.hash;
+  const redirectMsg = sessionStorage.getItem('sathya_auth_redirect_msg');
+
+  if ((hash === '#login' || hash === '#auth' || redirectMsg) && !isFarmerLoggedIn()) {
+    const msg = redirectMsg || 'Login or Sign Up is mandatory to access your basket and checkout. Please sign in.';
+    showToast(msg, 'error', 6000);
+    setAuthNotice(msg);
+    switchAuthTab('login');
+    openModal('authModal');
+    sessionStorage.removeItem('sathya_auth_redirect_msg');
+  }
+}
+window.checkUrlAuthTriggers = checkUrlAuthTriggers;
 
 // Two initialisers need the CMS settings, and each was fetching them
 // separately - two round trips on a phone for one payload. Share a single
@@ -1145,58 +1179,27 @@ function initStatsCounter() {
               suffix;
 
 
-            let current = 0;
+            const startTime = performance.now();
+            const duration = 1400;
 
-            const steps = 60;
+            function animateCount(now) {
+              const elapsed = now - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              // Smooth cubic ease-out curve
+              const ease = 1 - Math.pow(1 - progress, 3);
+              const current = Math.floor(target * ease);
 
-            const increment =
-              target / steps;
+              el.textContent = current.toLocaleString('en-IN');
 
-            const interval =
-              1800 / steps;
+              if (progress < 1) {
+                requestAnimationFrame(animateCount);
+              } else {
+                el.textContent = target.toLocaleString('en-IN');
+              }
+            }
 
-
-            const timer =
-              setInterval(
-                () => {
-
-                  current =
-                    Math.min(
-                      current + increment,
-                      target
-                    );
-
-
-                  el.textContent =
-                    Math.floor(
-                      current
-                    ).toLocaleString(
-                      'en-IN'
-                    );
-
-
-                  if (
-                    current >= target
-                  ) {
-
-                    el.textContent =
-                      target.toLocaleString(
-                        'en-IN'
-                      );
-
-                    clearInterval(
-                      timer
-                    );
-                  }
-
-                },
-                interval
-              );
-
-
-            observer.unobserve(
-              el
-            );
+            requestAnimationFrame(animateCount);
+            observer.unobserve(el);
 
           }
         );
@@ -1215,42 +1218,30 @@ function initStatsCounter() {
 
 
 function initBackToTop() {
-
-  const btn =
-    document.getElementById(
-      'backToTop'
-    );
-
+  const btn = document.getElementById('backToTop');
   if (!btn) return;
 
-
+  let ticking = false;
   window.addEventListener(
     'scroll',
     () => {
-
-      btn.classList.toggle(
-        'visible',
-        window.scrollY > 400
-      );
-
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          btn.classList.toggle('visible', window.scrollY > 400);
+          ticking = false;
+        });
+        ticking = true;
+      }
     },
-    {
-      passive: true
-    }
+    { passive: true }
   );
 
-
-  btn.addEventListener(
-    'click',
-    () => {
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-
-    }
-  );
+  btn.addEventListener('click', () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
 }
 
 
@@ -1297,1895 +1288,6 @@ function initNavigation() {
     });
   }
 }
-
-
-// --- CATALOG & FILTER ENGINE ---
-
-function initCatalog() {
-  populateFilterOptions();
-  renderProducts();
-  renderTrendingProducts();
-
-  const cropSelect =
-    document.getElementById('cropSelect');
-
-  const diseaseSelect =
-    document.getElementById('diseaseSelect');
-
-  const categorySelect =
-    document.getElementById('categorySelect');
-
-
-  if (cropSelect) {
-
-    cropSelect.addEventListener(
-      'change',
-      (e) => {
-
-        currentCropFilter =
-          e.target.value;
-
-        renderProducts();
-      }
-    );
-  }
-
-
-  if (diseaseSelect) {
-
-    diseaseSelect.addEventListener(
-      'change',
-      (e) => {
-
-        currentDiseaseFilter =
-          e.target.value;
-
-        renderProducts();
-      }
-    );
-  }
-
-
-  if (categorySelect) {
-
-    categorySelect.addEventListener(
-      'change',
-      (e) => {
-
-        currentCategoryFilter =
-          e.target.value;
-
-        renderProducts();
-      }
-    );
-  }
-}
-
-
-function populateFilterOptions() {
-
-  const cropSelect =
-    document.getElementById('cropSelect');
-
-  const diseaseSelect =
-    document.getElementById('diseaseSelect');
-
-  const categorySelect =
-    document.getElementById('categorySelect');
-
-
-  if (cropSelect) {
-
-    cropSelect.innerHTML =
-      CROPS
-        .map(
-          c =>
-            `<option value="${c.id}">${c.name}</option>`
-        )
-        .join('');
-  }
-
-
-  if (diseaseSelect) {
-
-    diseaseSelect.innerHTML =
-      DISEASES
-        .map(
-          d =>
-            `<option value="${d.id}">${d.name}</option>`
-        )
-        .join('');
-  }
-
-
-  if (categorySelect) {
-
-    categorySelect.innerHTML =
-      CATEGORIES
-        .map(
-          cat =>
-            `<option value="${cat}">${cat}</option>`
-        )
-        .join('');
-  }
-}
-
-
-function renderProducts() {
-
-  const container =
-    document.getElementById(
-      'productsGrid'
-    );
-
-  const counter =
-    document.getElementById(
-      'productsCount'
-    );
-
-
-  if (!container) return;
-
-
-  const filtered =
-    PESTICIDES.filter(p => {
-
-      const matchCrop =
-        currentCropFilter === 'all' ||
-        p.crops.includes(
-          currentCropFilter
-        );
-
-
-      const matchDisease =
-        currentDiseaseFilter === 'all' ||
-        p.diseases.includes(
-          currentDiseaseFilter
-        );
-
-
-      const matchCategory =
-        currentCategoryFilter === 'All' ||
-        p.category ===
-          currentCategoryFilter;
-
-
-      const matchSearch =
-        searchQuery === '' ||
-
-        p.name
-          .toLowerCase()
-          .includes(searchQuery) ||
-
-        p.description
-          .toLowerCase()
-          .includes(searchQuery) ||
-
-        p.activeIngredient
-          .toLowerCase()
-          .includes(searchQuery);
-
-
-      return (
-        matchCrop &&
-        matchDisease &&
-        matchCategory &&
-        matchSearch
-      );
-    });
-
-
-  if (counter) {
-
-    counter.textContent =
-      `${t('showing_products')} ${filtered.length} ${t('of_products')} ${PESTICIDES.length} ${t('products_label')}`;
-  }
-
-
-  if (filtered.length === 0) {
-
-    container.innerHTML = `
-      <div
-        style="
-          grid-column: 1/-1;
-          text-align: center;
-          padding: 50px 20px;
-          background: #ffffff;
-          border-radius: var(--radius-md);
-          border: 1px solid var(--border-light);
-        "
-      >
-
-        <i
-          class="fa-solid fa-leaf"
-          style="
-            font-size: 3rem;
-            color: var(--text-dim);
-            margin-bottom: 12px;
-          "
-        ></i>
-
-        <h3
-          style="
-            color: var(--primary-dark);
-          "
-        >
-          No products found
-        </h3>
-
-        <p
-          style="
-            color: var(--text-muted);
-            margin-top: 6px;
-          "
-        >
-          Try adjusting crop or disease filters.
-        </p>
-
-        <button
-          class="btn btn-outline"
-          style="margin-top: 16px;"
-          onclick="resetFilters()"
-        >
-          <i class="fa-solid fa-rotate-left"></i>
-          ${t('reset_filters')}
-        </button>
-
-      </div>
-    `;
-
-    return;
-  }
-
-
-  const currentUser =
-    getStoredUser();
-
-
-  container.innerHTML =
-    filtered
-      .map(p => {
-
-        const isUserTargeted =
-          currentUser &&
-          p.targetUserId ===
-            currentUser.id;
-
-
-        const isCropMatch =
-          currentUser &&
-          currentUser.crop &&
-          p.crops &&
-          p.crops.some(
-            c =>
-              currentUser.crop
-                .toLowerCase()
-                .includes(
-                  c.toLowerCase()
-                )
-          );
-
-
-        let personalBadge = '';
-
-
-        if (isUserTargeted) {
-
-          personalBadge =
-            `
-              <div
-                style="
-                  background:
-                    linear-gradient(
-                      135deg,
-                      #8b5cf6,
-                      #6366f1
-                    );
-                  color: #fff;
-                  font-size: 0.72rem;
-                  padding: 2px 8px;
-                  border-radius: 6px;
-                  font-weight: 700;
-                  margin-bottom: 6px;
-                  display: inline-flex;
-                  align-items: center;
-                  gap: 4px;
-                "
-              >
-                <i class="fa-solid fa-star"></i>
-                Recommended for You
-              </div>
-            `;
-
-        } else if (isCropMatch) {
-
-          personalBadge =
-            `
-              <div
-                style="
-                  background:
-                    rgba(
-                      16,
-                      185,
-                      129,
-                      0.12
-                    );
-                  color: #10b981;
-                  font-size: 0.72rem;
-                  padding: 2px 8px;
-                  border-radius: 6px;
-                  font-weight: 700;
-                  margin-bottom: 6px;
-                  border:
-                    1px solid
-                    rgba(
-                      16,
-                      185,
-                      129,
-                      0.3
-                    );
-                  display: inline-flex;
-                  align-items: center;
-                  gap: 4px;
-                "
-              >
-                <i class="fa-solid fa-seedling"></i>
-                Tailored for ${currentUser.crop}
-              </div>
-            `;
-        }
-
-
-        return `
-          <div class="product-card">
-
-            <span class="discount-tag">
-              ${p.discount || 'Special Offer'}
-            </span>
-
-            <div class="product-img-box">
-
-              <img
-                src="${productImage(p)}"
-                alt="${p.name}"
-              />
-
-            </div>
-
-            <div class="card-content">
-
-              <span class="product-category-tag">
-                ${p.category}
-              </span>
-
-              ${personalBadge}
-
-              <h3 class="product-name">
-                ${p.name}
-              </h3>
-
-              <p class="product-tagline">
-                ${p.tagline || ''}
-              </p>
-
-              ${
-                p.reviewsEnabled &&
-                p.reviewsCount > 0
-
-                  ? `
-                    <div class="rating-row">
-
-                      <i
-                        class="fa-solid fa-star"
-                      ></i>
-
-                      <span
-                        style="
-                          font-weight: 700;
-                        "
-                      >
-                        ${Number(
-                          p.rating
-                        ).toFixed(1)}
-                      </span>
-
-                      <span
-                        style="
-                          color:
-                            var(--text-muted);
-                        "
-                      >
-                        (${p.reviewsCount}
-                        ${t('reviews')})
-                      </span>
-
-                    </div>
-                  `
-
-                  : `
-                    <div
-                      class="rating-row"
-                      style="
-                        color:
-                          var(--text-muted);
-                      "
-                    >
-                      No verified reviews yet
-                    </div>
-                  `
-              }
-
-              <div class="price-row">
-
-                <span
-                  class="current-price"
-                >
-                  ₹${p.price}
-                </span>
-
-                <span
-                  class="original-price"
-                >
-                  ₹${
-                    p.originalPrice ||
-                    p.mrp ||
-                    p.price
-                  }
-                </span>
-
-              </div>
-
-
-              <div
-                class="pack-sizes-row"
-              >
-
-                ${
-                  Array.isArray(
-                    p.packSizes
-                  ) &&
-                  p.packSizes.length
-
-                    ? p.packSizes
-                        .map(
-                          (
-                            pack,
-                            idx
-                          ) =>
-                            `
-                              <span
-                                class="
-                                  pack-chip
-                                  ${
-                                    idx === 0
-                                      ? 'active'
-                                      : ''
-                                  }
-                                "
-                              >
-                                ${pack}
-                              </span>
-                            `
-                        )
-                        .join('')
-
-                    : `
-                        <span
-                          class="
-                            pack-chip
-                            active
-                          "
-                        >
-                          250g
-                        </span>
-
-                        <span
-                          class="pack-chip"
-                        >
-                          500g
-                        </span>
-
-                        <span
-                          class="pack-chip"
-                        >
-                          1kg
-                        </span>
-                      `
-                }
-
-              </div>
-
-
-              <div
-                class="card-btn-row"
-              >
-
-                <button
-                  class="
-                    btn
-                    btn-primary
-                    add-to-cart-btn
-                  "
-                  data-id="${p.id}"
-                  style="flex: 1;"
-                >
-
-                  <i
-                    class="
-                      fa-solid
-                      fa-cart-shopping
-                    "
-                  ></i>
-
-                  ${t('add_to_cart')}
-
-                </button>
-
-
-                <button
-                  class="
-                    btn
-                    btn-outline
-                    view-details-btn
-                  "
-                  data-id="${p.id}"
-                >
-
-                  <i
-                    class="
-                      fa-solid
-                      fa-eye
-                    "
-                  ></i>
-
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-        `;
-      })
-      .join('');
-
-
-  document
-    .querySelectorAll(
-      '.add-to-cart-btn'
-    )
-    .forEach(btn => {
-
-      btn.addEventListener(
-        'click',
-        () =>
-          addToCart(
-            btn.dataset.id
-          )
-      );
-    });
-
-
-  document
-    .querySelectorAll(
-      '.view-details-btn'
-    )
-    .forEach(btn => {
-
-      btn.addEventListener(
-        'click',
-        () =>
-          openProductPage(
-            btn.dataset.id
-          )
-      );
-    });
-}
-
-
-function renderTrendingProducts() {
-
-  const container =
-    document.getElementById(
-      'trendingProductsGrid'
-    );
-
-
-  if (!container) return;
-
-
-  const trending =
-    PESTICIDES
-      .filter(
-        p =>
-          p.badge === 'Best Seller' ||
-          p.badge === '100% Organic' ||
-          p.rating >= 4.8
-      )
-      .slice(0, 4);
-
-
-  container.innerHTML =
-    trending
-      .map(p => `
-
-        <div class="product-card">
-
-          <span class="discount-tag">
-            ${p.discount}
-          </span>
-
-          <div class="product-img-box">
-
-            <img
-              src="${productImage(p)}"
-              alt="${p.name}"
-            />
-
-          </div>
-
-          <div class="card-content">
-
-            <span
-              class="product-category-tag"
-            >
-              ${p.category}
-            </span>
-
-            <h3
-              class="product-name"
-            >
-              ${p.name}
-            </h3>
-
-            <p
-              class="product-tagline"
-            >
-              ${p.tagline}
-            </p>
-
-            ${
-              p.reviewsEnabled &&
-              p.reviewsCount
-
-                ? `
-                  <div class="rating-row">
-
-                    <i
-                      class="
-                        fa-solid
-                        fa-star
-                      "
-                    ></i>
-
-                    <span
-                      style="
-                        font-weight: 700;
-                      "
-                    >
-                      ${Number(
-                        p.rating
-                      ).toFixed(1)}
-                    </span>
-
-                    <span
-                      style="
-                        color:
-                          var(--text-muted);
-                      "
-                    >
-                      (${p.reviewsCount}
-                      ${t('reviews')})
-                    </span>
-
-                  </div>
-                `
-
-                : `
-                  <div
-                    class="rating-row"
-                    style="
-                      color:
-                        var(--text-muted);
-                    "
-                  >
-                    No verified reviews yet
-                  </div>
-                `
-            }
-
-
-            <div
-              class="price-row"
-            >
-
-              <span
-                class="current-price"
-              >
-                ₹${p.price}
-              </span>
-
-              <span
-                class="original-price"
-              >
-                ₹${p.originalPrice}
-              </span>
-
-            </div>
-
-
-            <div
-              class="pack-sizes-row"
-            >
-
-              ${p.packSizes
-                .map(
-                  (
-                    pack,
-                    idx
-                  ) => `
-                    <span
-                      class="
-                        pack-chip
-                        ${
-                          idx === 0
-                            ? 'active'
-                            : ''
-                        }
-                      "
-                    >
-                      ${pack}
-                    </span>
-                  `
-                )
-                .join('')}
-
-            </div>
-
-
-            <div
-              class="card-btn-row"
-            >
-
-              <button
-                class="
-                  btn
-                  btn-primary
-                  trending-add-btn
-                "
-                data-id="${p.id}"
-                style="flex: 1;"
-              >
-
-                <i
-                  class="
-                    fa-solid
-                    fa-cart-shopping
-                  "
-                ></i>
-
-                ${t('add_to_cart')}
-
-              </button>
-
-
-              <button
-                class="
-                  btn
-                  btn-outline
-                  trending-view-btn
-                "
-                data-id="${p.id}"
-              >
-
-                <i
-                  class="
-                    fa-solid
-                    fa-eye
-                  "
-                ></i>
-
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      `)
-      .join('');
-
-
-  document
-    .querySelectorAll(
-      '.trending-add-btn'
-    )
-    .forEach(btn => {
-
-      btn.addEventListener(
-        'click',
-        () =>
-          addToCart(
-            btn.dataset.id
-          )
-      );
-    });
-
-
-  document
-    .querySelectorAll(
-      '.trending-view-btn'
-    )
-    .forEach(btn => {
-
-      btn.addEventListener(
-        'click',
-        () =>
-          openProductPage(
-            btn.dataset.id
-          )
-      );
-    });
-}
-
-
-window.resetFilters =
-  function() {
-
-    currentCropFilter =
-      'all';
-
-    currentDiseaseFilter =
-      'all';
-
-    currentCategoryFilter =
-      'All';
-
-    searchQuery = '';
-
-
-    const cs =
-      document.getElementById(
-        'cropSelect'
-      );
-
-    const ds =
-      document.getElementById(
-        'diseaseSelect'
-      );
-
-    const cats =
-      document.getElementById(
-        'categorySelect'
-      );
-
-    const hs =
-      document.getElementById(
-        'headerSearchInput'
-      );
-
-
-    if (cs) {
-      cs.value = 'all';
-    }
-
-    if (ds) {
-      ds.value = 'all';
-    }
-
-    if (cats) {
-      cats.value = 'All';
-    }
-
-    if (hs) {
-      hs.value = '';
-    }
-
-
-    renderProducts();
-  };
-
-
-window.renderProducts =
-  renderProducts;
-
-
-window.filterByCategory =
-  function(cat) {
-
-    currentCategoryFilter =
-      cat;
-
-    const categorySelect =
-      document.getElementById(
-        'categorySelect'
-      );
-
-    if (categorySelect) {
-      categorySelect.value = cat;
-    }
-
-    renderProducts();
-
-    document
-      .getElementById('catalog')
-      ?.scrollIntoView({
-        behavior: 'smooth'
-      });
-  };
-
-
-window.filterByCrop =
-  function(crop) {
-
-    currentCropFilter =
-      crop;
-
-    const cropSelect =
-      document.getElementById(
-        'cropSelect'
-      );
-
-    if (cropSelect) {
-      cropSelect.value = crop;
-    }
-
-    renderProducts();
-
-    document
-      .getElementById('catalog')
-      ?.scrollIntoView({
-        behavior: 'smooth'
-      });
-  };
-
-
-// --- SHOPPING CART DRAWER ---
-
-function initCart() {
-
-  const cartTrigger =
-    document.getElementById(
-      'cartTrigger'
-    );
-
-  const cartDrawer =
-    document.getElementById(
-      'cartDrawer'
-    );
-
-  const cartClose =
-    document.getElementById(
-      'cartCloseBtn'
-    );
-
-  const checkoutBtn =
-    document.getElementById(
-      'checkoutBtn'
-    );
-
-
-  if (
-    cartTrigger &&
-    cartDrawer
-  ) {
-
-    cartTrigger.addEventListener(
-      'click',
-      () =>
-        cartDrawer.parentElement
-          ?.classList.add(
-            'active'
-          )
-    );
-
-
-    cartClose?.addEventListener(
-      'click',
-      () =>
-        cartDrawer.parentElement
-          ?.classList.remove(
-            'active'
-          )
-    );
-  }
-
-
-  if (checkoutBtn) {
-
-    checkoutBtn.addEventListener(
-      'click',
-      () => {
-
-        if (
-          cart.length === 0
-        ) {
-
-          showToast(
-            'Your cart is empty. Add products from the catalog first.',
-            'warning'
-          );
-
-          return;
-        }
-
-
-        cartDrawer.parentElement
-          ?.classList.remove(
-            'active'
-          );
-
-
-        openModal(
-          'checkoutModal'
-        );
-      }
-    );
-  }
-}
-
-
-window.addToCart =
-  function(productId) {
-
-    const p =
-      PESTICIDES.find(
-        item =>
-          item.id ===
-          productId
-      );
-
-
-    if (!p) return;
-
-
-    const existing =
-      cart.find(
-        item =>
-          item.id ===
-          productId
-      );
-
-
-    if (existing) {
-
-      existing.qty += 1;
-
-    } else {
-
-      cart.push({
-
-        ...p,
-
-        qty: 1,
-
-        selectedPack:
-          p.selectedPack ||
-          p.packSizes[0]
-
-      });
-    }
-
-
-    updateCartUI();
-
-    document
-      .getElementById(
-        'cartOverlay'
-      )
-      ?.classList.add(
-        'active'
-      );
-  };
-
-
-function updateCartUI() {
-
-  const cartBadge =
-    document.getElementById(
-      'cartBadge'
-    );
-
-  const cartContainer =
-    document.getElementById(
-      'cartItemsContainer'
-    );
-
-  const subtotalEl =
-    document.getElementById(
-      'cartSubtotal'
-    );
-
-  const drawerTotalEl =
-    document.getElementById(
-      'cartDrawerTotal'
-    );
-
-  const grandTotalEl =
-    document.getElementById(
-      'cartGrandTotal'
-    );
-
-
-  const totalItems =
-    cart.reduce(
-      (acc, item) =>
-        acc + item.qty,
-      0
-    );
-
-
-  if (cartBadge) {
-    cartBadge.textContent =
-      totalItems;
-  }
-
-
-  const subtotal =
-    cart.reduce(
-      (acc, item) =>
-        acc +
-        item.price *
-          item.qty,
-      0
-    );
-
-
-  if (subtotalEl) {
-    subtotalEl.textContent =
-      `₹${subtotal}`;
-  }
-
-
-  if (drawerTotalEl) {
-    drawerTotalEl.textContent =
-      `₹${subtotal}`;
-  }
-
-
-  if (grandTotalEl) {
-    grandTotalEl.textContent =
-      `₹${subtotal}`;
-  }
-
-
-  if (!cartContainer) {
-    return;
-  }
-
-
-  if (cart.length === 0) {
-
-    cartContainer.innerHTML = `
-
-      <div
-        style="
-          text-align: center;
-          padding: 40px 10px;
-          color: var(--text-muted);
-        "
-      >
-
-        <i
-          class="
-            fa-solid
-            fa-basket-shopping
-          "
-          style="
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            opacity: 0.5;
-          "
-        ></i>
-
-        <p>
-          Your shopping cart is empty
-        </p>
-
-      </div>
-
-    `;
-
-    return;
-  }
-
-
-  cartContainer.innerHTML =
-    cart
-      .map(
-        (item, idx) => `
-
-          <div class="cart-item">
-
-            <img
-              src="${productImage(item)}"
-              alt="${item.name}"
-            />
-
-            <div
-              style="
-                flex-grow: 1;
-              "
-            >
-
-              <h4
-                style="
-                  font-size: 0.9rem;
-                  line-height: 1.2;
-                "
-              >
-                ${item.name}
-              </h4>
-
-              <span
-                style="
-                  font-size: 0.78rem;
-                  color: var(--text-muted);
-                "
-              >
-                ${item.selectedPack}
-                |
-                ₹${item.price}
-              </span>
-
-
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  margin-top: 6px;
-                "
-              >
-
-                <button
-                  class="qty-btn"
-                  onclick="updateQty(${idx}, -1)"
-                >
-                  -
-                </button>
-
-                <span
-                  style="
-                    font-weight: 700;
-                    font-size: 0.85rem;
-                  "
-                >
-                  ${item.qty}
-                </span>
-
-                <button
-                  class="qty-btn"
-                  onclick="updateQty(${idx}, 1)"
-                >
-                  +
-                </button>
-
-              </div>
-
-            </div>
-
-
-            <button
-              style="
-                background: transparent;
-                color: #ef4444;
-              "
-              onclick="removeFromCart(${idx})"
-            >
-
-              <i
-                class="
-                  fa-solid
-                  fa-trash-can
-                "
-              ></i>
-
-            </button>
-
-          </div>
-
-        `
-      )
-      .join('');
-}
-
-
-window.updateQty =
-  function(index, change) {
-
-    if (cart[index]) {
-
-      cart[index].qty +=
-        change;
-
-
-      if (
-        cart[index].qty <= 0
-      ) {
-
-        cart.splice(
-          index,
-          1
-        );
-      }
-
-
-      updateCartUI();
-    }
-  };
-
-
-window.removeFromCart =
-  function(index) {
-
-    cart.splice(
-      index,
-      1
-    );
-
-    updateCartUI();
-  };
-
-
-// --- PRODUCT MODAL ---
-
-function openProductModal(productId) {
-
-  const p =
-    PESTICIDES.find(
-      item =>
-        item.id ===
-        productId
-    );
-
-
-  if (!p) return;
-
-
-  const modal =
-    document.getElementById(
-      'productModal'
-    );
-
-  const container =
-    document.getElementById(
-      'productModalContent'
-    );
-
-
-  if (
-    !modal ||
-    !container
-  ) {
-    return;
-  }
-
-
-  const relatedProducts =
-    PESTICIDES
-      .filter(
-        item =>
-          item.id !== p.id &&
-          (
-            item.category ===
-              p.category ||
-
-            item.crops.some(
-              c =>
-                p.crops.includes(c)
-            )
-          )
-      )
-      .slice(0, 4);
-
-
-  let relatedHTML = '';
-
-
-  if (
-    relatedProducts.length > 0
-  ) {
-
-    relatedHTML = `
-
-      <div
-        style="
-          margin-top: 24px;
-          padding-top: 20px;
-          border-top:
-            1px solid
-            var(--border-light);
-        "
-      >
-
-        <h4
-          style="
-            color:
-              var(--primary-dark);
-            margin-bottom: 12px;
-          "
-        >
-
-          <i
-            class="
-              fa-solid
-              fa-sparkles
-            "
-            style="
-              color:
-                var(--accent-amber);
-            "
-          ></i>
-
-          Frequently Bought Together
-
-        </h4>
-
-
-        <div
-          style="
-            display: grid;
-            grid-template-columns:
-              repeat(
-                auto-fill,
-                minmax(
-                  130px,
-                  1fr
-                )
-              );
-            gap: 10px;
-          "
-        >
-
-          ${
-            relatedProducts
-              .map(
-                rel => `
-
-                  <div
-                    style="
-                      background:
-                        #ffffff;
-                      border:
-                        1px solid
-                        var(--border-light);
-                      border-radius:
-                        10px;
-                      padding: 8px;
-                      text-align:
-                        center;
-                      cursor:
-                        pointer;
-                    "
-                    onclick="
-                      openProductModal(
-                        '${rel.id}'
-                      )
-                    "
-                  >
-
-                    <img
-                      src="${productImage(rel)}"
-                      style="
-                        width: 60px;
-                        height: 60px;
-                        object-fit:
-                          contain;
-                        margin:
-                          0 auto 4px;
-                      "
-                    />
-
-                    <h5
-                      style="
-                        font-size:
-                          0.75rem;
-                        color:
-                          var(--text-main);
-                        margin-bottom:
-                          2px;
-                        line-height:
-                          1.2;
-                        height:
-                          2.4em;
-                        overflow:
-                          hidden;
-                      "
-                    >
-                      ${rel.name}
-                    </h5>
-
-                    <span
-                      style="
-                        font-size:
-                          0.82rem;
-                        font-weight:
-                          800;
-                        color:
-                          var(--primary-dark);
-                      "
-                    >
-                      ₹${rel.price}
-                    </span>
-
-                  </div>
-
-                `
-              )
-              .join('')
-          }
-
-        </div>
-
-      </div>
-
-    `;
-  }
-
-
-  container.innerHTML = `
-
-    <div
-      style="
-        display: grid;
-        grid-template-columns:
-          160px 1fr;
-        gap: 16px;
-        align-items: center;
-        margin-bottom: 16px;
-      "
-    >
-
-      <div
-        style="
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 10px;
-          text-align: center;
-          border:
-            1px solid
-            var(--border-light);
-        "
-      >
-
-        <img
-          src="${productImage(p)}"
-          style="
-            width: 100%;
-            max-height: 140px;
-            object-fit: contain;
-            margin: 0 auto;
-          "
-        />
-
-      </div>
-
-
-      <div>
-
-        <span
-          style="
-            background: #ecfdf5;
-            color: var(--primary);
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.75rem;
-            border:
-              1px solid
-              #34d399;
-          "
-        >
-          ${p.category}
-        </span>
-
-
-        <h2
-          style="
-            font-size: 1.3rem;
-            margin-top: 4px;
-            color: var(--primary-dark);
-          "
-        >
-          ${p.name}
-        </h2>
-
-
-        <p
-          style="
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            margin-bottom: 6px;
-          "
-        >
-          ${p.tagline}
-        </p>
-
-
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.8rem;
-            margin-bottom: 8px;
-          "
-        >
-
-          ${
-            p.reviewsEnabled &&
-            p.reviewsCount
-
-              ? `
-                <span
-                  style="
-                    color:
-                      var(--accent-amber);
-                  "
-                >
-                  ★★★★★
-                </span>
-
-                <strong>
-                  ${Number(
-                    p.rating
-                  ).toFixed(1)}
-                </strong>
-
-                <span
-                  style="
-                    color:
-                      var(--text-muted);
-                  "
-                >
-                  (${p.reviewsCount}
-                  reviews)
-                </span>
-              `
-
-              : `
-                <span
-                  style="
-                    color:
-                      var(--text-muted);
-                  "
-                >
-                  No verified reviews yet
-                </span>
-              `
-          }
-
-        </div>
-
-
-        <div
-          style="
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
-          "
-        >
-
-          <span
-            style="
-              font-size: 1.4rem;
-              font-weight: 800;
-              color:
-                var(--primary-dark);
-            "
-          >
-            ₹${p.price}
-          </span>
-
-
-          <span
-            style="
-              color: var(--text-dim);
-              text-decoration:
-                line-through;
-            "
-          >
-            ₹${p.originalPrice}
-          </span>
-
-
-          <span
-            style="
-              color: #ef4444;
-              font-weight: 700;
-              font-size: 0.82rem;
-            "
-          >
-            ${p.discount}
-          </span>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <div
-      style="
-        display:
-          flex;
-        flex-direction:
-          column;
-        gap: 12px;
-      "
-    >
-
-      <div>
-
-        <h4
-          style="
-            color:
-              var(--primary-dark);
-            margin-bottom: 4px;
-            font-size: 0.9rem;
-          "
-        >
-
-          <i
-            class="
-              fa-solid
-              fa-file-lines
-            "
-          ></i>
-
-          Description
-
-        </h4>
-
-
-        <p
-          style="
-            color:
-              var(--text-muted);
-            font-size: 0.85rem;
-            line-height: 1.4;
-          "
-        >
-          ${p.detailedDescription ||
-            p.description}
-        </p>
-
-      </div>
-
-
-      <div
-        style="
-          background: #f8fafc;
-          padding: 10px;
-          border-radius: 8px;
-          font-size: 0.8rem;
-          border:
-            1px solid
-            var(--border-light);
-          display: grid;
-          grid-template-columns:
-            1fr 1fr;
-          gap: 8px;
-        "
-      >
-
-        <div>
-          <strong>
-            Active Ingredient:
-          </strong>
-          <br/>
-          ${p.activeIngredient}
-        </div>
-
-
-        <div>
-          <strong>
-            Dosage per Acre:
-          </strong>
-          <br/>
-          ${p.dosage}
-        </div>
-
-      </div>
-
-
-      <div
-        style="
-          border-top:
-            1px solid
-            var(--border-light);
-          padding-top: 12px;
-          display: flex;
-          gap: 10px;
-        "
-      >
-
-        <button
-          class="btn btn-primary"
-          onclick="
-            addToCart(
-              '${p.id}'
-            );
-            closeModal(
-              'productModal'
-            );
-          "
-          style="
-            flex: 1;
-          "
-        >
-
-          <i
-            class="
-              fa-solid
-              fa-cart-plus
-            "
-          ></i>
-
-          Add to Cart
-
-        </button>
-
-
-        <button
-          class="btn btn-gold"
-          onclick="
-            window.open(
-              'https://api.whatsapp.com/send?text=Hi%20Sathya%20Bio!%20I%20want%20to%20order%20'
-              +
-              encodeURIComponent(
-                '${p.name}'
-              ),
-              '_blank'
-            )
-          "
-        >
-
-          <i
-            class="
-              fa-brands
-              fa-whatsapp
-            "
-          ></i>
-
-          Buy via WhatsApp
-
-        </button>
-
-      </div>
-
-
-      ${relatedHTML}
-
-    </div>
-
-  `;
-
-
-  openModal(
-    'productModal'
-  );
-}
-
-
-function openProductPage(productId) {
-
-  window.location.href =
-    `/product/${encodeURIComponent(
-      productId
-    )}`;
-}
-
-
-window.openProductModal =
-  openProductModal;
-
-window.openProductPage =
-  openProductPage;
-
 
 // --- CATALOG & FILTER ENGINE ---
 function initCatalog() {
@@ -3256,6 +1358,24 @@ function renderProducts() {
 
   if (counter) {
     counter.textContent = `${t('showing_products')} ${filtered.length} ${t('of_products')} ${PESTICIDES.length} ${t('products_label')}`;
+  }
+  const mobileCountEl = document.getElementById('mobileCatalogCount');
+  if (mobileCountEl) {
+    mobileCountEl.textContent = `${filtered.length} Products`;
+  }
+  const mobileFilterBadge = document.getElementById('mobileFilterCountBadge');
+  if (mobileFilterBadge) {
+    let activeFilterCount = 0;
+    if (currentCropFilter !== 'all') activeFilterCount++;
+    if (currentDiseaseFilter !== 'all') activeFilterCount++;
+    if (currentCategoryFilter !== 'All') activeFilterCount++;
+    if (searchQuery !== '') activeFilterCount++;
+    if (activeFilterCount > 0) {
+      mobileFilterBadge.textContent = activeFilterCount;
+      mobileFilterBadge.style.display = 'inline-flex';
+    } else {
+      mobileFilterBadge.style.display = 'none';
+    }
   }
 
   if (filtered.length === 0) {
@@ -3380,6 +1500,22 @@ function renderTrendingProducts() {
   });
 }
 
+window.toggleMobileFilterDrawer = function(open) {
+  const panel = document.getElementById('sidebarPanel');
+  const overlay = document.getElementById('sidebarPanelOverlay');
+  if (!panel || !overlay) return;
+  const isOpen = open !== undefined ? open : !panel.classList.contains('active');
+  if (isOpen) {
+    panel.classList.add('active');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  } else {
+    panel.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+};
+
 window.resetFilters = function() {
   currentCropFilter = 'all';
   currentDiseaseFilter = 'all';
@@ -3393,6 +1529,9 @@ window.resetFilters = function() {
   if (ds) ds.value = 'all';
   if (cats) cats.value = 'All';
   if (hs) hs.value = '';
+  document.querySelectorAll('.mobile-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === 'All');
+  });
   renderProducts();
 };
 
@@ -3402,6 +1541,9 @@ window.filterByCategory = function(cat) {
   currentCategoryFilter = cat;
   const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) categorySelect.value = cat;
+  document.querySelectorAll('.mobile-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === cat);
+  });
   renderProducts();
   document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
 };
@@ -3414,11 +1556,80 @@ window.filterByCrop = function(crop) {
   document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
 };
 
-// --- SHOPPING CART ---
+// --- SHOPPING CART & BASKET ACCESS CONTROL ---
+
+function isFarmerLoggedIn() {
+  try {
+    const token = localStorage.getItem('sathya_token');
+    const userRaw = localStorage.getItem('sathya_user');
+    const user = userRaw ? JSON.parse(userRaw) : null;
+    return Boolean(user && (token || user.id || user.phone));
+  } catch {
+    return false;
+  }
+}
+window.isFarmerLoggedIn = isFarmerLoggedIn;
+
+function setAuthNotice(msg) {
+  const banner = document.getElementById('authNoticeBanner');
+  const bannerText = document.getElementById('authNoticeBannerText');
+  if (banner && bannerText) {
+    bannerText.textContent = msg || 'Login or Sign Up is mandatory to access your basket and checkout.';
+    banner.style.display = 'flex';
+  }
+}
+window.setAuthNotice = setAuthNotice;
+
+function clearAuthNotice() {
+  const banner = document.getElementById('authNoticeBanner');
+  if (banner) {
+    banner.style.display = 'none';
+  }
+}
+window.clearAuthNotice = clearAuthNotice;
+
+// Unified Basket Click Handler for desktop (#cartTrigger) & mobile (#mobileNavCart)
+window.handleBasketClick = function(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  if (!isFarmerLoggedIn()) {
+    showToast('Login or Sign Up is mandatory to access your basket and checkout. Please sign in.', 'error', 5000);
+    setAuthNotice('Login or Sign Up is mandatory to access your basket and checkout.');
+    switchAuthTab('login');
+    openModal('authModal');
+    document.getElementById('cartOverlay')?.classList.remove('active');
+    return false;
+  }
+
+  const cartOverlay = document.getElementById('cartOverlay');
+  if (cartOverlay) {
+    cartOverlay.classList.add('active');
+  }
+  updateCartUI();
+  return true;
+};
+
 // The storefront may run inside an iframe on "/", so navigate the top window.
 function goToCartPage() {
+  if (!isFarmerLoggedIn()) {
+    showToast('Login or Sign Up is mandatory to access checkout. Please sign in.', 'error', 5000);
+    setAuthNotice('Login or Sign Up is mandatory to access checkout.');
+    switchAuthTab('login');
+    openModal('authModal');
+    document.getElementById('cartOverlay')?.classList.remove('active');
+    return;
+  }
+
+  if (cart.length === 0) {
+    showToast('Your basket is empty. Add products from the catalog first.', 'warning');
+    return;
+  }
+
   // Persist first so checkout.html reads the same cart (server for signed-in
-  // users, sathya_cart_guest for guests), then hand off to the checkout page.
+  // users), then hand off to the checkout page.
   Promise.resolve(saveCart()).finally(() => {
     window.top.location.href = '/checkout.html';
   });
@@ -3429,21 +1640,46 @@ function initCart() {
   const cartDrawer = document.getElementById('cartOverlay');
   const cartClose = document.getElementById('cartCloseBtn');
   const checkoutBtn = document.getElementById('checkoutBtn');
+  const mobileNavCart = document.getElementById('mobileNavCart');
 
   if (cartTrigger) {
-    cartTrigger.addEventListener('click', goToCartPage);
+    cartTrigger.onclick = (e) => window.handleBasketClick(e);
   }
 
-  cartClose?.addEventListener('click', () => cartDrawer?.parentElement?.classList.remove('active'));
+  if (mobileNavCart) {
+    mobileNavCart.onclick = (e) => window.handleBasketClick(e);
+  }
+
+  if (cartClose) {
+    cartClose.onclick = () => cartDrawer?.classList.remove('active');
+  }
+
+  if (cartDrawer) {
+    cartDrawer.onclick = (e) => {
+      if (e.target === cartDrawer) {
+        cartDrawer.classList.remove('active');
+      }
+    };
+  }
 
   if (checkoutBtn) {
-    checkoutBtn.addEventListener('click', () => {
+    checkoutBtn.onclick = (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      if (!isFarmerLoggedIn()) {
+        showToast('Login or Sign Up is mandatory to access checkout. Please sign in.', 'error', 5000);
+        setAuthNotice('Login or Sign Up is mandatory to access checkout.');
+        cartDrawer?.classList.remove('active');
+        switchAuthTab('login');
+        openModal('authModal');
+        return;
+      }
+
       if (cart.length === 0) {
-        showToast('Your cart is empty. Add products from the catalog first.', 'warning');
+        showToast('Your basket is empty. Add products from the catalog first.', 'warning');
         return;
       }
       goToCartPage();
-    });
+    };
   }
 }
 
@@ -3461,7 +1697,17 @@ window.addToCart = function(productId) {
 
   saveCart();
   updateCartUI();
-  document.getElementById('cartOverlay')?.classList.add('active');
+
+  if (!isFarmerLoggedIn()) {
+    showToast(`"${p.name}" added to cart! Login or Sign Up is mandatory to access your basket and checkout.`, 'warning', 5000);
+    setAuthNotice('Login or Sign Up is mandatory to access your basket and complete checkout.');
+    switchAuthTab('login');
+    openModal('authModal');
+    document.getElementById('cartOverlay')?.classList.remove('active');
+  } else {
+    showToast(`"${p.name}" added to basket!`, 'success');
+    document.getElementById('cartOverlay')?.classList.add('active');
+  }
 };
 
 function updateCartUI() {
@@ -3473,6 +1719,8 @@ function updateCartUI() {
 
   const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
   if (cartBadge) cartBadge.textContent = totalItems;
+  const mobileCartBadge = document.getElementById('mobileCartBadge');
+  if (mobileCartBadge) mobileCartBadge.textContent = totalItems;
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   if (subtotalEl) subtotalEl.textContent = `₹${subtotal}`;
@@ -3556,7 +1804,7 @@ function openProductModal(productId) {
   }
 
   container.innerHTML = `
-    <div style="display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; margin-bottom: 16px;">
+    <div class="product-modal-hero" style="display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; margin-bottom: 16px;">
       <div style="background: #f8fafc; border-radius: 12px; padding: 10px; text-align: center; border: 1px solid var(--border-light);">
         <img loading="lazy" decoding="async" src="${productImage(p)}" style="width: 100%; max-height: 140px; object-fit: contain; margin: 0 auto;" />
       </div>
@@ -3588,9 +1836,9 @@ function openProductModal(productId) {
         <div><strong>Dosage per Acre:</strong><br/>${p.dosage}</div>
       </div>
 
-      <div style="border-top: 1px solid var(--border-light); padding-top: 12px; display: flex; gap: 10px;">
-        <button class="btn btn-primary" onclick="addToCart('${p.id}'); closeModal('productModal');" style="flex: 1;"><i class="fa-solid fa-cart-plus"></i> Add to Cart</button>
-        <button class="btn btn-gold" onclick="window.open('https://api.whatsapp.com/send?text=Hi%20Sathya%20Bio!%20I%20want%20to%20order%20' + encodeURIComponent('${p.name}'), '_blank')"><i class="fa-brands fa-whatsapp"></i> Buy via WhatsApp</button>
+      <div class="product-modal-actions" style="border-top: 1px solid var(--border-light); padding-top: 12px; display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="addToCart('${p.id}'); closeModal('productModal');" style="flex: 1; justify-content: center;"><i class="fa-solid fa-cart-plus"></i> Add to Cart</button>
+        <button class="btn btn-gold" onclick="window.open('https://api.whatsapp.com/send?text=Hi%20Sathya%20Bio!%20I%20want%20to%20order%20' + encodeURIComponent('${p.name}'), '_blank')" style="justify-content: center;"><i class="fa-brands fa-whatsapp"></i> Buy via WhatsApp</button>
       </div>
 
       ${relatedHTML}
@@ -4009,6 +2257,20 @@ function ensureFieldErrorStyles() {
     .sb-input-valid {
       border-color: #16a34a !important;
     }
+    .sb-password-rules {
+      list-style: none;
+      margin: 6px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 2px;
+      font-size: 0.74rem;
+      color: #6b7280;
+      line-height: 1.35;
+    }
+    .sb-password-rules li.ok {
+      color: #16a34a;
+      font-weight: 600;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -4071,15 +2333,57 @@ function validatePhoneField(el) {
   return true;
 }
 
-function validatePasswordField(el) {
-  const v = el.value;
-  if (!v) { clearField(el); return false; }
-  if (v.length < 6) {
-    setFieldError(el, `At least 6 characters (${v.length}/6).`);
-    return false;
+// Farmer password rules. The server enforces the same rules in
+// server/security.js (passwordRules) - keep the two in step.
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password12', 'password123', 'passw0rd', 'admin123', 'admin1234', 'welcome1',
+  'welcome123', 'qwerty123', 'qwertyuiop', 'asdfghjkl', 'iloveyou', 'abc12345', 'abcd1234', 'india123',
+  'farmer123', 'sathyabio', 'sathya123', '12345678', '123456789', '1234567890', '11111111', '00000000',
+  '87654321', 'test1234', 'letmein1',
+]);
+
+function farmerPasswordChecks(password, phone) {
+  return [
+    { label: 'At least 8 characters', ok: password.length >= 8 },
+    { label: 'At least one letter (a-z)', ok: /[A-Za-z]/.test(password) },
+    { label: 'At least one number (0-9)', ok: /\d/.test(password) },
+    {
+      label: 'Not a common password or your mobile number',
+      ok: password.length > 0 && !COMMON_PASSWORDS.has(password.toLowerCase()) && !(phone && password.includes(phone)),
+    },
+  ];
+}
+
+// Shows the password rules under the field, ticking each one off as it is met,
+// so people know what to type before they are told it is wrong.
+function renderPasswordChecklist(el) {
+  ensureFieldErrorStyles();
+  let list = el.parentElement?.querySelector('.sb-password-rules');
+  if (!list) {
+    list = document.createElement('ul');
+    list.className = 'sb-password-rules';
+    list.setAttribute('aria-live', 'polite');
+    el.insertAdjacentElement('afterend', list);
   }
-  setFieldValid(el);
-  return true;
+
+  const phone = document.getElementById('regPhone')?.value?.trim() || '';
+  const checks = farmerPasswordChecks(el.value, phone);
+  list.replaceChildren(...checks.map(check => {
+    const item = document.createElement('li');
+    if (check.ok) item.className = 'ok';
+    item.textContent = `${check.ok ? '✓' : '○'} ${check.label}`;
+    return item;
+  }));
+  return checks.every(check => check.ok);
+}
+
+function validatePasswordField(el) {
+  const ok = renderPasswordChecklist(el);
+  el.parentElement?.querySelector('.sb-field-error, .sb-field-ok')?.remove();
+  el.classList.remove('sb-input-invalid');
+  el.removeAttribute('aria-invalid');
+  el.classList.toggle('sb-input-valid', ok);
+  return ok;
 }
 
 function validateNameField(el) {
@@ -4125,7 +2429,12 @@ function initFormValidation() {
 
   const regPassword = document.getElementById('regPassword');
   if (regPassword) {
+    regPassword.addEventListener('focus', () => renderPasswordChecklist(regPassword));
     regPassword.addEventListener('input', () => validatePasswordField(regPassword));
+    // "Not your mobile number" depends on the number, so refresh the list when it changes.
+    regPhone?.addEventListener('input', () => {
+      if (regPassword.parentElement?.querySelector('.sb-password-rules')) validatePasswordField(regPassword);
+    });
   }
 
   const regName = document.getElementById('regName');
@@ -4161,6 +2470,7 @@ function initFormValidation() {
 window.clearStorefrontFieldErrors = function() {
   ['regName', 'regPhone', 'regPassword', 'loginIdentifier', 'loginPassword']
     .forEach(id => clearField(document.getElementById(id)));
+  document.querySelectorAll('.sb-password-rules').forEach(list => list.remove());
 };
 
 function openModal(id) {
@@ -4171,6 +2481,7 @@ function openModal(id) {
 function closeModal(id) {
   const modal = document.getElementById(id);
   if (modal) modal.classList.remove('active');
+  if (id === 'authModal' && typeof clearAuthNotice === 'function') clearAuthNotice();
 }
 
 window.openModal = openModal;
@@ -4210,7 +2521,7 @@ async function fetchLiveProducts() {
 
 async function fetchLiveCatalogOptions() {
   try {
-    const res = await fetch('/api/catalog/options');
+    const res = await fetch('/api/catalog-options');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (!json.success) return;
@@ -4252,7 +2563,12 @@ function checkStorefrontAuth() {
 
     if (greeting) {
       greeting.style.display = 'inline-block';
-      greeting.innerHTML = `<i class="fa-solid fa-leaf"></i> Welcome, <strong>${user.name || 'Farmer'}</strong> (${crop})`;
+      // Built from nodes, not HTML, because the name and crop are user-entered text.
+      const leaf = document.createElement('i');
+      leaf.className = 'fa-solid fa-leaf';
+      const name = document.createElement('strong');
+      name.textContent = user.name || 'Farmer';
+      greeting.replaceChildren(leaf, ' Welcome, ', name, ` (${crop})`);
     }
 
     // Populate logged in modal view
@@ -4300,12 +2616,28 @@ window.addEventListener('storage', event => {
   if (event.key === 'sathya_user' || event.key === 'sathya_token') checkStorefrontAuth();
 });
 
+// The admin Products page (src/pages/admin/Products.jsx) announces changes on this channel.
+if ('BroadcastChannel' in window) {
+  new BroadcastChannel('sathya_catalog').addEventListener('message', event => {
+    if (event.data === 'products-changed') {
+      fetchLiveProducts();
+      fetchLiveCatalogOptions();
+    }
+  });
+}
+
+// Admin may be working in another browser, where the channel can't reach; catch up on return to this tab.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') fetchLiveProducts();
+});
+
 window.handleAccountClick = function() {
+  if (typeof clearAuthNotice === 'function') clearAuthNotice();
   checkStorefrontAuth();
   openModal('authModal');
 };
 
-window.switchAuthTab = function(tab) {
+function switchAuthTab(tab) {
   const loginTabBtn = document.getElementById('authTabLogin');
   const regTabBtn = document.getElementById('authTabRegister');
   const loginForm = document.getElementById('storefrontLoginForm');
@@ -4339,7 +2671,8 @@ window.switchAuthTab = function(tab) {
     if (loginForm) loginForm.style.display = 'none';
     if (regForm) regForm.style.display = 'flex';
   }
-};
+}
+window.switchAuthTab = switchAuthTab;
 
 window.submitStorefrontLogin = async function(e) {
   e.preventDefault();
@@ -4468,7 +2801,10 @@ window.submitStorefrontRegister = async function(e) {
   else if (!validatePhoneField(phoneEl)) { firstBad = firstBad || phoneEl; }
 
   if (!password) { setFieldError(passEl, 'Please create a password.'); firstBad = firstBad || passEl; }
-  else if (!validatePasswordField(passEl)) { firstBad = firstBad || passEl; }
+  else if (!validatePasswordField(passEl)) {
+    setFieldError(passEl, 'Your password does not meet all the rules above.');
+    firstBad = firstBad || passEl;
+  }
 
   if (firstBad) {
     firstBad.focus();

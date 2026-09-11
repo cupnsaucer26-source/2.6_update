@@ -93,11 +93,11 @@ export default function BillingDashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px', alignItems: 'start', marginTop: '24px' }}>
+      <div className="pos-billing-layout">
         <div>
           <div className="card" style={{ marginBottom: '20px' }}>
             <div className="card-header"><div className="card-title">Add item to bill</div></div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '12px', alignItems: 'end' }}>
+            <div className="pos-add-item-row">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Product</label>
                 <select className="form-select" value={selected} onChange={e => setSelected(e.target.value)}>
