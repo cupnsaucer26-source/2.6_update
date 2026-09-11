@@ -136,7 +136,7 @@
         </div>
 
         <!-- SHOPPING CART -->
-        <div class="action-item cart-trigger-btn" id="cartTrigger">
+        <div class="action-item cart-trigger-btn" id="cartTrigger" onclick="handleBasketClick(event)" role="button" tabindex="0" style="cursor: pointer;">
           <div class="action-icon">
             <i class="fa-solid fa-bag-shopping"></i>
             <span class="cart-badge" id="cartBadge">0</span>
@@ -1042,6 +1042,12 @@
       
       <!-- LOGGED OUT VIEW -->
       <div id="authLoggedOutView">
+        <!-- MANDATORY AUTH NOTICE BANNER -->
+        <div id="authNoticeBanner" style="display: none; align-items: center; gap: 10px; background: #fef2f2; border: 1.5px solid #f87171; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; color: #991b1b; font-size: 0.88rem; font-weight: 600; line-height: 1.4;">
+          <i class="fa-solid fa-triangle-exclamation" style="color: #dc2626; font-size: 1.25rem; flex-shrink: 0;"></i>
+          <span id="authNoticeBannerText">Login or Sign Up is mandatory to access your basket and checkout.</span>
+        </div>
+
         <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border-light); padding-bottom: 8px;">
           <button id="authTabLogin" class="btn btn-outline" style="flex: 1; border: none; font-weight: 700; border-radius: 8px; background: rgba(52, 211, 153, 0.15); color: var(--primary);" onclick="switchAuthTab('login')">
             <i class="fa-solid fa-right-to-bracket"></i> Sign In
@@ -1166,12 +1172,12 @@
       <i class="fa-brands fa-whatsapp"></i>
       <span>WhatsApp</span>
     </a>
-    <button class="mobile-nav-item" id="mobileNavCart" onclick="document.getElementById('cartOverlay')?.classList.add('active');" aria-label="Shopping Cart">
+    <button class="mobile-nav-item" id="mobileNavCart" onclick="handleBasketClick(event)" aria-label="Shopping Cart">
       <i class="fa-solid fa-bag-shopping"></i>
       <span class="mobile-badge" id="mobileCartBadge">0</span>
       <span>Cart</span>
     </button>
-    <button class="mobile-nav-item" data-modal-target="authModal" id="mobileNavAccount" aria-label="Account">
+    <button class="mobile-nav-item" id="mobileNavAccount" onclick="handleAccountClick()" aria-label="Account">
       <i class="fa-solid fa-user"></i>
       <span>Account</span>
     </button>

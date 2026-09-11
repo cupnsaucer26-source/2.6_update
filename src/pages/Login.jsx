@@ -26,6 +26,12 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading]   = useState(false)
 
+  useEffect(() => {
+    if (location.state?.message) {
+      toast.error(location.state.message, { duration: 5000 })
+    }
+  }, [location.state])
+
   const roleInfo = ROLES.find(r => r.key === selectedRole)
 
   const handleRoleSelect = (role) => {

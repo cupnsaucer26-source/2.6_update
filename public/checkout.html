@@ -148,6 +148,13 @@
     let user = null;
     try { user = JSON.parse(localStorage.getItem('sathya_user') || 'null'); } catch {}
 
+    // MANDATORY AUTH GUARD: Unauthenticated users are blocked from checkout
+    if (!token || !user) {
+      sessionStorage.setItem('sathya_auth_redirect_msg', 'Login or Sign Up is mandatory to access your basket and checkout. Please sign in.');
+      alert('Login or Sign Up is mandatory before accessing checkout. Redirecting you to sign in...');
+      window.top.location.href = '/index.html#login';
+    }
+
     const itemsEl = document.getElementById('items');
     const totalsEl = document.getElementById('totals');
     const form = document.getElementById('checkoutForm');
@@ -170,16 +177,23 @@
     }
 
     async function loadCart() {
-      if (!token) return readGuestCart();
+      if (!token || !user) {
+        sessionStorage.setItem('sathya_auth_redirect_msg', 'Login or Sign Up is mandatory to access your basket and checkout. Please sign in.');
+        window.top.location.href = '/index.html#login';
+        return [];
+      }
       try {
         const res = await fetch('/api/cart', { headers: authHeaders() });
         if (res.status === 401) {
-          // Expired or revoked session: carry on as a guest rather than show an empty basket.
+          // Expired or revoked session: redirect to login
           localStorage.removeItem('sathya_token');
           localStorage.removeItem('sathya_user');
           token = null;
           user = null;
-          return readGuestCart();
+          sessionStorage.setItem('sathya_auth_redirect_msg', 'Your session expired. Please sign in again to access checkout.');
+          alert('Your session expired. Please sign in again to access checkout.');
+          window.top.location.href = '/index.html#login';
+          return [];
         }
         const json = await res.json();
         let serverCart = json.success && Array.isArray(json.data) ? json.data : [];
@@ -292,6 +306,12 @@
 
     // --- Cash on delivery: no payment gateway, order recorded straight away ---
     codBtn.addEventListener('click', async () => {
+      if (!token || !user) {
+        sessionStorage.setItem('sathya_auth_redirect_msg', 'Login or Sign Up is mandatory to place an order. Please sign in.');
+        alert('Login or Sign Up is mandatory to place an order. Redirecting to sign in...');
+        window.top.location.href = '/index.html#login';
+        return;
+      }
       const details = customerDetails();
       if (!details) return;
       codBtn.disabled = true;
@@ -316,6 +336,12 @@
 
     // --- Razorpay: the server prices the cart and verifies the signature ---
     payBtn.addEventListener('click', async () => {
+      if (!token || !user) {
+        sessionStorage.setItem('sathya_auth_redirect_msg', 'Login or Sign Up is mandatory to place an order. Please sign in.');
+        alert('Login or Sign Up is mandatory to place an order. Redirecting to sign in...');
+        window.top.location.href = '/index.html#login';
+        return;
+      }
       const details = customerDetails();
       if (!details) return;
       if (!window.Razorpay) { alert('Payment library did not load. Please refresh and try again.'); return; }

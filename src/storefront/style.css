@@ -995,7 +995,30 @@ footer {
   margin-top: auto;
 }
 
-/* SLIDE-OUT CART DRAWER */
+/* SLIDE-OUT CART DRAWER & BACKDROP OVERLAY */
+.cart-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 2490;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+  pointer-events: none;
+}
+.cart-drawer-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.cart-drawer-overlay.active .cart-drawer {
+  transform: translateX(0);
+  visibility: visible;
+}
 .cart-drawer {
   position: fixed;
   top: 0;
@@ -1012,10 +1035,25 @@ footer {
   visibility: hidden;
   transition: transform 0.28s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0.28s ease;
   will-change: transform;
+  pointer-events: auto;
 }
 .cart-drawer.active {
   transform: translateX(0);
   visibility: visible;
+}
+.cart-close-btn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+.cart-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 .cart-header {
   background: var(--primary-dark);
