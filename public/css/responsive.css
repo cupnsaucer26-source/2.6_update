@@ -486,9 +486,14 @@ pre {
     font-size: 16px;
   }
 
-  /* Hover-only effects are a nuisance on touch. */
-  .product-card:hover {
-    transform: none;
+  /* Hover-only effects are a nuisance on touch and cause scroll stutters. */
+  .product-card:hover,
+  .bento-card:hover,
+  .store-section-card:hover {
+    transform: none !important;
+  }
+  .bento-card:hover .bento-bg-img {
+    transform: none !important;
   }
 }
 

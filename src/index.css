@@ -95,7 +95,12 @@
 /* === RESET & BASE === */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; font-size: 16px; }
+html {
+  scroll-behavior: auto;
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -104,6 +109,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-overflow-scrolling: touch;
   min-height: 100vh;
 }
 
@@ -1035,7 +1041,7 @@ h6 { font-size: 1rem; }
 /* Topbar */
 .topbar {
   height: var(--navbar-height);
-  background: rgba(255,255,255,0.72);
+  background: rgba(255, 255, 255, 0.97);
   border-bottom: 1px solid rgba(113, 128, 142, 0.16);
   display: flex;
   align-items: center;
@@ -1044,7 +1050,8 @@ h6 { font-size: 1rem; }
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: blur(12px);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .topbar-left { display: flex; align-items: center; gap: 16px; }
@@ -1250,15 +1257,14 @@ h6 { font-size: 1rem; }
   right: 12px;
   width: 32px;
   height: 32px;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.65);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
   z-index: 2;
-  transition: all var(--transition-fast);
-  backdrop-filter: blur(6px);
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 .product-wishlist:hover { background: rgba(239,68,68,0.3); color: var(--red); }
 
@@ -1587,13 +1593,12 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.75);
+  background: rgba(0,0,0,0.78);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  backdrop-filter: blur(4px);
   animation: fadeIn 0.2s ease;
 }
 
@@ -2398,16 +2403,17 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
   .sidebar-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.65);
     z-index: 99;
     display: block;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.25s ease;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
   }
   .sidebar-overlay.show {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
   }
 

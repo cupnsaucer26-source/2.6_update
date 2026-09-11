@@ -1233,42 +1233,30 @@ function initStatsCounter() {
 
 
 function initBackToTop() {
-
-  const btn =
-    document.getElementById(
-      'backToTop'
-    );
-
+  const btn = document.getElementById('backToTop');
   if (!btn) return;
 
-
+  let ticking = false;
   window.addEventListener(
     'scroll',
     () => {
-
-      btn.classList.toggle(
-        'visible',
-        window.scrollY > 400
-      );
-
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          btn.classList.toggle('visible', window.scrollY > 400);
+          ticking = false;
+        });
+        ticking = true;
+      }
     },
-    {
-      passive: true
-    }
+    { passive: true }
   );
 
-
-  btn.addEventListener(
-    'click',
-    () => {
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-
-    }
-  );
+  btn.addEventListener('click', () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
 }
 
 
@@ -1666,6 +1654,8 @@ function renderProducts() {
               <img
                 src="${productImage(p)}"
                 alt="${p.name}"
+                loading="lazy"
+                decoding="async"
               />
 
             </div>
@@ -1938,6 +1928,8 @@ function renderTrendingProducts() {
             <img
               src="${productImage(p)}"
               alt="${p.name}"
+              loading="lazy"
+              decoding="async"
             />
 
           </div>
@@ -2519,6 +2511,8 @@ function updateCartUI() {
             <img
               src="${productImage(item)}"
               alt="${item.name}"
+              loading="lazy"
+              decoding="async"
             />
 
             <div
@@ -2786,6 +2780,8 @@ function openProductModal(productId) {
 
                     <img
                       src="${productImage(rel)}"
+                      loading="lazy"
+                      decoding="async"
                       style="
                         width: 60px;
                         height: 60px;
@@ -2870,6 +2866,8 @@ function openProductModal(productId) {
 
         <img
           src="${productImage(p)}"
+          loading="lazy"
+          decoding="async"
           style="
             width: 100%;
             max-height: 140px;
