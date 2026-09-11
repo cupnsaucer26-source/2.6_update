@@ -1163,58 +1163,27 @@ function initStatsCounter() {
               suffix;
 
 
-            let current = 0;
+            const startTime = performance.now();
+            const duration = 1400;
 
-            const steps = 60;
+            function animateCount(now) {
+              const elapsed = now - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              // Smooth cubic ease-out curve
+              const ease = 1 - Math.pow(1 - progress, 3);
+              const current = Math.floor(target * ease);
 
-            const increment =
-              target / steps;
+              el.textContent = current.toLocaleString('en-IN');
 
-            const interval =
-              1800 / steps;
+              if (progress < 1) {
+                requestAnimationFrame(animateCount);
+              } else {
+                el.textContent = target.toLocaleString('en-IN');
+              }
+            }
 
-
-            const timer =
-              setInterval(
-                () => {
-
-                  current =
-                    Math.min(
-                      current + increment,
-                      target
-                    );
-
-
-                  el.textContent =
-                    Math.floor(
-                      current
-                    ).toLocaleString(
-                      'en-IN'
-                    );
-
-
-                  if (
-                    current >= target
-                  ) {
-
-                    el.textContent =
-                      target.toLocaleString(
-                        'en-IN'
-                      );
-
-                    clearInterval(
-                      timer
-                    );
-                  }
-
-                },
-                interval
-              );
-
-
-            observer.unobserve(
-              el
-            );
+            requestAnimationFrame(animateCount);
+            observer.unobserve(el);
 
           }
         );

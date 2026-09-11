@@ -110,6 +110,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: none;
   min-height: 100vh;
 }
 
@@ -122,8 +124,8 @@ body {
 .store-section-heading { max-width: 700px; margin-bottom: 30px; }
 .store-section-heading h1 { margin: 12px 0 8px; color: #062d25; }
 .store-section-heading p { margin: 0; color: #64748b; font-size: 1.05rem; }
-.store-section-grid, .wishlist-grid, .order-status-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-.store-section-card { display: flex; flex-direction: column; gap: 9px; min-height: 120px; padding: 22px; color: #064e3b; background: #fff; border: 1px solid #d8eee2; border-radius: 12px; box-shadow: 0 8px 24px rgba(20,83,45,.08); text-decoration: none; }
+.store-section-grid, .wishlist-grid, .order-status-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; contain: layout style; }
+.store-section-card { display: flex; flex-direction: column; gap: 9px; min-height: 120px; padding: 22px; color: #064e3b; background: #fff; border: 1px solid #d8eee2; border-radius: 12px; box-shadow: 0 8px 24px rgba(20,83,45,.08); text-decoration: none; content-visibility: auto; contain-intrinsic-size: 1px 180px; transform: translateZ(0); }
 .store-section-card:hover { border-color: #16a05d; transform: translateY(-2px); }
 .store-section-card strong { font-size: 1.08rem; }.store-section-card span { color: #64748b; line-height: 1.5; }.store-section-card small { margin-top: auto; color: #059669; font-weight: 700; }
 .store-section-filter { margin-top: 24px; color: #64748b; }
