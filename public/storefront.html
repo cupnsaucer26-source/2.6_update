@@ -82,11 +82,11 @@
             <option value="Nematicide">Nematicides</option>
           </select>
         </div>
-        <input type="text" id="headerSearchInput" data-i18n-placeholder="search_placeholder" placeholder="Search by crop, disease, chemical e.g. Blast, Paddy, Whitefly..." />
-        <button type="button" class="voice-search-btn" title="Voice Search" onclick="alert('Voice Search Activated! Please speak crop or disease name.')">
+        <input type="text" id="headerSearchInput" data-i18n-placeholder="search_placeholder" placeholder="Search by crop, disease, chemical e.g. Blast, Paddy, Whitefly..." aria-label="Search products" enterkeyhint="search" autocomplete="off" />
+        <button type="button" class="voice-search-btn" title="Voice Search" aria-label="Voice search" onclick="alert('Voice Search Activated! Please speak crop or disease name.')">
           <i class="fa-solid fa-microphone"></i>
         </button>
-        <button id="headerSearchBtn"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="search_btn">Search</span></button>
+        <button type="button" id="headerSearchBtn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="search_btn">Search</span></button>
       </div>
 
       <!-- HEADER ACTIONS: LANGUAGE, TRACK ORDER, WISHLIST, ACCOUNT, CART -->

@@ -1276,6 +1276,14 @@ function initNavigation() {
       searchQuery = e.target.value.toLowerCase().trim();
       renderProducts();
     });
+    // The keyboard's Search key takes the shopper to the results and closes
+    // the on-screen keyboard.
+    headerSearchInput.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      headerSearchInput.blur();
+      document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+    });
   }
 
   if (searchCategorySelect) {
