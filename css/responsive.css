@@ -2152,10 +2152,12 @@ pre {
 
 /* ------------------------------------------------------------
    7g. FLOATING PILL BOTTOM BAR (One UI style)
-   A solid graphite capsule floating above the gesture area, centred
+   A solid white capsule floating above the gesture area, centred
    and capped in width. Opaque on purpose: a translucent bar let busy
-   banners show through on real phones. Still plain position:fixed
-   with no transform, will-change or backdrop-filter, so it stays
+   banners show through on real phones. A hairline border and a soft
+   two-layer shadow lift it off both light and dark sections. Still
+   plain position:fixed with no transform, will-change or
+   backdrop-filter, so it stays
    pinned on Samsung Internet / Chrome while the toolbar animates.
    Offsets for everything above it: bar 62px + 12px gap + 14px air.
    ------------------------------------------------------------ */
@@ -2175,10 +2177,10 @@ pre {
     height: 62px;
     padding: 0 6px;
     align-items: center;
-    background: #1d2126;
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: 31px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
   }
 
   /* Home and Shop are links, the rest are buttons; buttons don't inherit
@@ -2187,7 +2189,7 @@ pre {
   .mobile-nav-fab {
     min-height: 54px;
     gap: 3px;
-    color: #a7adb5;
+    color: #64748b;
     font-family: inherit;
     font-size: 0.64rem;
     font-weight: 600;
@@ -2218,23 +2220,26 @@ pre {
   }
   .mobile-nav-item.active,
   .mobile-nav-item.is-open {
-    color: #ffffff;
+    color: #065f46;
     background: none;
+  }
+  .mobile-nav-item:hover {
+    color: #065f46;
   }
   .mobile-nav-item.active > i,
   .mobile-nav-item.is-open > i {
-    background: rgba(52, 211, 153, 0.2);
-    color: #5eead4;
+    background: #d1fae5;
+    color: #047857;
   }
   .mobile-nav-item:active > i {
-    background: rgba(255, 255, 255, 0.1);
+    background: #eef2f6;
     transform: scale(0.94);
   }
 
   /* AI Doctor: the same capsule, filled - the bar's one call to action. */
   .mobile-nav-fab-icon {
-    background: linear-gradient(135deg, #34d399, #059669);
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45);
+    background: linear-gradient(135deg, #10b981, #047857);
+    box-shadow: 0 4px 12px rgba(4, 120, 87, 0.3);
   }
   .mobile-nav-fab-icon i {
     color: #ffffff;
@@ -2247,7 +2252,7 @@ pre {
   .mobile-nav-item .mobile-badge {
     top: 1px;
     right: calc(50% - 24px);
-    border-color: #1d2126;
+    border-color: #ffffff;
     box-shadow: none;
   }
 

@@ -3467,7 +3467,7 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
 }
 
 /* Mobile Bottom Navigation Bar (BigHaat App Style) */
-/* Graphite floating pill, matching the storefront's One UI bottom bar
+/* White floating pill, matching the storefront's One UI bottom bar
    (public/css/responsive.css, section 7g). */
 .bighaat-mobile-bottom-nav {
   position: fixed;
@@ -3478,14 +3478,14 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
   margin: 0 auto;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   height: 62px;
-  background-color: #1d2126;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 31px;
   display: flex;
   align-items: center;
   justify-content: space-around;
   z-index: 50;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
   padding: 0 6px;
 }
 
@@ -3499,7 +3499,7 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: #a7adb5;
+  color: #64748b;
   text-decoration: none;
   gap: 3px;
   transition: color 0.15s ease;
@@ -3521,18 +3521,18 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
 
 .mobile-nav-link:active > svg,
 .mobile-nav-link:active > .active-dot-wrap {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: #eef2f6;
   transform: scale(0.94);
 }
 
 .mobile-nav-link.active {
-  color: #ffffff;
+  color: #065f46;
 }
 
 .mobile-nav-link.active > .active-dot-wrap,
 .mobile-nav-link.active > svg {
-  background-color: rgba(52, 211, 153, 0.2);
-  color: #5eead4;
+  background-color: #d1fae5;
+  color: #047857;
 }
 
 .active-dot-wrap {
