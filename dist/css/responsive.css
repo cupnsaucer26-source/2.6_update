@@ -1376,7 +1376,13 @@ pre {
     transform: scale(0.93);
   }
 
-  /* ---- Menu sheet ---- */
+  /* ---- Menu sheet ----
+     Traced on an emulated phone, opening waited two warm-up frames and then
+     rasterised the whole sheet (under a 40px blurred shadow) as it began to
+     move. Now the closed sheet stays painted just below the screen, so its
+     GPU texture already exists: the tap starts the slide on the next frame
+     and the slide only moves that layer. Closed, the sheet is `inert` and
+     aria-hidden (toggleMobileMenu), so nothing off-screen can take focus. */
   .mobile-menu-backdrop {
     display: block;
     position: fixed;
@@ -1384,22 +1390,13 @@ pre {
     z-index: 9980;
     background: rgba(15, 23, 42, 0.5);
     opacity: 0;
-    visibility: hidden;
-    /* Hide only once the fade-out has finished. */
-    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
     touch-action: none;
-  }
-  /* 'is-opening' is the one-frame warm-up set by toggleMobileMenu(): visible
-     but still transparent / off-screen, so the slide starts pre-painted.
-     Visibility flips at once here - a transitioned visibility still reads
-     'hidden' on that first frame, and hidden content is not painted. */
-  .mobile-menu-backdrop.is-opening,
-  .mobile-menu-backdrop.active {
-    visibility: visible;
-    transition: opacity 0.3s ease, visibility 0s;
   }
   .mobile-menu-backdrop.active {
     opacity: 1;
+    pointer-events: auto;
   }
   /* Sits under the bottom bar (z 9990), so the bar stays usable and the
      Menu tab - now an X - closes it again. */
@@ -1417,22 +1414,15 @@ pre {
     -webkit-overflow-scrolling: touch;
     background: #ffffff;
     border-radius: 22px 22px 0 0;
-    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.22);
+    /* Small shadow: a 40px blur across the full width was the costliest
+       thing to rasterise, and the dimmed backdrop hides it anyway. */
+    box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.12);
     padding: 6px 16px calc(84px + env(safe-area-inset-bottom, 0px));
-    transform: translateY(100%);
-    visibility: hidden;
-    /* Its own GPU layer for good, so neither opening nor closing has to
-       create one mid-slide; contain keeps text updates inside the sheet from
-       touching the page's layout. The curve eases in gently instead of
-       leaping most of the distance in the first few frames. */
+    /* 16px past the edge, so the shadow is off-screen too while closed. */
+    transform: translateY(calc(100% + 16px));
     will-change: transform;
     contain: layout paint;
-    transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 0.38s;
-  }
-  .mobile-menu-sheet.is-opening,
-  .mobile-menu-sheet.active {
-    visibility: visible;
-    transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s;
+    transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
   }
   .mobile-menu-sheet.active {
     transform: translateY(0);
@@ -2529,6 +2519,52 @@ html[lang="ta"] .lang-quick-title {
     white-space: nowrap;
     text-overflow: ellipsis;
     font-size: 0.58rem;
+  }
+}
+
+/* ------------------------------------------------------------
+   7i. SMOOTH SHEETS AND POPUPS ON PHONES
+   Traced opening Menu / AI Doctor / sign-in from the bottom bar on an
+   emulated phone (4x slower CPU): the sheets themselves were cheap, but
+   the main thread was busy every frame with work unrelated to them.
+   ------------------------------------------------------------ */
+
+@media (max-width: 768px) {
+  /* `transition: all` also covers `visibility`, which every button inside a
+     popup inherits as the popup appears - dozens of main-thread transitions
+     started on the first frame of each slide. List only what hover and press
+     states actually change. */
+  :root {
+    --transition: background-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+      border-color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+      color 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+      box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+      transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+      opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+
+  /* The sale banner's pulsing bolt ran on the page's own layer, so each
+     frame of its endless pulse repainted the whole ~11,000px page. On its
+     own layer the pulse is composited; it also pauses (like the ticker and
+     chat pulse) while a sheet or popup is open. */
+  .deal-fire {
+    will-change: transform;
+  }
+  body.overlay-open .deal-fire {
+    animation-play-state: paused;
+  }
+
+  /* Tabs switch colour instantly, like native bottom bars. Their 150ms
+     colour fades ran on the main thread (the bar deliberately has no layer
+     of its own) on exactly the frames a sheet starts sliding. The press
+     scale stays - transforms are composited. */
+  .mobile-bottom-nav .mobile-nav-item,
+  .mobile-bottom-nav .mobile-nav-fab {
+    transition: none;
+  }
+  .mobile-bottom-nav .mobile-nav-item > i,
+  .mobile-bottom-nav .mobile-nav-fab-icon {
+    transition: transform 0.12s ease;
   }
 }
 

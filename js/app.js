@@ -1338,71 +1338,43 @@ function initDealCountdown() {
   }
 
 
-  let totalSecs =
-    getSecondsUntilMidnight();
+  const hEl = document.getElementById('dealHours');
+  const mEl = document.getElementById('dealMins');
+  const sEl = document.getElementById('dealSecs');
+  const banner = document.querySelector('.deal-banner');
 
-
-  function tick() {
-
-    if (totalSecs <= 0) {
-      totalSecs = 86399;
-    }
-
-
-    const {
-      h,
-      m,
-      s
-    } =
-      formatCountdown(
-        totalSecs
-      );
-
-
-    const hEl =
-      document.getElementById(
-        'dealHours'
-      );
-
-    const mEl =
-      document.getElementById(
-        'dealMins'
-      );
-
-    const sEl =
-      document.getElementById(
-        'dealSecs'
-      );
-
-
-    if (hEl) {
-      hEl.textContent =
-        String(h).padStart(2, '0');
-    }
-
-
-    if (mEl) {
-      mEl.textContent =
-        String(m).padStart(2, '0');
-    }
-
-
-    if (sEl) {
-      sEl.textContent =
-        String(s).padStart(2, '0');
-    }
-
-
-    totalSecs--;
+  // Every text change here lays out and repaints the whole page, so on a
+  // phone a once-a-second write was a regular hitch under scrolling and
+  // sheet slides. Only changed digits are written, and nothing is written
+  // while the banner is off-screen or a sheet/popup covers the page. The time
+  // is read from the clock on each tick, so skipped ticks never drift.
+  let bannerOnScreen = true;
+  if (banner && 'IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      bannerOnScreen = entries[entries.length - 1].isIntersecting;
+      if (bannerOnScreen) tick();
+    }).observe(banner);
   }
 
+  const setDigits = (el, value) => {
+    const text = String(value).padStart(2, '0');
+    if (el && el.textContent !== text) el.textContent = text;
+  };
+
+  function tick() {
+    if (!bannerOnScreen || document.body.classList.contains('overlay-open')) return;
+
+    let totalSecs = getSecondsUntilMidnight();
+    if (totalSecs <= 0) totalSecs = 86399;
+
+    const { h, m, s } = formatCountdown(totalSecs);
+    setDigits(hEl, h);
+    setDigits(mEl, m);
+    setDigits(sEl, s);
+  }
 
   tick();
-
-  setInterval(
-    tick,
-    1000
-  );
+  setInterval(tick, 1000);
 }
 
 
@@ -2428,6 +2400,7 @@ function initExpertBooking() {
 
 // --- MODALS ENGINE ---
 function initModals() {
+  initModalPrewarm();
   document.querySelectorAll('[data-modal-target]').forEach(btn => {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-modal-target');
@@ -2626,22 +2599,21 @@ window.toggleMobileMenu = function(open) {
   if (next) {
     refreshMobileMenuAccount();
     closeModal('welcomePosterModal');
-    sheet.scrollTop = 0;
-    // Same trick as openModal(): show the sheet off-screen and let it be
-    // rasterised one frame before the slide starts. Toggling hidden -> sliding
-    // in a single frame spent the slide's first (and largest) step painting
-    // the whole sheet, which read as lag on phones.
-    sheet.classList.add('is-opening');
-    backdrop.classList.add('is-opening');
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (!sheet.classList.contains('is-opening')) return; // closed meanwhile
-      sheet.classList.replace('is-opening', 'active');
-      backdrop.classList.replace('is-opening', 'active');
-    }));
+    // No scrollTop reset here: touching scroll position forced a layout of the
+    // whole page (1,191 objects) on the tap frame. It is reset after closing.
   } else {
-    sheet.classList.remove('active', 'is-opening');
-    backdrop.classList.remove('active', 'is-opening');
+    // Back to the top for next time, once the slide-out has finished.
+    setTimeout(() => {
+      if (!isMobileMenuOpen() && sheet.scrollTop !== 0) sheet.scrollTop = 0;
+    }, 450);
   }
+  // The closed sheet stays painted just below the screen (responsive.css 7d),
+  // so there is nothing to warm up: the slide starts on the next frame.
+  sheet.classList.remove('is-opening');
+  backdrop.classList.remove('is-opening');
+  sheet.classList.toggle('active', next);
+  backdrop.classList.toggle('active', next);
+  sheet.toggleAttribute('inert', !next);
   sheet.setAttribute('aria-hidden', String(!next));
 
   const menuBtn = document.getElementById('mobileNavMenu');
@@ -2671,14 +2643,20 @@ function refreshMobileMenuAccount() {
   const sub = document.getElementById('mmsAccountSub');
   const btn = document.getElementById('mmsAccountBtn');
   if (!name || !sub || !btn) return;
+  // Runs on the tap that opens the sheet: rewriting unchanged text replaced the
+  // text nodes and forced style and layout right as the slide begins.
+  const setText = (el, value) => {
+    const shown = localizedSources.get(el.firstChild)?.source ?? el.textContent;
+    if (shown !== value) el.textContent = value;
+  };
   if (user) {
-    name.textContent = `Hi, ${user.name || 'Farmer'}`;
-    sub.textContent = [user.crop, user.village || user.district].filter(Boolean).join(' · ') || 'Signed in';
-    btn.textContent = 'My Account';
+    setText(name, `Hi, ${user.name || 'Farmer'}`);
+    setText(sub, [user.crop, user.village || user.district].filter(Boolean).join(' · ') || 'Signed in');
+    setText(btn, 'My Account');
   } else {
-    name.textContent = 'Welcome to Sathya Bio';
-    sub.textContent = 'Sign in to track orders & get crop advice';
-    btn.textContent = 'Sign In';
+    setText(name, 'Welcome to Sathya Bio');
+    setText(sub, 'Sign in to track orders & get crop advice');
+    setText(btn, 'Sign In');
   }
 }
 
@@ -2686,6 +2664,8 @@ function initMobileMenu() {
   const sheet = document.getElementById('mobileMenuSheet');
   const nav = document.getElementById('mobileBottomNav');
   if (!sheet) return;
+  // Painted below the screen while closed; keep it out of focus order.
+  sheet.toggleAttribute('inert', !isMobileMenuOpen());
 
   // Tiles and links in the sheet do their job, then the sheet closes.
   sheet.addEventListener('click', e => {
@@ -3108,23 +3088,66 @@ function syncOverlayState() {
 
 function openModal(id) {
   const modal = document.getElementById(id);
-  if (!modal || modal.classList.contains('active') || modal.classList.contains('is-opening')) return;
-  // Paint the (still transparent) overlay and promote the card one frame
-  // before the slide starts, so the animation's first frame is not spent
-  // creating and rasterising the layer - the stutter on phones.
-  modal.classList.add('is-opening');
-  syncOverlayState();
-  requestAnimationFrame(() => requestAnimationFrame(() => {
+  if (!modal || modal.classList.contains('active')) return;
+  const prewarmedAt = Number(modal.dataset.prewarmAt || 0);
+  if (modal.classList.contains('is-opening') && !prewarmedAt) return; // already opening
+  delete modal.dataset.prewarmAt;
+
+  const start = () => {
     if (!modal.classList.contains('is-opening')) return; // closed meanwhile
     modal.classList.add('active');
     modal.classList.remove('is-opening');
     syncOverlayState();
-  }));
+  };
+
+  // Paint the (still transparent) overlay and promote the card at least one
+  // frame before the slide starts, so the animation's first frame is not
+  // spent creating and rasterising the layer - the stutter on phones.
+  modal.classList.add('is-opening');
+  syncOverlayState();
+  if (prewarmedAt && performance.now() - prewarmedAt > 20) {
+    // Warmed on touch-down (prewarmModal) - the layer is ready: slide now.
+    start();
+  } else {
+    requestAnimationFrame(() => requestAnimationFrame(start));
+  }
+}
+
+// Touch-down on anything that opens a popup starts its warm-up, so by the time
+// the finger lifts (~80-150ms later) the sheet can slide straight away instead
+// of waiting two more frames. Not tapped after all (a scroll): cools down.
+function prewarmModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal || modal.classList.contains('active') || modal.classList.contains('is-opening')) return;
+  modal.dataset.prewarmAt = String(performance.now());
+  modal.classList.add('is-opening');
+  clearTimeout(modal._prewarmCooldown);
+  modal._prewarmCooldown = setTimeout(() => {
+    if (!modal.dataset.prewarmAt) return;
+    delete modal.dataset.prewarmAt;
+    modal.classList.remove('is-opening');
+    syncOverlayState();
+  }, 800);
+}
+
+function initModalPrewarm() {
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || !(e.target instanceof Element)) return;
+    const trigger = e.target.closest('[data-modal-target]');
+    if (trigger) {
+      prewarmModal(trigger.getAttribute('data-modal-target'));
+    } else if (e.target.closest('#headerAccountBtn') || (e.target.closest('#mobileNavCart') && !isFarmerLoggedIn())) {
+      prewarmModal('authModal');
+    }
+  }, { passive: true, capture: true });
 }
 
 function closeModal(id) {
   const modal = document.getElementById(id);
-  if (modal) modal.classList.remove('active', 'is-opening');
+  if (modal) {
+    modal.classList.remove('active', 'is-opening');
+    delete modal.dataset.prewarmAt;
+  }
   if (id === 'authModal' && typeof clearAuthNotice === 'function') clearAuthNotice();
   syncOverlayState();
 }
