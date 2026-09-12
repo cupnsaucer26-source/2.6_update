@@ -3467,51 +3467,72 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
 }
 
 /* Mobile Bottom Navigation Bar (BigHaat App Style) */
-/* Floating pill, matching the storefront's One UI style bottom bar. */
+/* Graphite floating pill, matching the storefront's One UI bottom bar
+   (public/css/responsive.css, section 7g). */
 .bighaat-mobile-bottom-nav {
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  height: 64px;
-  background-color: rgba(255, 255, 255, 0.97);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 32px;
+  left: 0;
+  right: 0;
+  width: calc(100% - 28px);
+  max-width: 440px;
+  margin: 0 auto;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  height: 62px;
+  background-color: #1d2126;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 31px;
   display: flex;
   align-items: center;
   justify-content: space-around;
   z-index: 50;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16), 0 2px 6px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32), 0 2px 8px rgba(0, 0, 0, 0.18);
   padding: 0 6px;
 }
 
 .mobile-nav-link {
   flex: 1;
-  min-height: 52px;
-  border-radius: 26px;
+  min-height: 54px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  font-weight: 500;
-  color: #6b7280;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #a7adb5;
   text-decoration: none;
-  gap: 2px;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  gap: 3px;
+  transition: color 0.15s ease;
   position: relative;
-  padding: 4px 2px;
+  padding: 0 2px;
   -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-nav-link:active {
-  background-color: #f1f5f9;
+/* Each icon sits in a 48x30 capsule, tinted for the current page. */
+.mobile-nav-link > svg,
+.mobile-nav-link > .active-dot-wrap {
+  box-sizing: border-box;
+  width: 48px;
+  height: 30px;
+  padding: 5px 14px;
+  border-radius: 15px;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+
+.mobile-nav-link:active > svg,
+.mobile-nav-link:active > .active-dot-wrap {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(0.94);
 }
 
 .mobile-nav-link.active {
-  color: #047857;
-  font-weight: 700;
-  background-color: #ecfdf5;
+  color: #ffffff;
+}
+
+.mobile-nav-link.active > .active-dot-wrap,
+.mobile-nav-link.active > svg {
+  background-color: rgba(52, 211, 153, 0.2);
+  color: #5eead4;
 }
 
 .active-dot-wrap {
@@ -3521,13 +3542,7 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
   justify-content: center;
 }
 
+/* The tinted capsule marks the current page; the old dot is redundant. */
 .nav-active-dot {
-  position: absolute;
-  top: -2px;
-  right: -3px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #059669;
-  box-shadow: 0 0 6px rgba(5, 150, 105, 0.6);
+  display: none;
 }
