@@ -903,7 +903,7 @@ function applyTranslations() {
 // ---- Untagged page text (gettext-style: the English text is the key) ----
 // Leading/trailing punctuation, symbols and emoji stay as written, so
 // "🌾 Paddy / Rice", "Password *" and "Forgot password?" share plain keys.
-const TEXT_AFFIX = /^([\s\p{P}\p{S}\p{M}‍]*)([\s\S]*?)([\s\p{P}\p{S}]*)$/u;
+const TEXT_AFFIX = /^([\s\p{P}\p{S}\p{M}\u200d]*)([\s\S]*?)([\s\p{P}\p{S}]*)$/u;
 const SKIP_TEXT = 'script, style, noscript, textarea, [data-i18n], .notranslate, #n8nExecutionLog';
 // Text node or element -> { source: English, shown: what we wrote }.
 const localizedSources = new WeakMap();
@@ -940,7 +940,7 @@ const reverseTextIndex = new Map();
 
 function englishSource(text) {
   const clean = text.replace(/\s+/g, ' ').trim();
-  if (!clean || !/[^ -ɏ -⃏]/.test(clean)) return text;
+  if (!clean || !/[^\u0000-\u024F\u2000-\u20CF]/.test(clean)) return text;
   const [, before, core, after] = clean.match(TEXT_AFFIX);
   for (const pack of Object.values(TEXT_PACKS)) {
     if (!reverseTextIndex.has(pack)) {
