@@ -11,13 +11,13 @@
  */
 
 import { db } from './db.js';
-import { sendWhatsAppText } from './whatsapp.js';
+import { sendWhatsAppText, whatsAppConfigured } from './whatsapp.js';
 import { buildOrderConfirmationMessage, buildDeliveryStatusMessage } from './orderMessages.js';
 
 const MAX_AUTOMATIC_ATTEMPTS = 3;
 
 export function orderWhatsAppEnabled() {
-  return Boolean(process.env.WASENDER_API_KEY)
+  return whatsAppConfigured()
     && String(process.env.ORDER_WHATSAPP_MESSAGES || '').toLowerCase() !== 'off';
 }
 
@@ -62,9 +62,9 @@ export async function sendOrderConfirmation(order, { resend = false } = {}) {
       supportPhone: cms?.contactPhone,
     });
 
-    await sendWhatsAppText(phone, text);
-    await db.recordOrderNotification(order.id, 'orderConfirmation', 'sent');
-    console.log(`📲 Order confirmation for ${order.id} sent to +91 ${phone}`);
+    const { sender } = await sendWhatsAppText(phone, text);
+    await db.recordOrderNotification(order.id, 'orderConfirmation', 'sent', '', { sender });
+    console.log(`📲 Order confirmation for ${order.id} sent to +91 ${phone} via ${sender}`);
     return 'sent';
   } catch (err) {
     console.error(`❌ Order confirmation for ${order.id} failed:`, err.message);
@@ -97,9 +97,9 @@ export async function sendDeliveryStatusUpdate(order, newStatus) {
     });
     if (!text) return 'skipped';
 
-    await sendWhatsAppText(phone, text);
-    await db.recordOrderNotification(order.id, kind, 'sent');
-    console.log(`📲 Delivery status update (${newStatus}) for ${order.id} sent to +91 ${phone}`);
+    const { sender } = await sendWhatsAppText(phone, text);
+    await db.recordOrderNotification(order.id, kind, 'sent', '', { sender });
+    console.log(`📲 Delivery status update (${newStatus}) for ${order.id} sent to +91 ${phone} via ${sender}`);
     return 'sent';
   } catch (err) {
     console.error(`❌ Delivery status update (${newStatus}) for ${order.id} failed:`, err.message);

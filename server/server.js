@@ -335,6 +335,16 @@ app.post('/api/auth/send-otp', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Send OTP error:', err.message);
+    if (err.code === 'NOT_ON_WHATSAPP') {
+      return res.status(400).json({
+        success: false,
+        notOnWhatsApp: true,
+        message: 'This number is not on WhatsApp. Please enter the mobile number you use for WhatsApp.',
+      });
+    }
+    if (err.code === 'BUSY' || err.code === 'NO_SENDER') {
+      return tooManyRequests(res, 30, 'We are sending a lot of codes right now. Please try again in 30 seconds.');
+    }
     return res.status(500).json({ success: false, message: 'Could not send the OTP right now. Please try again shortly.' });
   }
 });
@@ -457,9 +467,15 @@ app.post('/api/auth/forgot-password/send-otp', async (req, res) => {
     let otpHash = null;
     if (canReset) {
       const otp = generateOtp();
-      await sendWhatsAppText(phone, buildResetOtpMessage(otp, user.name, phone, OTP_EXPIRY_MS));
-      otpHash = hashOtp(otp);
-      console.log(`🔑 Password reset code sent to +91 ${phone}`);
+      try {
+        await sendWhatsAppText(phone, buildResetOtpMessage(otp, user.name, phone, OTP_EXPIRY_MS));
+        otpHash = hashOtp(otp);
+        console.log(`🔑 Password reset code sent to +91 ${phone}`);
+      } catch (sendErr) {
+        // Answered like an unknown number, so the form still reveals nothing.
+        if (sendErr.code !== 'NOT_ON_WHATSAPP') throw sendErr;
+        console.warn(`⚠️ Password reset for +91 ${phone} skipped: number is not on WhatsApp`);
+      }
     }
 
     // An unknown number still gets a record (with no code), so the resend wait

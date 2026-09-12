@@ -1348,7 +1348,7 @@ class DatabaseManager {
         return result.modifiedCount === 1;
   }
 
-  async recordOrderNotification(orderId, kind, status, error = '') {
+  async recordOrderNotification(orderId, kind, status, error = '', { sender } = {}) {
         await connectDB();
         const path = `notifications.${kind}`;
         const now = new Date().toISOString();
@@ -1358,6 +1358,8 @@ class DatabaseManager {
             [`${path}.error`]: status === 'failed' ? String(error).slice(0, 200) : ''
         };
         if (status === 'sent') set[`${path}.sentAt`] = now;
+        // Which WhatsApp number sent it (e.g. "sender 2"), for tracing a banned number.
+        if (sender) set[`${path}.sender`] = sender;
         await Order.updateOne({ _id: String(orderId) }, { $set: set });
   }
 
@@ -1528,6 +1530,36 @@ class DatabaseManager {
   async kvDelete(key) {
         await connectDB();
         await Ephemeral.deleteOne({ _id: key });
+  }
+
+  // Several kvGet lookups in one round trip. Returns a Map of key -> value,
+  // holding only the keys that exist and have not expired.
+  async kvGetMany(keys) {
+        await connectDB();
+        const docs = await Ephemeral.find({ _id: { $in: keys }, purgeAt: { $gt: new Date() } }).lean();
+        return new Map(docs.map(doc => [doc._id, doc.value]));
+  }
+
+  // Claims the next turn on a paced resource (e.g. one WhatsApp number): it
+  // succeeds only once the gap set by the previous claim has passed, so parallel
+  // instances can never both take the same turn. Returns 0 when claimed,
+  // otherwise the milliseconds until the resource frees up.
+  async kvClaimSlot(key, gapMs) {
+        await connectDB();
+        const now = Date.now();
+        try {
+            await Ephemeral.findOneAndUpdate(
+                { _id: key, $or: [{ 'value.nextAt': { $lte: now } }, { purgeAt: { $lte: new Date(now) } }] },
+                { $set: { value: { nextAt: now + gapMs }, purgeAt: new Date(now + gapMs + 60 * 1000) } },
+                { upsert: true }
+            );
+            return 0;
+        } catch (err) {
+            // The record exists and its turn is still taken, so the upsert collided.
+            if (err?.code !== 11000) throw err;
+            const doc = await Ephemeral.findById(key).lean();
+            return Math.max(50, Number(doc?.value?.nextAt) - now || 50);
+        }
   }
 
   // Atomically adds 1 to a numeric field inside the value. With upsert (the

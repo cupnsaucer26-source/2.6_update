@@ -2,6 +2,7 @@ import express from 'express';
 import { db, USER_ROLES } from './db.js';
 import { HttpError, sendError, userInputError } from './http.js';
 import { orderWhatsAppEnabled, sendOrderConfirmation } from './orderNotifications.js';
+import { getWhatsAppSenderStatus } from './whatsapp.js';
 
 // Every route in this file is mounted behind requireAuth('admin') in server.js,
 // so req.user is always the signed-in admin.
@@ -158,6 +159,15 @@ router.post('/orders/:id/whatsapp', async (req, res) => {
           res.json({ success: true, status, notification, message: `Order details sent on WhatsApp to +91 ${order.customerPhone}.` });
     } catch (err) {
           sendError(res, err, 'Resend order WhatsApp');
+    }
+});
+
+// Health of each WhatsApp sending number: session state, resting, sends today.
+router.get('/whatsapp/senders', async (req, res) => {
+    try {
+          res.json({ success: true, data: await getWhatsAppSenderStatus() });
+    } catch (err) {
+          sendError(res, err, 'WhatsApp sender status');
     }
 });
 
