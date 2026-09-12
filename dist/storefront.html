@@ -108,7 +108,7 @@
         </div>
 
         <!-- TRACK ORDER -->
-        <div class="action-item" onclick="window.location.assign('./order-status.html')" role="button" tabindex="0">
+        <div class="action-item action-track" onclick="window.location.assign('./order-status.html')" role="button" tabindex="0">
           <i class="fa-solid fa-truck-ramp-box action-icon"></i>
           <div>
             <span class="action-sub">Track</span>
@@ -117,7 +117,7 @@
         </div>
 
         <!-- WISHLIST -->
-        <div class="action-item" onclick="alert('Wishlist saved!')">
+        <div class="action-item action-wishlist" onclick="alert('Wishlist saved!')">
           <div class="action-icon">
             <i class="fa-regular fa-heart"></i>
             <span class="cart-badge" style="background: var(--accent-amber);">0</span>
@@ -766,9 +766,9 @@
           </div>
         </div>
 
-        <div>
-          <h4 style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;" data-i18n="footer_nav">Store Categories</h4>
-          <ul style="list-style: none; font-size: 0.82rem; display: flex; flex-direction: column; gap: 8px; color: #d1fae5;">
+        <div class="footer-col">
+          <h4 class="footer-col-title" role="button" tabindex="0" aria-expanded="false" style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;" data-i18n="footer_nav">Store Categories</h4>
+          <ul class="footer-col-body" style="list-style: none; font-size: 0.82rem; display: flex; flex-direction: column; gap: 8px; color: #d1fae5;">
             <li><a href="#catalog" onclick="filterByCategory('Fungicide')">Bio-Fungicides</a></li>
             <li><a href="#catalog" onclick="filterByCategory('Insecticide')">Insecticides</a></li>
             <li><a href="#catalog" onclick="filterByCategory('Herbicide')">Herbicides</a></li>
@@ -777,9 +777,9 @@
           </ul>
         </div>
 
-        <div>
-          <h4 style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;" data-i18n="footer_crops">Top Crops</h4>
-          <ul style="list-style: none; font-size: 0.82rem; display: flex; flex-direction: column; gap: 8px; color: #d1fae5;">
+        <div class="footer-col">
+          <h4 class="footer-col-title" role="button" tabindex="0" aria-expanded="false" style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;" data-i18n="footer_crops">Top Crops</h4>
+          <ul class="footer-col-body" style="list-style: none; font-size: 0.82rem; display: flex; flex-direction: column; gap: 8px; color: #d1fae5;">
             <li><a href="#catalog" onclick="filterByCrop('Paddy/Rice')">Paddy / Rice Care</a></li>
             <li><a href="#catalog" onclick="filterByCrop('Cotton')">Cotton Protection</a></li>
             <li><a href="#catalog" onclick="filterByCrop('Tomato')">Tomato & Vegetables</a></li>
@@ -788,18 +788,20 @@
           </ul>
         </div>
 
-        <div>
-          <h4 style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;" data-i18n="footer_help">Customer Support</h4>
-          <p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 8px;"><i class="fa-solid fa-phone"></i> Toll Free: 1800-425-9999</p>
-          <p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 8px;"><i class="fa-solid fa-envelope"></i> support@sathyabio.com</p>
-          <p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 12px;"><i class="fa-solid fa-location-dot"></i> Sathya Bio Tech Park, Hyderabad, India</p>
-          <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-size: 0.78rem;">
-            <i class="fa-solid fa-lock" style="color: var(--accent-gold);"></i> 100% Secure Payment (UPI, COD, NetBanking)
+        <div class="footer-col">
+          <h4 class="footer-col-title" role="button" tabindex="0" aria-expanded="false" style="color: var(--accent-gold); margin-bottom: 14px; font-size: 0.95rem;" data-i18n="footer_help">Customer Support</h4>
+          <div class="footer-col-body">
+            <p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 8px;"><i class="fa-solid fa-phone"></i> Toll Free: 1800-425-9999</p>
+            <p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 8px;"><i class="fa-solid fa-envelope"></i> support@sathyabio.com</p>
+            <p style="font-size: 0.85rem; color: #d1fae5; margin-bottom: 12px;"><i class="fa-solid fa-location-dot"></i> Sathya Bio Tech Park, Hyderabad, India</p>
+            <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-size: 0.78rem;">
+              <i class="fa-solid fa-lock" style="color: var(--accent-gold);"></i> 100% Secure Payment (UPI, COD, NetBanking)
+            </div>
           </div>
         </div>
       </div>
 
-      <div style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #a7f3d0;">
+      <div class="footer-bottom-row" style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #a7f3d0;">
         <span data-i18n="footer_copyright">© 2026 Sathya Bio Agro Tech Ltd. All rights reserved. Inspired by BigHaat.</span>
         <div style="display: flex; gap: 15px;">
           <span>Privacy Policy</span>
@@ -1156,32 +1158,89 @@
     </div>
   </div>
 
+  <!-- MOBILE MENU SHEET (phones): every destination one thumb-tap away -->
+  <div class="mobile-menu-backdrop" id="mobileMenuBackdrop" onclick="toggleMobileMenu(false)"></div>
+  <aside class="mobile-menu-sheet" id="mobileMenuSheet" aria-label="Menu" aria-hidden="true">
+    <div class="mms-handle" aria-hidden="true"></div>
+
+    <div class="mms-account">
+      <div class="mms-avatar"><i class="fa-solid fa-user"></i></div>
+      <div class="mms-account-text">
+        <strong id="mmsAccountName">Welcome to Sathya Bio</strong>
+        <span id="mmsAccountSub">Sign in to track orders &amp; get crop advice</span>
+      </div>
+      <button type="button" class="mms-account-btn" id="mmsAccountBtn" onclick="toggleMobileMenu(false); handleAccountClick();">Sign In</button>
+    </div>
+
+    <h3 class="mms-title">Quick actions</h3>
+    <div class="mms-grid">
+      <a href="#catalog" class="mms-tile"><span class="mms-tile-icon" style="--tile:#059669"><i class="fa-solid fa-store"></i></span>All Products</a>
+      <a href="#categoriesSection" class="mms-tile"><span class="mms-tile-icon" style="--tile:#0891b2"><i class="fa-solid fa-layer-group"></i></span>Categories</a>
+      <a href="#cropSection" class="mms-tile"><span class="mms-tile-icon" style="--tile:#65a30d"><i class="fa-solid fa-wheat-awn"></i></span>Shop by Crop</a>
+      <button type="button" class="mms-tile" data-modal-target="photoScannerModal" data-close-menu><span class="mms-tile-icon" style="--tile:#d97706"><i class="fa-solid fa-camera-retro"></i></span>AI Leaf Doctor</button>
+      <a href="#soil" class="mms-tile"><span class="mms-tile-icon" style="--tile:#7c3aed"><i class="fa-solid fa-flask"></i></span>Soil Analyzer</a>
+      <a href="#experts" class="mms-tile"><span class="mms-tile-icon" style="--tile:#db2777"><i class="fa-solid fa-user-doctor"></i></span>Agronomists</a>
+      <a href="./order-status.html" class="mms-tile"><span class="mms-tile-icon" style="--tile:#2563eb"><i class="fa-solid fa-truck-fast"></i></span>Track Order</a>
+      <a href="#tickets" class="mms-tile"><span class="mms-tile-icon" style="--tile:#475569"><i class="fa-solid fa-headset"></i></span>Support</a>
+      <a href="https://wa.me/919442562423?text=Hello%20Sathya%20Bio%20Expert%2C%20I%20need%20crop%20advice" target="_blank" rel="noopener" class="mms-tile"><span class="mms-tile-icon" style="--tile:#16a34a"><i class="fa-brands fa-whatsapp"></i></span>WhatsApp Expert</a>
+    </div>
+
+    <h3 class="mms-title">Shop by category</h3>
+    <div class="mms-chips">
+      <button type="button" class="mms-chip" onclick="shopFromMenu('category', 'Fungicide')">Fungicides</button>
+      <button type="button" class="mms-chip" onclick="shopFromMenu('category', 'Insecticide')">Insecticides</button>
+      <button type="button" class="mms-chip" onclick="shopFromMenu('category', 'Herbicide')">Herbicides</button>
+      <button type="button" class="mms-chip" onclick="shopFromMenu('category', 'Bio-Stimulant')">Bio-Stimulants</button>
+      <button type="button" class="mms-chip" onclick="shopFromMenu('category', 'Nematicide')">Nematicides</button>
+    </div>
+
+    <h3 class="mms-title">Shop by crop</h3>
+    <div class="mms-chips">
+      <button type="button" class="mms-chip" onclick="shopFromMenu('crop', 'Paddy/Rice')">🌾 Paddy / Rice</button>
+      <button type="button" class="mms-chip" onclick="shopFromMenu('crop', 'Cotton')">☁️ Cotton</button>
+      <button type="button" class="mms-chip" onclick="shopFromMenu('crop', 'Tomato')">🍅 Tomato</button>
+      <button type="button" class="mms-chip" onclick="shopFromMenu('crop', 'Sugarcane')">🎋 Sugarcane</button>
+      <button type="button" class="mms-chip" onclick="shopFromMenu('crop', 'Grapes')">🍇 Fruits</button>
+    </div>
+
+    <div class="mms-footer-row">
+      <label class="mms-lang">
+        <i class="fa-solid fa-globe"></i>
+        <select id="mobileMenuLang" aria-label="Language">
+          <option value="en">English</option>
+          <option value="ta">தமிழ்</option>
+          <option value="te">తెలుగు</option>
+          <option value="kn">ಕನ್ನಡ</option>
+          <option value="ml">മലയാളം</option>
+          <option value="tulu">ತುಳು</option>
+        </select>
+      </label>
+      <a class="mms-call" href="tel:18004259999"><i class="fa-solid fa-phone-volume"></i> 1800-425-9999</a>
+    </div>
+  </aside>
+
   <!-- MOBILE BOTTOM NAVIGATION BAR (NATIVE APP STYLE) -->
   <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile Navigation">
-    <a href="#top" class="mobile-nav-item active" id="mobileNavHome">
+    <a href="#top" class="mobile-nav-item active" id="mobileNavHome" data-nav="home" aria-current="page">
       <i class="fa-solid fa-house"></i>
       <span>Home</span>
     </a>
-    <a href="#categoriesSection" class="mobile-nav-item" id="mobileNavCategories">
-      <i class="fa-solid fa-layer-group"></i>
-      <span>Categories</span>
+    <a href="#catalog" class="mobile-nav-item" id="mobileNavShop" data-nav="shop">
+      <i class="fa-solid fa-store"></i>
+      <span>Shop</span>
     </a>
-    <button class="mobile-nav-item" data-modal-target="photoScannerModal" id="mobileNavDoctor" aria-label="AI Leaf Doctor">
-      <i class="fa-solid fa-camera-retro"></i>
+    <button type="button" class="mobile-nav-item mobile-nav-fab" data-modal-target="photoScannerModal" id="mobileNavDoctor" aria-label="AI Leaf Doctor">
+      <span class="mobile-nav-fab-icon"><i class="fa-solid fa-camera-retro"></i></span>
       <span>AI Doctor</span>
     </button>
-    <a href="https://wa.me/919442562423?text=Hello%20Sathya%20Bio%20Expert%2C%20I%20need%20crop%20advice" target="_blank" rel="noopener" class="mobile-nav-item mobile-nav-wa" id="mobileNavWhatsApp" aria-label="WhatsApp Support">
-      <i class="fa-brands fa-whatsapp"></i>
-      <span>WhatsApp</span>
-    </a>
-    <button class="mobile-nav-item" id="mobileNavCart" onclick="handleBasketClick(event)" aria-label="Shopping Cart">
+    <button type="button" class="mobile-nav-item" id="mobileNavCart" onclick="handleBasketClick(event)" aria-label="Shopping Cart">
       <i class="fa-solid fa-bag-shopping"></i>
       <span class="mobile-badge" id="mobileCartBadge">0</span>
       <span>Cart</span>
     </button>
-    <button class="mobile-nav-item" id="mobileNavAccount" onclick="handleAccountClick()" aria-label="Account">
-      <i class="fa-solid fa-user"></i>
-      <span>Account</span>
+    <button type="button" class="mobile-nav-item" id="mobileNavMenu" data-nav="menu" onclick="toggleMobileMenu()" aria-label="Menu" aria-controls="mobileMenuSheet" aria-expanded="false">
+      <i class="fa-solid fa-bars"></i>
+      <span>Menu</span>
     </button>
   </nav>
 

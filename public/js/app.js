@@ -711,7 +711,7 @@ function setLanguage(langCode) {
 
 
 function initLanguageSelector() {
-  const selectors = ['langSelectTop', 'langSelectHeader']
+  const selectors = ['langSelectTop', 'langSelectHeader', 'mobileMenuLang']
     .map(id => document.getElementById(id))
     .filter(Boolean);
 
@@ -2161,6 +2161,213 @@ function initModals() {
     const open = [...document.querySelectorAll('.modal-overlay.active')].pop();
     if (open) closeModal(open.id);
     else document.getElementById('cartOverlay')?.classList.remove('active');
+  });
+
+  initPosterSwipeToDismiss();
+  initMobileMenu();
+  initFooterAccordions();
+  initMobileNavActiveState();
+}
+
+// A downward swipe dismisses a bottom card or sheet, like a native bottom
+// sheet. `scroller` keeps its own scrolling until it is back at the top.
+function enableSwipeToDismiss(card, onDismiss, scroller = card) {
+  if (!card) return;
+  let startX = 0;
+  let startY = 0;
+  let dy = 0;
+  let tracking = false;
+  let decided = false;
+
+  const resetDrag = () => {
+    card.style.removeProperty('transform');
+    card.style.removeProperty('transition');
+    card.style.removeProperty('opacity');
+  };
+
+  card.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || e.target.closest('select, input, textarea')) return;
+    if (scroller && scroller.contains(e.target) && scroller.scrollTop > 0) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    dy = 0;
+    tracking = true;
+    decided = false;
+  }, { passive: true });
+
+  card.addEventListener('touchmove', e => {
+    if (!tracking) return;
+    const moveX = e.touches[0].clientX - startX;
+    const moveY = e.touches[0].clientY - startY;
+    if (!decided) {
+      if (Math.abs(moveX) < 6 && Math.abs(moveY) < 6) return;
+      decided = true;
+      // Sideways is a chip row scrolling; upward is not a dismiss.
+      if (Math.abs(moveX) > Math.abs(moveY) || moveY < 0) {
+        tracking = false;
+        return;
+      }
+    }
+    dy = Math.max(0, moveY);
+    // Stylesheets position these with !important, so the drag must too.
+    card.style.setProperty('transition', 'none', 'important');
+    card.style.setProperty('transform', `translateY(${dy}px)`, 'important');
+    card.style.setProperty('opacity', String(Math.max(0.4, 1 - dy / 320)));
+  }, { passive: true });
+
+  const endDrag = () => {
+    if (!tracking) return;
+    tracking = false;
+    if (dy > 70) {
+      onDismiss();
+      setTimeout(resetDrag, 350);
+    } else {
+      resetDrag();
+    }
+  };
+  card.addEventListener('touchend', endDrag);
+  card.addEventListener('touchcancel', endDrag);
+}
+
+// On phones the welcome poster is a card docked above the bottom nav.
+function initPosterSwipeToDismiss() {
+  const card = document.querySelector('#welcomePosterModal .welcome-poster-card');
+  enableSwipeToDismiss(card, () => closeModal('welcomePosterModal'), card?.querySelector('.welcome-poster-body'));
+}
+
+// ==================== MOBILE MENU SHEET (phones) ====================
+
+function isMobileMenuOpen() {
+  return Boolean(document.getElementById('mobileMenuSheet')?.classList.contains('active'));
+}
+
+window.toggleMobileMenu = function(open) {
+  const sheet = document.getElementById('mobileMenuSheet');
+  const backdrop = document.getElementById('mobileMenuBackdrop');
+  if (!sheet || !backdrop) return;
+  const next = typeof open === 'boolean' ? open : !sheet.classList.contains('active');
+  if (next === isMobileMenuOpen()) return;
+
+  if (next) {
+    refreshMobileMenuAccount();
+    closeModal('welcomePosterModal');
+    sheet.scrollTop = 0;
+  }
+  sheet.classList.toggle('active', next);
+  backdrop.classList.toggle('active', next);
+  sheet.setAttribute('aria-hidden', String(!next));
+
+  const menuBtn = document.getElementById('mobileNavMenu');
+  if (menuBtn) {
+    menuBtn.setAttribute('aria-expanded', String(next));
+    menuBtn.classList.toggle('is-open', next);
+    const icon = menuBtn.querySelector('i');
+    if (icon) icon.className = next ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+  }
+  updateMobileNavActive();
+};
+
+// Menu chips filter the catalogue and take the shopper straight to it.
+window.shopFromMenu = function(kind, value) {
+  if (kind === 'crop') window.filterByCrop(value);
+  else window.filterByCategory(value);
+  toggleMobileMenu(false);
+  document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+};
+
+function refreshMobileMenuAccount() {
+  const user = getStoredUser();
+  const name = document.getElementById('mmsAccountName');
+  const sub = document.getElementById('mmsAccountSub');
+  const btn = document.getElementById('mmsAccountBtn');
+  if (!name || !sub || !btn) return;
+  if (user) {
+    name.textContent = `Hi, ${user.name || 'Farmer'}`;
+    sub.textContent = [user.crop, user.village || user.district].filter(Boolean).join(' · ') || 'Signed in';
+    btn.textContent = 'My Account';
+  } else {
+    name.textContent = 'Welcome to Sathya Bio';
+    sub.textContent = 'Sign in to track orders & get crop advice';
+    btn.textContent = 'Sign In';
+  }
+}
+
+function initMobileMenu() {
+  const sheet = document.getElementById('mobileMenuSheet');
+  const nav = document.getElementById('mobileBottomNav');
+  if (!sheet) return;
+
+  // Tiles and links in the sheet do their job, then the sheet closes.
+  sheet.addEventListener('click', e => {
+    if (e.target.closest('a, [data-close-menu]')) toggleMobileMenu(false);
+  });
+
+  // Any other bottom-bar tab closes the sheet first. Capture phase, because
+  // the basket handler stops propagation.
+  nav?.addEventListener('click', e => {
+    const item = e.target.closest('.mobile-nav-item');
+    if (item && item.id !== 'mobileNavMenu') toggleMobileMenu(false);
+  }, true);
+
+  enableSwipeToDismiss(sheet, () => toggleMobileMenu(false));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && isMobileMenuOpen()) toggleMobileMenu(false);
+  });
+
+  // Rotating or resizing to the desktop layout must not leave it open.
+  const desktop = window.matchMedia('(min-width: 769px)');
+  const onChange = ev => { if (ev.matches) toggleMobileMenu(false); };
+  if (desktop.addEventListener) desktop.addEventListener('change', onChange);
+}
+
+// Highlights the bottom-bar tab for where the shopper is.
+function updateMobileNavActive() {
+  const nav = document.getElementById('mobileBottomNav');
+  if (!nav || getComputedStyle(nav).display === 'none') return;
+  let key = 'home';
+  if (isMobileMenuOpen()) {
+    key = 'menu';
+  } else {
+    const rect = document.getElementById('catalog')?.getBoundingClientRect();
+    if (rect && rect.top < window.innerHeight * 0.45 && rect.bottom > 140) key = 'shop';
+  }
+  nav.querySelectorAll('.mobile-nav-item[data-nav]').forEach(item => {
+    const on = item.dataset.nav === key;
+    item.classList.toggle('active', on);
+    if (on) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+}
+
+function initMobileNavActiveState() {
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      updateMobileNavActive();
+    });
+  }, { passive: true });
+  updateMobileNavActive();
+}
+
+// Footer link groups collapse into accordions on phones.
+function initFooterAccordions() {
+  document.querySelectorAll('.footer-col-title').forEach(title => {
+    const toggle = () => {
+      if (!window.matchMedia('(max-width: 768px)').matches) return;
+      const open = title.closest('.footer-col').classList.toggle('open');
+      title.setAttribute('aria-expanded', String(open));
+    };
+    title.addEventListener('click', toggle);
+    title.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
   });
 }
 

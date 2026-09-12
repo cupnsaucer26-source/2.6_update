@@ -472,8 +472,13 @@ pre {
     padding-bottom: env(safe-area-inset-bottom, 0px);
     z-index: 9990;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-    transform: translateZ(0);
-    backface-visibility: hidden;
+    /* Pinned to the viewport on every mobile browser: no transform /
+       backface-visibility / will-change here. Those promote the bar to its
+       own compositor layer, and Samsung Internet and Android WebViews then
+       move it with the page while the browser toolbar animates. */
+    top: auto;
+    transform: none;
+    will-change: auto;
   }
   .mobile-nav-item {
     flex: 1;
@@ -768,55 +773,139 @@ pre {
     flex-direction: column !important;
   }
 
-  /* Welcome poster as a bottom sheet that fits the screen. The card was taller
-     than a phone with overflow hidden, so "Connect With Expert" / "Explore"
-     sat below the fold and could not be reached. The header stays put, the
-     body scrolls, and the close button is always visible. */
-  .modal-card.welcome-poster-card {
+  /* ----------------------------------------------------------
+     WELCOME POSTER ON PHONES: non-blocking promo card.
+     A full-screen modal on a phone swallowed every swipe (the page could
+     not scroll while it was open) and took ~90% of the screen. On phones
+     it is a compact card docked above the bottom nav: the backdrop is
+     transparent and lets touches through, so the page keeps scrolling;
+     the card is dismissed with x, "Explore", Escape or a downward swipe.
+     ---------------------------------------------------------- */
+  #welcomePosterModal.modal-overlay,
+  #welcomePosterModal.modal-overlay.active {
+    background: transparent !important;
+    pointer-events: none !important;
+    align-items: flex-end !important;
+    padding: 0 10px calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #welcomePosterModal .modal-card.welcome-poster-card {
+    pointer-events: auto;
     display: flex !important;
     flex-direction: column !important;
+    width: 100% !important;
+    max-width: 480px !important;
+    margin: 0 auto;
     padding: 0 !important;
     overflow: hidden !important;
-    max-height: 88vh !important;
-    max-height: 88dvh !important;
+    max-height: calc(100vh - 150px) !important;
+    max-height: calc(100dvh - 150px) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 14px 44px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(52, 211, 153, 0.18) !important;
+    transform: translateY(calc(100% + 96px)) !important;
+    transition: transform 0.34s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
   }
-  .welcome-poster-header {
+  #welcomePosterModal.active .modal-card.welcome-poster-card {
+    transform: translateY(0) !important;
+  }
+  #welcomePosterModal .modal-close {
+    top: 10px !important;
+    right: 10px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    min-width: 32px !important;
+  }
+  /* Header shrinks to a single brand row with a drag handle. */
+  #welcomePosterModal .welcome-poster-header {
     flex: 0 0 auto;
-    height: 150px;
+    height: auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 16px 52px 10px 14px;
   }
-  .welcome-poster-leaf {
-    font-size: 2.6rem;
+  #welcomePosterModal .welcome-poster-header::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.32);
   }
-  /* In the shorter header the absolute badge landed on the tagline. */
-  .welcome-poster-badge {
-    position: static;
-    transform: none;
-    margin-top: 4px;
-    padding: 3px 12px;
-    font-size: 0.7rem;
+  #welcomePosterModal .welcome-poster-leaf {
+    font-size: 1.6rem;
+    animation: none;
   }
-  .welcome-poster-header {
-    gap: 4px;
+  #welcomePosterModal .welcome-poster-brand {
+    font-size: 1.1rem;
   }
-  .welcome-poster-body {
+  #welcomePosterModal .welcome-poster-tagline,
+  #welcomePosterModal .welcome-poster-badge,
+  #welcomePosterModal .welcome-poster-tag,
+  #welcomePosterModal .welcome-poster-text {
+    display: none;
+  }
+  #welcomePosterModal .welcome-poster-body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 14px 14px;
   }
-  .welcome-poster-title {
-    font-size: 1.12rem;
-    margin-bottom: 8px;
+  #welcomePosterModal .welcome-poster-title {
+    font-size: 1rem;
+    line-height: 1.3;
+    margin: 0 0 10px;
   }
-  .welcome-poster-text {
-    font-size: 0.84rem;
+  /* Feature list becomes one row of swipeable chips. */
+  #welcomePosterModal .welcome-poster-features {
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 0 -14px 12px;
+    padding: 0 14px 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  #welcomePosterModal .welcome-poster-features::-webkit-scrollbar {
+    display: none;
+  }
+  #welcomePosterModal .wp-feat {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: 0.74rem;
+    gap: 7px;
+    padding: 5px 11px 5px 5px;
+    border-radius: 999px;
+  }
+  #welcomePosterModal .wp-feat-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 0.72rem;
+    border-radius: 50%;
+  }
+  #welcomePosterModal .wp-btn-primary,
+  #welcomePosterModal .wp-btn-secondary {
+    min-height: 44px;
     padding: 10px 12px;
-    margin-bottom: 12px;
+    font-size: 0.84rem;
+    border-radius: 12px;
   }
-  .welcome-poster-features {
-    gap: 6px;
-    margin-bottom: 14px;
+  /* Card content fits on normal phones, so vertical drags on it belong to
+     the swipe-to-dismiss gesture (chips still scroll sideways). Very short
+     screens keep native scrolling inside the card instead. */
+  @media (min-height: 520px) {
+    #welcomePosterModal .modal-card.welcome-poster-card {
+      touch-action: pan-x;
+    }
+  }
+  /* The chat bubble would sit on top of the card. */
+  body:has(#welcomePosterModal.active) .chatbot-trigger-btn {
+    opacity: 0;
+    pointer-events: none;
   }
 
   /* Floating Buttons repositioned safely above bottom nav. Back-to-top is
@@ -1057,6 +1146,349 @@ pre {
 @media (max-width: 600px) {
   .footer-grid {
     gap: 22px !important;
+  }
+}
+
+/* ------------------------------------------------------------
+   7d. MOBILE APP SHELL - navigation redesign (phones)
+   A five-tab bottom bar (Home / Shop / AI Doctor / Cart / Menu) and a
+   Menu bottom sheet that holds every destination, so each menu is one
+   thumb-tap away instead of living in a cramped top strip.
+   ------------------------------------------------------------ */
+
+.mobile-menu-sheet,
+.mobile-menu-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* The horizontal link strip is replaced by the Menu sheet. */
+  .navbar {
+    display: none;
+  }
+  /* Header keeps Account + Basket; Track Order is in the Menu sheet. */
+  .header-actions .action-track,
+  .header-actions .action-wishlist {
+    display: none;
+  }
+
+  /* Jumps from the menus land below the sticky header, not under it. */
+  #catalog,
+  #categoriesSection,
+  #cropSection,
+  #soil,
+  #n8n,
+  #tickets,
+  #experts {
+    scroll-margin-top: 124px;
+  }
+
+  /* Cart drawer opens above the bottom bar and fits the visible viewport,
+     so its checkout button is never hidden behind the bar or toolbar. */
+  .cart-drawer-overlay {
+    z-index: 10010;
+  }
+  .cart-drawer {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* ---- Bottom bar ---- */
+  .mobile-nav-item {
+    min-height: 48px;
+    border-radius: 12px;
+  }
+  .mobile-nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 24px;
+    height: 3px;
+    margin-left: -12px;
+    border-radius: 0 0 3px 3px;
+    background: var(--primary);
+  }
+  .mobile-nav-item.is-open {
+    color: var(--primary);
+  }
+  /* Raised centre action - the store's signature feature. */
+  .mobile-nav-fab {
+    color: var(--primary-dark);
+    font-weight: 700;
+  }
+  .mobile-nav-fab-icon {
+    width: 50px;
+    height: 50px;
+    margin-top: -24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(145deg, #10b981, #047857);
+    border: 4px solid #ffffff;
+    box-shadow: 0 6px 16px rgba(4, 120, 87, 0.4);
+    transition: transform 0.15s ease;
+  }
+  .mobile-nav-fab-icon i {
+    color: #ffffff;
+    font-size: 1.15rem !important;
+  }
+  .mobile-nav-fab:active .mobile-nav-fab-icon {
+    transform: scale(0.93);
+  }
+
+  /* ---- Menu sheet ---- */
+  .mobile-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 9980;
+    background: rgba(15, 23, 42, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    touch-action: none;
+  }
+  .mobile-menu-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+  }
+  /* Sits under the bottom bar (z 9990), so the bar stays usable and the
+     Menu tab - now an X - closes it again. */
+  .mobile-menu-sheet {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9985;
+    max-height: calc(100vh - 72px);
+    max-height: calc(100dvh - 72px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background: #ffffff;
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.22);
+    padding: 6px 16px calc(84px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.32s;
+  }
+  .mobile-menu-sheet.active {
+    transform: translateY(0);
+    visibility: visible;
+  }
+  .mms-handle {
+    width: 40px;
+    height: 4px;
+    margin: 4px auto 12px;
+    border-radius: 4px;
+    background: #cbd5e1;
+  }
+  .mms-account {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #ecfdf5, #f0fdfa);
+    border: 1px solid #d1fae5;
+  }
+  .mms-avatar {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary);
+    color: #ffffff;
+    font-size: 1.05rem;
+  }
+  .mms-account-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+  }
+  .mms-account-text strong {
+    font-size: 0.92rem;
+    color: var(--primary-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mms-account-text span {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+  }
+  .mms-account-btn {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mms-title {
+    margin: 18px 2px 10px;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .mms-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .mms-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    min-height: 86px;
+    padding: 12px 4px 10px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .mms-tile:active {
+    transform: scale(0.97);
+    background: #f1f5f9;
+  }
+  .mms-tile-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--tile, #059669);
+    background: #ecfdf5;
+    background: color-mix(in srgb, var(--tile, #059669) 13%, #ffffff);
+  }
+  .mms-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .mms-chip {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid #d1fae5;
+    background: #ffffff;
+    color: var(--primary-dark);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mms-chip:active {
+    background: #ecfdf5;
+  }
+  .mms-footer-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .mms-lang,
+  .mms-call {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: var(--primary-dark);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .mms-lang select {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-weight: 600;
+    outline: none;
+  }
+
+  /* ---- Footer: collapsible groups instead of one long column ---- */
+  .footer-grid {
+    gap: 0 !important;
+  }
+  .footer-grid > div:first-child {
+    padding-bottom: 18px;
+  }
+  .footer-col {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .footer-col-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 50px;
+    margin: 0 !important;
+    padding: 14px 2px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .footer-col-title::after {
+    content: '\f078';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 0.72rem;
+    color: #a7f3d0;
+    transition: transform 0.2s ease;
+  }
+  .footer-col.open .footer-col-title::after {
+    transform: rotate(180deg);
+  }
+  .footer-col-body {
+    display: none !important;
+    padding: 0 2px 16px;
+  }
+  .footer-col.open .footer-col-body {
+    display: flex !important;
+    flex-direction: column;
+  }
+  .footer-bottom-row {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
   }
 }
 
