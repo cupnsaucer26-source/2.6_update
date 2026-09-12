@@ -843,25 +843,38 @@ pre {
   }
   /* Close button: a quiet grey circle in its own row above the content. The
      dark ringed desktop button looked heavy and crowded tabs like "New Farmer". */
+  /* A true circle with only an x inside, on every phone. The x is drawn as an
+     SVG rather than the text "×": on Samsung phones the system font's glyph
+     metrics made the button render as a rounded blob instead of a circle.
+     Size is pinned from every side (min/max/aspect-ratio/no padding) so no
+     other button rule can stretch it. */
   .modal-close {
     top: 8px !important;
     right: 10px !important;
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
-    min-height: 34px !important;
-    background: #f1f5f9 !important;
-    color: #475569 !important;
+    box-sizing: border-box !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    aspect-ratio: 1 / 1;
+    flex: 0 0 36px;
+    padding: 0 !important;
     border: none !important;
+    border-radius: 50% !important;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #f1f5f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2.5 2.5l9 9M11.5 2.5l-9 9'/%3E%3C/svg%3E") center / 14px 14px no-repeat !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
     box-shadow: none !important;
-    font-size: 1.4rem !important;
-    font-weight: 400 !important;
-    transition: background-color 0.15s ease, color 0.15s ease !important;
+    transition: background-color 0.15s ease !important;
   }
   .modal-close:hover,
   .modal-close:active {
-    background: #e2e8f0 !important;
-    color: #0f172a !important;
+    background-color: #e2e8f0 !important;
     transform: none !important;
   }
   /* 34px looks right; the invisible ring keeps a 46px tap target. */
@@ -876,8 +889,11 @@ pre {
     display: none;
   }
   #welcomePosterModal .modal-close {
-    background: rgba(255, 255, 255, 0.14) !important;
-    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2.5 2.5l9 9M11.5 2.5l-9 9'/%3E%3C/svg%3E") center / 13px 13px no-repeat !important;
+  }
+  #welcomePosterModal .modal-close:hover,
+  #welcomePosterModal .modal-close:active {
+    background-color: rgba(255, 255, 255, 0.24) !important;
   }
   .product-modal-hero {
     grid-template-columns: 1fr !important;

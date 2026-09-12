@@ -2442,6 +2442,8 @@ function initModals() {
   });
 
   document.querySelectorAll('.modal-close').forEach(btn => {
+    // On phones the "×" text is hidden and drawn as an icon, so name the button.
+    if (!btn.hasAttribute('aria-label')) btn.setAttribute('aria-label', 'Close');
     btn.addEventListener('click', () => {
       const overlay = btn.closest('.modal-overlay');
       if (overlay) closeModal(overlay.id);
