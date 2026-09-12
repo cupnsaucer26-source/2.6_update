@@ -475,12 +475,48 @@ body {
     width: 36px;
     height: 36px;
   }
+  /* Phone header: the utility strip wrapped into a ~300px column and the
+     ticker, icons and search pushed content ~700px down. Keep one ticker
+     line, one header row (brand, account, basket, menu) and a slim search. */
   .public-utility {
-    font-size: 0.75rem;
+    display: none;
+  }
+  .public-ticker {
+    justify-content: flex-start;
+    padding: 6px 12px;
+    font-size: 0.72rem;
+  }
+  .public-ticker span:not(:first-child) {
+    display: none;
+  }
+  .public-site-header {
+    padding: 10px 12px;
+    gap: 8px 6px;
+  }
+  .public-header-actions .public-icon-action:not(.public-account-action) {
+    display: none;
+  }
+  .public-search {
+    height: 42px;
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+  }
+  .public-search input {
+    background: transparent;
+    font-size: 16px;
+  }
+  .public-search button {
+    flex: 0 0 34px;
+    align-self: center;
+    width: 34px;
+    height: 34px;
+    min-width: 0;
+    min-height: 0;
+    margin: 0 4px 0 0;
+    border-radius: 50%;
   }
   .public-footer-grid { grid-template-columns: 1fr; }
-  .public-footer-bottom { align-items: flex-start; flex-direction: column; }
-  .public-footer-bottom > div:nth-child(2) { flex-wrap: wrap; }
+  .public-footer-bottom { align-items: flex-start; flex-direction: column; }  .public-footer-bottom > div:nth-child(2) { flex-wrap: wrap; }
 }
 
 a { text-decoration: none; color: inherit; }
@@ -2436,6 +2472,13 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
   .login-right { display: none; }
   .login-page { justify-content: center; padding: 24px 14px; }
   .login-card { padding: 24px 18px; width: 100%; max-width: 480px; }
+  /* Brand and language switcher share one row (the brand wrapped onto its own
+     lines). Placed after the base .login-logo rules so it wins the cascade. */
+  .login-card > div:first-child { gap: 10px; }
+  .login-logo { gap: 8px; }
+  .login-logo-icon { width: 42px; height: 42px; font-size: 21px; }
+  .login-logo-text .brand { font-size: 1.15rem; white-space: nowrap; }
+  .login-logo-text .tagline { display: none; }
   .role-selector {
     display: flex;
     flex-wrap: wrap;
@@ -2894,12 +2937,16 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
 }
 
+/* 16px and full height: 13px text in a 20px-tall box was hard to tap and made
+   iOS zoom the page on focus. */
 .mobile-cat-search-bar input {
   flex: 1;
+  align-self: stretch;
+  min-height: 40px;
   border: none;
   background: transparent;
   outline: none;
-  font-size: 13px;
+  font-size: 16px;
   color: #1f2937;
 }
 
@@ -3007,7 +3054,10 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
 }
 
 /* Individual Rail Category Tab */
+/* flex-shrink: 0 - the rail is a scrolling flex column; letting tabs shrink
+   squeezed every tab to 77px, squashed the icon and cut labels in half. */
 .bighaat-rail-tab {
+  flex-shrink: 0;
   position: relative;
   width: 100%;
   display: flex;
@@ -3080,7 +3130,7 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
 }
 
 .rail-tab-label {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.25;
   font-weight: 500;
   color: #4b5563;

@@ -1742,26 +1742,41 @@ function updateCartUI() {
   const cartBadge = document.getElementById('cartBadge');
   const cartContainer = document.getElementById('cartItemsContainer');
   const subtotalEl = document.getElementById('cartSubtotal');
+  const gstEl = document.getElementById('cartGst');
   const drawerTotalEl = document.getElementById('cartDrawerTotal');
+  const checkoutAmountEl = document.getElementById('cartCheckoutAmount');
+  const itemCountEl = document.getElementById('cartItemCount');
   const grandTotalEl = document.getElementById('cartGrandTotal');
+  const drawer = document.querySelector('#cartOverlay .cart-drawer');
+  const rupees = value => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
   const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
   if (cartBadge) cartBadge.textContent = totalItems;
   const mobileCartBadge = document.getElementById('mobileCartBadge');
   if (mobileCartBadge) mobileCartBadge.textContent = totalItems;
 
+  // Same rule as checkout.html and the server: GST is 18% of the subtotal,
+  // rounded. The basket used to show the subtotal as the "Grand Total".
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-  if (subtotalEl) subtotalEl.textContent = `₹${subtotal}`;
-  if (drawerTotalEl) drawerTotalEl.textContent = `₹${subtotal}`;
-  if (grandTotalEl) grandTotalEl.textContent = `₹${subtotal}`;
+  const gst = Math.round(subtotal * 0.18);
+  const total = subtotal + gst;
+  if (subtotalEl) subtotalEl.textContent = rupees(subtotal);
+  if (gstEl) gstEl.textContent = rupees(gst);
+  if (drawerTotalEl) drawerTotalEl.textContent = rupees(total);
+  if (checkoutAmountEl) checkoutAmountEl.textContent = rupees(total);
+  if (grandTotalEl) grandTotalEl.textContent = rupees(total);
+  if (itemCountEl) itemCountEl.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'items'}`;
+  if (drawer) drawer.classList.toggle('is-empty', cart.length === 0);
 
   if (!cartContainer) return;
 
   if (cart.length === 0) {
     cartContainer.innerHTML = `
-      <div style="text-align: center; padding: 40px 10px; color: var(--text-muted);">
-        <i class="fa-solid fa-basket-shopping" style="font-size: 2.5rem; margin-bottom: 10px; opacity: 0.5;"></i>
-        <p>Your shopping cart is empty</p>
+      <div class="cart-empty">
+        <div class="cart-empty-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+        <h4>Your basket is empty</h4>
+        <p>Add crop protection products to get started.</p>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('cartOverlay')?.classList.remove('active'); document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });">Browse products</button>
       </div>
     `;
     return;
@@ -1769,17 +1784,20 @@ function updateCartUI() {
 
   cartContainer.innerHTML = cart.map((item, idx) => `
     <div class="cart-item">
-      <img loading="lazy" decoding="async" src="${productImage(item)}" alt="${item.name}" />
-      <div style="flex-grow: 1;">
-        <h4 style="font-size: 0.9rem; line-height: 1.2;">${item.name}</h4>
-        <span style="font-size: 0.78rem; color: var(--text-muted);">${item.selectedPack} | ₹${item.price}</span>
-        <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
-          <button class="qty-btn" onclick="updateQty(${idx}, -1)">-</button>
-          <span style="font-weight: 700; font-size: 0.85rem;">${item.qty}</span>
-          <button class="qty-btn" onclick="updateQty(${idx}, 1)">+</button>
+      <div class="cart-item-thumb"><img loading="lazy" decoding="async" src="${productImage(item)}" alt="${item.name}" /></div>
+      <div class="cart-item-body">
+        <h4 class="cart-item-name">${item.name}</h4>
+        <div class="cart-item-meta">${item.selectedPack ? `<span class="cart-item-pack">${item.selectedPack}</span>` : ''}<span>${rupees(item.price)} each</span></div>
+        <div class="cart-item-foot">
+          <div class="cart-stepper" role="group" aria-label="Quantity">
+            <button type="button" onclick="updateQty(${idx}, -1)" aria-label="${item.qty <= 1 ? 'Remove item' : 'Decrease quantity'}"><i class="fa-solid ${item.qty <= 1 ? 'fa-trash-can' : 'fa-minus'}"></i></button>
+            <span>${item.qty}</span>
+            <button type="button" onclick="updateQty(${idx}, 1)" aria-label="Increase quantity"><i class="fa-solid fa-plus"></i></button>
+          </div>
+          <strong class="cart-item-total">${rupees(item.price * item.qty)}</strong>
         </div>
       </div>
-      <button style="background: transparent; color: #ef4444;" onclick="removeFromCart(${idx})"><i class="fa-solid fa-trash-can"></i></button>
+      <button type="button" class="cart-item-remove" onclick="removeFromCart(${idx})" aria-label="Remove from basket"><i class="fa-solid fa-xmark"></i></button>
     </div>
   `).join('');
 }

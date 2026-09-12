@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/responsive.css">
 </head>
-<body id="top">
+<body id="top" class="has-bottom-nav">
   <!-- SITE CONTENT (loads before React) -->
   
   <!-- TICKER DISPLAY -->
@@ -564,7 +564,7 @@
             <select class="select-input" id="categorySelect"></select>
           </div>
 
-          <button class="btn btn-outline" style="width: 100%; justify-content: center; font-size: 0.82rem;" onclick="resetFilters()">
+          <button class="btn btn-outline filter-reset-inline" style="width: 100%; justify-content: center; font-size: 0.82rem;" onclick="resetFilters()">
             <i class="fa-solid fa-rotate-left"></i> <span data-i18n="reset_filters">Reset All Filters</span>
           </button>
 
@@ -819,31 +819,42 @@
 
   <!-- E-COMMERCE SHOPPING CART DRAWER -->
   <div class="cart-drawer-overlay" id="cartOverlay">
-    <div class="cart-drawer">
+    <div class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cartDrawerTitle">
       <div class="cart-header">
-        <h3><i class="fa-solid fa-cart-shopping"></i> Shopping Basket</h3>
-        <button class="cart-close-btn" id="cartCloseBtn">&times;</button>
+        <div class="cart-header-title">
+          <h3 id="cartDrawerTitle"><i class="fa-solid fa-bag-shopping"></i> Your Basket</h3>
+          <span class="cart-header-count" id="cartItemCount">0 items</span>
+        </div>
+        <button class="cart-close-btn" id="cartCloseBtn" aria-label="Close basket">&times;</button>
       </div>
 
       <div class="cart-items-container" id="cartItemsContainer"></div>
 
       <div class="cart-footer">
-        <div class="cart-summary-row">
-          <span>Subtotal:</span>
-          <span id="cartSubtotal">₹0</span>
-        </div>
-        <div class="cart-summary-row">
-          <span>Express Delivery:</span>
-          <span style="color: var(--primary);">FREE</span>
-        </div>
-        <div class="cart-summary-row grand-total">
-          <span>Grand Total:</span>
-          <span id="cartDrawerTotal">₹0</span>
+        <div class="cart-summary">
+          <div class="cart-summary-row">
+            <span>Subtotal</span>
+            <span id="cartSubtotal">₹0</span>
+          </div>
+          <div class="cart-summary-row">
+            <span>GST (18%)</span>
+            <span id="cartGst">₹0</span>
+          </div>
+          <div class="cart-summary-row">
+            <span>Delivery</span>
+            <span class="cart-free">FREE</span>
+          </div>
+          <div class="cart-summary-row grand-total">
+            <span>Total</span>
+            <span id="cartDrawerTotal">₹0</span>
+          </div>
         </div>
 
-        <button class="btn btn-primary" id="checkoutBtn" style="width: 100%; justify-content: center; padding: 14px; font-size: 1rem; margin-top: 10px;">
-          <i class="fa-solid fa-lock"></i> Proceed to Checkout
+        <button class="btn btn-primary cart-checkout-btn" id="checkoutBtn">
+          <span><i class="fa-solid fa-lock"></i> Checkout</span>
+          <span class="cart-checkout-amount" id="cartCheckoutAmount">₹0</span>
         </button>
+        <p class="cart-secure-note"><i class="fa-solid fa-shield-halved"></i> Secure payment · UPI, cards or cash on delivery</p>
       </div>
     </div>
   </div>
@@ -908,7 +919,12 @@
       <button class="modal-close">&times;</button>
       <h3 style="color: var(--primary-dark); margin-bottom: 14px;"><i class="fa-solid fa-camera"></i> <span data-i18n="scan_title">AI Crop Disease Photo Scanner</span></h3>
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;" data-i18n="scan_desc">AI will diagnose disease & recommend pesticide</p>
-      <input type="file" class="text-input" accept="image/*" id="diseasePhotoInput" style="margin-bottom: 12px;" />
+      <label class="upload-dropzone" for="diseasePhotoInput">
+        <input type="file" accept="image/*" id="diseasePhotoInput" onchange="document.getElementById('diseasePhotoName').textContent = (this.files[0] && this.files[0].name) || 'JPG or PNG · a clear, close-up photo'" />
+        <span class="upload-dropzone-icon"><i class="fa-solid fa-camera"></i></span>
+        <strong>Take or upload a leaf photo</strong>
+        <small id="diseasePhotoName">JPG or PNG · a clear, close-up photo</small>
+      </label>
       <button class="btn btn-gold" id="analyzePhotoBtn" style="width: 100%; justify-content: center;"><i class="fa-solid fa-microscope"></i> Diagnose Crop Disease</button>
       <div id="photoScannerResult" style="margin-top: 14px;"></div>
     </div>

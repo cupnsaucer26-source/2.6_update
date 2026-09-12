@@ -107,12 +107,67 @@
       .checkout-page { margin-bottom: max(24px, env(safe-area-inset-bottom)); }
     }
     @media (max-width:520px) { .footer-grid { grid-template-columns:1fr; } .checkout-page { margin:24px 14px; } }
+
+    /* --- Phone polish -----------------------------------------------------
+       Item rows become cards with a compact quantity pill and an X to remove;
+       the address box uses the page font (it rendered in a typewriter font);
+       Pay is the clear primary action, Cash on Delivery secondary, Continue
+       shopping a quiet link; the footer drops its link lists. --- */
+    .checkout-form textarea { font-family: inherit; line-height: 1.45; resize: vertical; }
+    .checkout-line-thumb img { background: #f8fafc; }
+    @media (max-width: 560px) {
+      .checkout-page { margin: 12px; padding: 18px 14px; border-radius: 16px; }
+      .checkout-page > a { color: #15803d; font-weight: 700; font-size: .9rem; }
+      .checkout-page h1 { margin: 4px 0 2px; }
+      .checkout-items { margin: 12px 0 0; padding-bottom: 0; border-bottom: 0; display: grid; gap: 10px; }
+      .checkout-line {
+        grid-template-columns: 64px minmax(0, 1fr) auto;
+        grid-template-areas: "thumb name del" "thumb qty price";
+        column-gap: 12px;
+        row-gap: 8px;
+        padding: 10px !important;
+        background: #fff;
+        border: 1px solid #e3f4ea;
+        border-radius: 14px;
+      }
+      .checkout-line-thumb { width: 64px; height: 64px; background: #f8fafc; align-self: start; }
+      .checkout-line-body { align-self: start; }
+      .checkout-line .link-btn {
+        grid-area: del;
+        align-self: start;
+        justify-self: end;
+        transform: none;
+        width: 34px; height: 34px; min-height: 34px; padding: 0;
+        border-radius: 50%;
+        font-size: 0;
+        color: #94a3b8;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .checkout-line .link-btn::before { content: '\f00d'; font-family: 'Font Awesome 6 Free'; font-weight: 900; font-size: .95rem; }
+      .checkout-line .link-btn:active { background: #fef2f2; color: #dc2626; }
+      .checkout-line .qty { grid-area: qty; gap: 0; border: 1px solid #d1fae5; border-radius: 999px; overflow: hidden; }
+      .checkout-line .qty button { width: 34px; height: 34px; min-width: 34px; min-height: 34px; padding: 0; border-radius: 0; background: transparent; font-size: 1.05rem; }
+      .checkout-line .qty span { min-width: 28px; text-align: center; font-weight: 700; }
+      .checkout-line > strong { grid-area: price; align-self: center; }
+      .totals { margin: 12px 0 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e3f4ea; border-radius: 14px; }
+      .checkout-form input, .checkout-form textarea { padding: 13px 14px; border-color: #d7ebe0; border-radius: 12px; background: #fff; }
+      .checkout-form input:focus, .checkout-form textarea:focus { outline: none; border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
+      .checkout-actions { flex-direction: column; gap: 10px; }
+      .checkout-actions #payBtn { order: 1; border-radius: 14px; box-shadow: 0 8px 18px rgba(21,128,61,.25); }
+      .checkout-actions #codBtn { order: 2; border-radius: 14px; background: #fff; color: #166534; border: 1.5px solid #86efac; }
+      .checkout-actions button[onclick] { order: 3; min-height: 40px !important; background: transparent; color: #475569; font-weight: 600; }
+      .pay-note { text-align: center; }
+      footer { padding: 32px 0 16px !important; }
+      footer .footer-grid > div:nth-child(2),
+      footer .footer-grid > div:nth-child(3) { display: none; }
+      footer .container > div:last-child { flex-direction: column; gap: 10px; text-align: center; }
+    }
   </style>
 </head>
 <body>
   <div class="ticker-wrap"><div class="ticker-track" id="tickerTrack"><span class="ticker-item"><i class="fa-solid fa-fire" style="color:#fbbf24"></i> FLAT 15% OFF on first order — Use code <strong>FARM15</strong></span><span class="ticker-item"><i class="fa-solid fa-truck-fast" style="color:#34d399"></i> Free express delivery on orders above ₹999 across all 28 states</span><span class="ticker-item"><i class="fa-solid fa-leaf" style="color:#6ee7b7"></i> BlastShield 75 WP — #1 Selling Paddy Fungicide this Kharif Season</span><span class="ticker-item"><i class="fa-brands fa-whatsapp" style="color:#25d366"></i> WhatsApp us at 9000-425-999 for instant crop advisory in your language</span><span class="ticker-item"><i class="fa-solid fa-award" style="color:#fbbf24"></i> Sathya Bio — Winner of ICAR Best AgriTech 2025 Award</span><span class="ticker-item"><i class="fa-solid fa-phone-volume" style="color:#34d399"></i> Missed Call To Order: <strong>1800-425-9999</strong> — 24 hrs, 7 days</span></div></div>
   <div class="topbar"><div class="container topbar-content"><div class="topbar-left-links"><a href="./index.html#catalog" class="topbar-link">Sell on Sathya Bio</a><a href="./index.html#tickets" class="topbar-link">Bulk Order Inquiries</a><a href="./index.html#experts" class="topbar-link">Corporate Site</a><span class="topbar-badge"><i class="fa-solid fa-phone-volume"></i> Missed Call To Order: <strong>1800-425-9999</strong></span></div><div class="topbar-right-info"><span class="topbar-shipping-note"><i class="fa-solid fa-truck-fast"></i> <span data-i18n="topbar_shipping">FREE Shipping on Orders over ₹999</span></span><div class="lang-selector-wrapper"><i class="fa-solid fa-globe"></i><select class="lang-select" aria-label="Language"><option>English</option><option>தமிழ் (Tamil)</option><option>తెలుగు (Telugu)</option><option>ಕನ್ನಡ (Kannada)</option><option>മലയാളം (Malayalam)</option><option>ತುಳು (Tulu)</option></select></div></div></div></div>
-  <header class="header-main"><div class="container header-grid"><a href="./index.html" class="logo-box"><div class="logo-icon"><i class="fa-solid fa-leaf"></i></div><div><div class="logo-text">SATHYA <span>BIO</span></div><span class="logo-sub" data-i18n="logo_sub">Agro Pesticide Store</span></div></a><div class="header-search"><div class="search-category-dropdown"><select><option>All Categories</option><option>Fungicides</option><option>Insecticides</option><option>Herbicides</option><option>Bio-Stimulants</option><option>Nematicides</option></select></div><input type="text" placeholder="Search by crop, disease, chemical e.g. Blast, Paddy, Whitefly..." /><button type="button" class="voice-search-btn" title="Voice Search"><i class="fa-solid fa-microphone"></i></button><button type="button"><i class="fa-solid fa-magnifying-glass"></i> Search</button></div><div class="header-actions"><div class="action-item lang-item"><i class="fa-solid fa-language action-icon"></i><div><span class="action-sub">Language</span><select class="header-lang-dropdown"><option>English</option><option>தமிழ்</option><option>తెలుగు</option><option>ಕನ್ನಡ</option><option>മലയാളം</option><option>ತುಳು</option></select></div></div><a class="action-item" href="./order-status.html"><i class="fa-solid fa-truck-ramp-box action-icon"></i><div><span class="action-sub">Track</span><span class="action-title">Order Status</span></div></a><div class="action-item"><div class="action-icon"><i class="fa-regular fa-heart"></i><span class="cart-badge" style="background: var(--accent-amber);">0</span></div><div><span class="action-sub">Saved</span><span class="action-title">Wishlist</span></div></div><div class="action-item"><i class="fa-regular fa-circle-user action-icon"></i><div><span class="action-sub">Account</span><span class="action-title">Login / Register</span></div></div><a class="action-item cart-trigger-btn" href="./checkout.html"><div class="action-icon"><i class="fa-solid fa-bag-shopping"></i><span class="cart-badge">0</span></div><div><span class="action-sub">Basket</span><span class="action-title">₹0</span></div></a></div></div></header>
+  <header class="header-main"><div class="container header-grid"><a href="./index.html" class="logo-box"><div class="logo-icon"><i class="fa-solid fa-leaf"></i></div><div><div class="logo-text">SATHYA <span>BIO</span></div><span class="logo-sub" data-i18n="logo_sub">Agro Pesticide Store</span></div></a><div class="header-search"><div class="search-category-dropdown"><select><option>All Categories</option><option>Fungicides</option><option>Insecticides</option><option>Herbicides</option><option>Bio-Stimulants</option><option>Nematicides</option></select></div><input type="text" placeholder="Search by crop, disease, chemical e.g. Blast, Paddy, Whitefly..." /><button type="button" class="voice-search-btn" title="Voice Search"><i class="fa-solid fa-microphone"></i></button><button type="button" id="headerSearchBtn" aria-label="Search" onclick="location.href='/storefront.html#catalog'"><i class="fa-solid fa-magnifying-glass"></i> Search</button></div><div class="header-actions"><div class="action-item lang-item"><i class="fa-solid fa-language action-icon"></i><div><span class="action-sub">Language</span><select class="header-lang-dropdown"><option>English</option><option>தமிழ்</option><option>తెలుగు</option><option>ಕನ್ನಡ</option><option>മലയാളം</option><option>ತುಳು</option></select></div></div><a class="action-item" href="./order-status.html"><i class="fa-solid fa-truck-ramp-box action-icon"></i><div><span class="action-sub">Track</span><span class="action-title">Order Status</span></div></a><div class="action-item"><div class="action-icon"><i class="fa-regular fa-heart"></i><span class="cart-badge" style="background: var(--accent-amber);">0</span></div><div><span class="action-sub">Saved</span><span class="action-title">Wishlist</span></div></div><div class="action-item"><i class="fa-regular fa-circle-user action-icon"></i><div><span class="action-sub">Account</span><span class="action-title">Login / Register</span></div></div><a class="action-item cart-trigger-btn" href="./checkout.html"><div class="action-icon"><i class="fa-solid fa-bag-shopping"></i><span class="cart-badge">0</span></div><div><span class="action-sub">Basket</span><span class="action-title">₹0</span></div></a></div></div></header>
   <nav class="navbar"><div class="container nav-content"><ul class="nav-links"><li><a href="/#catalog" class="active"><i class="fa-solid fa-store"></i> All Products</a></li><li><a href="/#categoriesSection"><i class="fa-solid fa-layer-group"></i> Categories</a></li><li><a href="/#cropSection"><i class="fa-solid fa-wheat-awn"></i> Shop by Crop</a></li><li><a href="/#brandsSection"><i class="fa-solid fa-award"></i> Brands</a></li><li><a href="/#soil"><i class="fa-solid fa-flask"></i> Soil Analyzer</a></li><li><a href="/#n8n"><i class="fa-brands fa-whatsapp"></i> WhatsApp N8N AI</a></li><li><a href="/#tickets"><i class="fa-solid fa-headset"></i> Support Tickets</a></li><li><a href="/#experts"><i class="fa-solid fa-user-doctor"></i> Agronomists</a></li></ul><div style="display: flex; gap: 10px;"><button class="btn btn-gold" style="padding: 6px 16px; font-size: 0.82rem; border-radius: 50px;"><i class="fa-solid fa-camera-retro"></i> AI Leaf Doctor</button></div></div></nav>
   <main class="checkout-page">
     <a href="/">← Back to store</a>
@@ -126,7 +181,7 @@
       <div class="checkout-actions">
         <button type="button" class="secondary" onclick="location.href='/'">Continue shopping</button>
         <button type="button" class="secondary" id="codBtn">Cash on Delivery</button>
-        <button type="button" class="primary" id="payBtn">💳 Pay with Razorpay</button>
+        <button type="button" class="primary" id="payBtn"><i class="fa-solid fa-lock"></i> Pay online (UPI / Card)</button>
       </div>
       <p class="pay-note">Online payments are processed by Razorpay. The amount is calculated on our server, so it can never be changed in the browser.</p>
     </form>
@@ -251,8 +306,11 @@
       itemsEl.innerHTML = cart.map(item => {
         const id = keyOf(item);
         const qty = Number(item.qty || 1);
-        const image = item.image || item.imageUrl;
-        const thumb = image ? '<img src="' + image + '" alt="" />' : (item.emoji || '🌿');
+        // Empty "data:image/...;base64," uploads are not images; use the placeholder
+        // (the storefront does the same), and fall back if a URL fails to load.
+        let image = String(item.image || item.imageUrl || '').trim();
+        if (/^data:image\/[\w+.-]+;base64,?$/i.test(image)) image = '';
+        const thumb = '<img src="' + (image || './assets/p1.webp') + '" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'./assets/p1.webp\'" />';
         const meta = [item.category, item.selectedPack].filter(Boolean).join(' · ');
         return '<div class="checkout-line">' +
           '<div class="checkout-line-thumb">' + thumb + '</div>' +
