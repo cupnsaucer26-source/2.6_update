@@ -1183,9 +1183,29 @@ pre {
 @media (max-width: 480px) {
   .logo-text {
     font-size: 1.05rem;
+    line-height: 1.1;
+  }
+  /* The "Agro Pesticide Store" tagline stays on phones as a compact second
+     line under the brand. Tight line-heights keep the two lines within the
+     38px logo icon, so the sticky header does not grow; min-width: 0 on the
+     text column lets a very narrow screen trim it with an ellipsis instead
+     of pushing the language and account buttons. */
+  .logo-box > div {
+    min-width: 0;
   }
   .logo-sub {
-    display: none;
+    display: block;
+    margin-top: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 0.58rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: 0.09em;
+  }
+  html[lang="ta"] .logo-sub {
+    letter-spacing: 0;
   }
   .header-actions {
     gap: 4px;

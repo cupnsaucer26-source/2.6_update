@@ -13,7 +13,8 @@
 window.SB_LANG_TA = {
   keys: {
     topbar_shipping: '₹999-க்கு மேல் ஆர்டர்களுக்கு இலவச டெலிவரி',
-    logo_sub: 'வேளாண் பூச்சிக்கொல்லி அங்காடி',
+    // Short: on phones this sits under the brand name, beside the header buttons.
+    logo_sub: 'வேளாண் மருந்துக் கடை',
     search_placeholder: 'பயிர், நோய் அல்லது மருந்து பெயரில் தேடுங்கள்...',
     search_btn: 'தேடு',
     basket_label: 'கூடை',
