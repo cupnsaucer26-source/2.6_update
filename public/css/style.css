@@ -2271,6 +2271,16 @@ footer {
 .modal-overlay.active .modal-card {
   transform: translateY(0) scale(1);
 }
+/* Opening (see openModal): for one frame the overlay is painted but still
+   transparent and the card already has its own layer, so the first frame of
+   the transition does not also have to create and rasterise that layer. */
+.modal-overlay.is-opening {
+  visibility: visible;
+}
+.modal-overlay.is-opening .modal-card,
+.modal-overlay.active .modal-card {
+  will-change: transform;
+}
 .modal-lg {
   max-width: 760px;
 }

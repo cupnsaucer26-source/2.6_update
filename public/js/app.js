@@ -960,7 +960,7 @@ function initPreloaderAndWelcomePoster() {
     setTimeout(async () => {
       // Never stack the poster on top of a window the visitor is already using
       // (for example the sign-in modal opened by a checkout redirect).
-      if (await shouldShowPoster && !document.querySelector('.modal-overlay.active')) {
+      if (await shouldShowPoster && !document.querySelector('.modal-overlay.active, .modal-overlay.is-opening')) {
         openModal('welcomePosterModal');
       }
     }, 400);
@@ -1541,6 +1541,7 @@ window.toggleMobileFilterDrawer = function(open) {
     overlay.classList.remove('active');
     document.body.style.overflow = '';
   }
+  syncOverlayState();
 };
 
 window.resetFilters = function() {
@@ -1807,6 +1808,16 @@ function openProductModal(productId) {
   const modal = document.getElementById('productModal');
   const container = document.getElementById('productModalContent');
   if (!modal || !container) return;
+
+  modal.querySelector('.modal-card')?.scrollTo(0, 0);
+  // Reopening the same product reuses what is already rendered: building it is
+  // the popup's one large layout. A catalogue refresh replaces the product
+  // objects, so stale content is never reused.
+  if (container.renderedProduct === p) {
+    openModal('productModal');
+    return;
+  }
+  container.renderedProduct = p;
 
   const relatedProducts = PESTICIDES.filter(item =>
     item.id !== p.id && (item.category === p.category || item.crops.some(c => p.crops.includes(c)))
@@ -2312,6 +2323,13 @@ function enableSwipeToDismiss(card, onDismiss, scroller = card) {
 function initPosterSwipeToDismiss() {
   const card = document.querySelector('#welcomePosterModal .welcome-poster-card');
   enableSwipeToDismiss(card, () => closeModal('welcomePosterModal'), card?.querySelector('.welcome-poster-body'));
+
+  // Every other popup is a bottom sheet on phones (grab handle at the top);
+  // a downward swipe from the top of its content closes it too.
+  document.querySelectorAll('.modal-overlay:not(#welcomePosterModal) .modal-card').forEach(sheet => {
+    const overlay = sheet.closest('.modal-overlay');
+    enableSwipeToDismiss(sheet, () => closeModal(overlay.id), sheet);
+  });
 }
 
 // ==================== MOBILE MENU SHEET (phones) ====================
@@ -2343,7 +2361,10 @@ window.toggleMobileMenu = function(open) {
     const icon = menuBtn.querySelector('i');
     if (icon) icon.className = next ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
   }
-  updateMobileNavActive();
+  syncOverlayState();
+  // The tab highlight reads layout; doing it in this frame forced a style and
+  // layout pass right as the sheet starts to slide.
+  requestAnimationFrame(updateMobileNavActive);
 };
 
 // Menu chips filter the catalogue and take the shopper straight to it.
@@ -2786,15 +2807,36 @@ window.clearStorefrontFieldErrors = function() {
   document.querySelectorAll('.sb-password-rules').forEach(list => list.remove());
 };
 
+// Body classes other styles key off, instead of a document-wide :has()
+// selector that made every class change re-check the whole page.
+function syncOverlayState() {
+  const body = document.body;
+  const blocking = document.querySelector('.modal-overlay.active:not(#welcomePosterModal), .modal-overlay.is-opening:not(#welcomePosterModal), .mobile-menu-sheet.active, .sidebar-panel.active');
+  body.classList.toggle('overlay-open', Boolean(blocking));
+  body.classList.toggle('poster-open', Boolean(document.getElementById('welcomePosterModal')?.classList.contains('active')));
+}
+
 function openModal(id) {
   const modal = document.getElementById(id);
-  if (modal) modal.classList.add('active');
+  if (!modal || modal.classList.contains('active') || modal.classList.contains('is-opening')) return;
+  // Paint the (still transparent) overlay and promote the card one frame
+  // before the slide starts, so the animation's first frame is not spent
+  // creating and rasterising the layer - the stutter on phones.
+  modal.classList.add('is-opening');
+  syncOverlayState();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (!modal.classList.contains('is-opening')) return; // closed meanwhile
+    modal.classList.add('active');
+    modal.classList.remove('is-opening');
+    syncOverlayState();
+  }));
 }
 
 function closeModal(id) {
   const modal = document.getElementById(id);
-  if (modal) modal.classList.remove('active');
+  if (modal) modal.classList.remove('active', 'is-opening');
   if (id === 'authModal' && typeof clearAuthNotice === 'function') clearAuthNotice();
+  syncOverlayState();
 }
 
 window.openModal = openModal;

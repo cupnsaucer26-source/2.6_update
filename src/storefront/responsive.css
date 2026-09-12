@@ -804,30 +804,80 @@ pre {
     padding: 7px 8px !important;
   }
 
-  /* Bottom-Sheet Modals */
+  /* Bottom-Sheet Modals
+     Kept cheap to animate on phone GPUs: the sheet only slides (transform),
+     the backdrop only fades (opacity), the sheet's layer is created a frame
+     before the slide starts (openModal), and the shadow is small - a 40px blur
+     on a full-width moving sheet was expensive to paint and invisible against
+     the dimmed backdrop anyway. */
   .modal-overlay {
     align-items: flex-end !important;
     padding: 0 !important;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
   }
   .modal-card {
     width: 100% !important;
     max-width: 100% !important;
-    border-radius: 24px 24px 0 0 !important;
+    border-radius: 22px 22px 0 0 !important;
     max-height: 86vh !important;
-    padding: 22px 16px calc(24px + env(safe-area-inset-bottom, 0px)) 16px !important;
+    padding: 44px 16px calc(24px + env(safe-area-inset-bottom, 0px)) 16px !important;
     transform: translateY(100%) !important;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25) !important;
-    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.12) !important;
+    transition: transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+    overscroll-behavior: contain;
   }
   .modal-overlay.active .modal-card {
     transform: translateY(0) !important;
   }
+  /* Grab handle: signals the sheet can be swiped down to close. */
+  .modal-card::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 4px;
+    background: #cbd5e1;
+  }
+  /* Close button: a quiet grey circle in its own row above the content. The
+     dark ringed desktop button looked heavy and crowded tabs like "New Farmer". */
   .modal-close {
-    top: 12px !important;
-    right: 12px !important;
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 1.2rem !important;
+    top: 8px !important;
+    right: 10px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 1.4rem !important;
+    font-weight: 400 !important;
+    transition: background-color 0.15s ease, color 0.15s ease !important;
+  }
+  .modal-close:hover,
+  .modal-close:active {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    transform: none !important;
+  }
+  /* 34px looks right; the invisible ring keeps a 46px tap target. */
+  .modal-close::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+  }
+  /* The welcome poster is dark and has its own handle. */
+  #welcomePosterModal .modal-card::before {
+    display: none;
+  }
+  #welcomePosterModal .modal-close {
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
   }
   .product-modal-hero {
     grid-template-columns: 1fr !important;
@@ -966,10 +1016,18 @@ pre {
       touch-action: pan-x;
     }
   }
-  /* The chat bubble would sit on top of the card. */
-  body:has(#welcomePosterModal.active) .chatbot-trigger-btn {
+  /* The chat bubble would sit on top of the card. A body class set by
+     syncOverlayState(), not body:has(...): :has() on body re-checked the whole
+     page on every class change, including every popup opening. */
+  body.poster-open .chatbot-trigger-btn {
     opacity: 0;
     pointer-events: none;
+  }
+  /* While a popup or sheet is open, pause the looping decorations behind it
+     so the phone spends every frame on the sheet's slide. */
+  body.overlay-open .ticker-track,
+  body.overlay-open .chatbot-trigger-btn::after {
+    animation-play-state: paused;
   }
 
   /* Floating Buttons repositioned safely above bottom nav. Back-to-top is
