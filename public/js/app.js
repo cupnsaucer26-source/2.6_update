@@ -2167,54 +2167,78 @@ function initModals() {
   initMobileMenu();
   initFooterAccordions();
   initMobileNavActiveState();
-  initViewportDocking();
+  initNavDebugPanel();
 }
 
-// Measured safety net for the CSS docking in responsive.css: if the bottom
-// bar still ends below the visible screen (or floats above it), --dock-lift
-// moves every docked layer by exactly that difference.
-function initViewportDocking() {
-  const vv = window.visualViewport;
+// On-device diagnostics for the bottom bar. Open the storefront with
+// ?debug=nav to overlay live viewport numbers and outline the bar in red, then
+// screenshot it while the bar is hidden. Does nothing without the parameter.
+function initNavDebugPanel() {
+  if (new URLSearchParams(location.search).get('debug') !== 'nav') return;
   const nav = document.getElementById('mobileBottomNav');
-  if (!vv || !nav) return;
-  const root = document.documentElement;
-  let lift = 0;
+  const vv = window.visualViewport;
+
+  const probe = unit => {
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;top:0;left:-9999px;width:1px;height:100${unit};visibility:hidden;pointer-events:none`;
+    document.body.appendChild(el);
+    return el;
+  };
+  const vhProbe = probe('vh');
+  const dvhProbe = CSS.supports('height', '100dvh') ? probe('dvh') : null;
+
+  const panel = document.createElement('pre');
+  panel.id = 'navDebugPanel';
+  panel.style.cssText = 'position:fixed;top:130px;left:8px;right:8px;z-index:2147483647;margin:0;padding:8px 10px;background:rgba(0,0,0,0.85);color:#7cfc00;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;border-radius:8px;pointer-events:none';
+  document.body.appendChild(panel);
+  if (nav) nav.style.outline = '3px solid #ff2d55';
+
+  const describe = el => {
+    if (!el) return 'none';
+    const cls = typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/)[0] : '';
+    return `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${cls}`;
+  };
+
+  const render = () => {
+    const rect = nav?.getBoundingClientRect();
+    const css = nav ? getComputedStyle(nav) : null;
+    const visibleBottom = vv ? vv.offsetTop + vv.height : innerHeight;
+    // elementFromPoint skips this panel (pointer-events: none).
+    const hit = document.elementFromPoint(innerWidth / 2, Math.max(0, visibleBottom - 8));
+    const ua = (navigator.userAgent.match(/(SamsungBrowser|Chrome|CriOS|Firefox|Version)\/[\d.]+/g) || []).join(' ');
+    const fixed = n => (typeof n === 'number' ? n.toFixed(1) : '-');
+    panel.textContent = [
+      `ua         ${ua}`,
+      `url        ${location.pathname}  top=${window.top === window}`,
+      `screen     ${screen.width}x${screen.height} dpr=${devicePixelRatio}`,
+      `inner      ${innerWidth}x${innerHeight}  client=${document.documentElement.clientHeight}`,
+      `visualVP   h=${fixed(vv?.height)} top=${fixed(vv?.offsetTop)} scale=${vv ? vv.scale.toFixed(2) : '-'}`,
+      `100vh=${vhProbe.offsetHeight}  100dvh=${dvhProbe ? dvhProbe.offsetHeight : 'n/a'}`,
+      `scrollY    ${Math.round(scrollY)} / ${document.documentElement.scrollHeight}`,
+      `nav rect   top=${fixed(rect?.top)} bottom=${fixed(rect?.bottom)} visibleBottom=${fixed(visibleBottom)}`,
+      `nav css    bottom=${css?.bottom} margin-bottom=${css?.marginBottom} display=${css?.display}`,
+      `bottom hit ${describe(hit)} ${nav && nav.contains(hit) ? '(nav OK)' : '(NOT nav)'}`,
+    ].join('\n');
+  };
+
   let queued = false;
-
-  const typing = () => {
-    const el = document.activeElement;
-    return Boolean(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)));
-  };
-
-  const measure = () => {
-    queued = false;
-    let next = 0;
-    // Pinch-zoom and the on-screen keyboard are left to the browser.
-    if (getComputedStyle(nav).display !== 'none' && vv.scale <= 1.01 && !typing()) {
-      const naturalBottom = nav.getBoundingClientRect().bottom + lift;
-      next = Math.round(naturalBottom - (vv.offsetTop + vv.height));
-      if (Math.abs(next) <= 1 || Math.abs(next) > 200) next = 0;
-    }
-    if (next !== lift) {
-      lift = next;
-      root.style.setProperty('--dock-lift', `${lift}px`);
-    }
-  };
   const queue = () => {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(measure);
+    requestAnimationFrame(() => {
+      queued = false;
+      render();
+    });
   };
-
-  vv.addEventListener('resize', queue);
-  vv.addEventListener('scroll', queue);
   window.addEventListener('scroll', queue, { passive: true });
   window.addEventListener('resize', queue);
-  window.addEventListener('orientationchange', queue);
-  document.addEventListener('focusin', queue);
-  document.addEventListener('focusout', queue);
-  queue();
+  vv?.addEventListener('resize', queue);
+  vv?.addEventListener('scroll', queue);
+  // Toolbar animations do not always fire events; keep the numbers fresh.
+  setInterval(render, 500);
+  render();
 }
+
 
 // A downward swipe dismisses a bottom card or sheet, like a native bottom
 // sheet. `scroller` keeps its own scrolling until it is back at the top.

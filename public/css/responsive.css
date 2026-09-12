@@ -1491,43 +1491,23 @@ pre {
     text-align: center;
   }
 
-  /* ---- Dock bottom-anchored layers to the VISIBLE viewport ----
-     Chrome on Android can lay out fixed elements against the full-screen
-     (address bar hidden) height while the address bar is still showing, so
-     bottom: 0 ended ~60px below the screen and the bottom bar vanished.
-     calc(100% - 100dvh) is the gap between that box and the dynamic
-     viewport: 0 where they already agree, the toolbar height where they do
-     not. Browsers without dvh drop the declaration and keep bottom: 0.
-     --dock-lift is a measured JS correction for anything left over
-     (initViewportDocking in app.js). */
-  .mobile-bottom-nav,
-  .mobile-menu-sheet {
-    bottom: 0;
-    bottom: calc(100% - 100dvh);
-    margin-bottom: var(--dock-lift, 0px);
-  }
-  .chatbot-trigger-btn {
-    bottom: calc(100% - 100dvh + 74px + env(safe-area-inset-bottom, 0px)) !important;
-    margin-bottom: var(--dock-lift, 0px) !important;
-  }
+  /* ---- Bottom-anchored layers ----
+     Plain position: fixed; bottom: 0 - the form mobile browsers pin to the
+     visible screen and move with the address bar themselves. No dvh offset
+     maths or JS nudging on top of it: that fights the browser's own toolbar
+     handling. (The bar used to vanish because "/" showed the storefront in a
+     100vh iframe; see App.jsx / index.html.) dvh is used only for sizes, so
+     sheets fit the visible screen while the toolbar is showing. */
   .chatbot-window {
-    bottom: calc(100% - 100dvh + 74px) !important;
-    margin-bottom: var(--dock-lift, 0px) !important;
     max-height: calc(100dvh - 90px) !important;
   }
   .sidebar-panel {
-    bottom: calc(100% - 100dvh) !important;
-    margin-bottom: var(--dock-lift, 0px) !important;
     max-height: 84dvh !important;
   }
-  /* Modal overlays: style.css also gives them height: 100vh, which overrides
-     inset: 0 and pushed bottom sheets (sign-in, product details) below the
-     screen on the same browsers. */
+  /* style.css gives modal overlays height: 100vh (the toolbar-hidden height),
+     which overrides inset: 0 and pushes bottom sheets below the screen. */
   .modal-overlay {
     height: auto !important;
-    bottom: 0;
-    bottom: calc(100% - 100dvh);
-    margin-bottom: var(--dock-lift, 0px);
   }
   .modal-card {
     max-height: 86dvh !important;
