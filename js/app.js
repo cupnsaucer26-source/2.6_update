@@ -904,7 +904,6 @@ function checkUrlAuthTriggers() {
 
   if ((hash === '#login' || hash === '#auth' || redirectMsg) && !isFarmerLoggedIn()) {
     const msg = redirectMsg || 'Login or Sign Up is mandatory to access your basket and checkout. Please sign in.';
-    showToast(msg, 'error', 6000);
     setAuthNotice(msg);
     switchAuthTab('login');
     openModal('authModal');
@@ -1624,7 +1623,6 @@ window.handleBasketClick = function(e) {
   }
 
   if (!isFarmerLoggedIn()) {
-    showToast('Login or Sign Up is mandatory to access your basket and checkout. Please sign in.', 'error', 5000);
     setAuthNotice('Login or Sign Up is mandatory to access your basket and checkout.');
     switchAuthTab('login');
     openModal('authModal');
@@ -1643,7 +1641,6 @@ window.handleBasketClick = function(e) {
 // The storefront may run inside an iframe on "/", so navigate the top window.
 function goToCartPage() {
   if (!isFarmerLoggedIn()) {
-    showToast('Login or Sign Up is mandatory to access checkout. Please sign in.', 'error', 5000);
     setAuthNotice('Login or Sign Up is mandatory to access checkout.');
     switchAuthTab('login');
     openModal('authModal');
@@ -1694,7 +1691,6 @@ function initCart() {
     checkoutBtn.onclick = (e) => {
       if (e && typeof e.preventDefault === 'function') e.preventDefault();
       if (!isFarmerLoggedIn()) {
-        showToast('Login or Sign Up is mandatory to access checkout. Please sign in.', 'error', 5000);
         setAuthNotice('Login or Sign Up is mandatory to access checkout.');
         cartDrawer?.classList.remove('active');
         switchAuthTab('login');
@@ -1727,7 +1723,7 @@ window.addToCart = function(productId) {
   updateCartUI();
 
   if (!isFarmerLoggedIn()) {
-    showToast(`"${p.name}" added to cart! Login or Sign Up is mandatory to access your basket and checkout.`, 'warning', 5000);
+    showToast(`"${p.name}" added to cart!`, 'success');
     setAuthNotice('Login or Sign Up is mandatory to access your basket and complete checkout.');
     switchAuthTab('login');
     openModal('authModal');
