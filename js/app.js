@@ -2348,24 +2348,38 @@ function initPosterSwipeToDismiss() {
 
 // ==================== MOBILE MENU SHEET (phones) ====================
 
+// 'is-opening' counts as open, so a second tap during the warm-up frame closes.
 function isMobileMenuOpen() {
-  return Boolean(document.getElementById('mobileMenuSheet')?.classList.contains('active'));
+  const sheet = document.getElementById('mobileMenuSheet');
+  return Boolean(sheet && (sheet.classList.contains('active') || sheet.classList.contains('is-opening')));
 }
 
 window.toggleMobileMenu = function(open) {
   const sheet = document.getElementById('mobileMenuSheet');
   const backdrop = document.getElementById('mobileMenuBackdrop');
   if (!sheet || !backdrop) return;
-  const next = typeof open === 'boolean' ? open : !sheet.classList.contains('active');
+  const next = typeof open === 'boolean' ? open : !isMobileMenuOpen();
   if (next === isMobileMenuOpen()) return;
 
   if (next) {
     refreshMobileMenuAccount();
     closeModal('welcomePosterModal');
     sheet.scrollTop = 0;
+    // Same trick as openModal(): show the sheet off-screen and let it be
+    // rasterised one frame before the slide starts. Toggling hidden -> sliding
+    // in a single frame spent the slide's first (and largest) step painting
+    // the whole sheet, which read as lag on phones.
+    sheet.classList.add('is-opening');
+    backdrop.classList.add('is-opening');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!sheet.classList.contains('is-opening')) return; // closed meanwhile
+      sheet.classList.replace('is-opening', 'active');
+      backdrop.classList.replace('is-opening', 'active');
+    }));
+  } else {
+    sheet.classList.remove('active', 'is-opening');
+    backdrop.classList.remove('active', 'is-opening');
   }
-  sheet.classList.toggle('active', next);
-  backdrop.classList.toggle('active', next);
   sheet.setAttribute('aria-hidden', String(!next));
 
   const menuBtn = document.getElementById('mobileNavMenu');
@@ -2825,7 +2839,7 @@ window.clearStorefrontFieldErrors = function() {
 // selector that made every class change re-check the whole page.
 function syncOverlayState() {
   const body = document.body;
-  const blocking = document.querySelector('.modal-overlay.active:not(#welcomePosterModal), .modal-overlay.is-opening:not(#welcomePosterModal), .mobile-menu-sheet.active, .sidebar-panel.active');
+  const blocking = document.querySelector('.modal-overlay.active:not(#welcomePosterModal), .modal-overlay.is-opening:not(#welcomePosterModal), .mobile-menu-sheet.active, .mobile-menu-sheet.is-opening, .sidebar-panel.active');
   body.classList.toggle('overlay-open', Boolean(blocking));
   body.classList.toggle('poster-open', Boolean(document.getElementById('welcomePosterModal')?.classList.contains('active')));
 }

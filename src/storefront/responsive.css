@@ -1369,12 +1369,21 @@ pre {
     background: rgba(15, 23, 42, 0.5);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
+    /* Hide only once the fade-out has finished. */
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
     touch-action: none;
+  }
+  /* 'is-opening' is the one-frame warm-up set by toggleMobileMenu(): visible
+     but still transparent / off-screen, so the slide starts pre-painted.
+     Visibility flips at once here - a transitioned visibility still reads
+     'hidden' on that first frame, and hidden content is not painted. */
+  .mobile-menu-backdrop.is-opening,
+  .mobile-menu-backdrop.active {
+    visibility: visible;
+    transition: opacity 0.3s ease, visibility 0s;
   }
   .mobile-menu-backdrop.active {
     opacity: 1;
-    visibility: visible;
   }
   /* Sits under the bottom bar (z 9990), so the bar stays usable and the
      Menu tab - now an X - closes it again. */
@@ -1396,11 +1405,21 @@ pre {
     padding: 6px 16px calc(84px + env(safe-area-inset-bottom, 0px));
     transform: translateY(100%);
     visibility: hidden;
-    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.32s;
+    /* Its own GPU layer for good, so neither opening nor closing has to
+       create one mid-slide; contain keeps text updates inside the sheet from
+       touching the page's layout. The curve eases in gently instead of
+       leaping most of the distance in the first few frames. */
+    will-change: transform;
+    contain: layout paint;
+    transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 0.38s;
+  }
+  .mobile-menu-sheet.is-opening,
+  .mobile-menu-sheet.active {
+    visibility: visible;
+    transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s;
   }
   .mobile-menu-sheet.active {
     transform: translateY(0);
-    visibility: visible;
   }
   .mms-handle {
     width: 40px;
