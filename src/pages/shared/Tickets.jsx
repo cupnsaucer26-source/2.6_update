@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { useAuth } from '../../context/AuthContext'
 
 const SAMPLE_TICKETS = [

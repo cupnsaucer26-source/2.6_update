@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import PasswordChecklist from '../components/PasswordChecklist'
 import { isPasswordValid, passwordPlaceholder } from '../utils/passwordRules'
 
@@ -81,7 +81,7 @@ export default function Register() {
     } catch (err) {
       // Already has an account — send them to sign in with the number carried over.
       if (err?.response?.data?.alreadyRegistered) {
-        toast('This number is already registered. Please sign in.', { icon: 'ℹ️' })
+        toast.info('This number is already registered. Please sign in.')
         navigate('/#login')
         return
       }

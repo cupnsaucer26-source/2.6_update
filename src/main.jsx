@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { LanguageProvider } from './context/LanguageContext.jsx'
-import { Toaster } from 'react-hot-toast'
+import { Toaster } from 'sonner'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -13,21 +13,18 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <LanguageProvider>
         <AuthProvider>
           <App />
+          {/* Sonner: stacked, swipeable, accessible toasts. The storefront's
+              js/toast.js uses the same palette so both halves of the site match. */}
           <Toaster
             position="top-right"
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: '#1a2e1a',
-                color: '#fff',
-                border: '1px solid #2d5a2d',
-                borderRadius: '12px',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '14px',
-              },
-              success: { iconTheme: { primary: '#4ade80', secondary: '#1a2e1a' } },
-              error: { iconTheme: { primary: '#f87171', secondary: '#1a2e1a' } },
-            }}
+            richColors
+            closeButton
+            duration={4000}
+            visibleToasts={3}
+            gap={10}
+            offset={16}
+            mobileOffset={12}
+            toastOptions={{ style: { fontFamily: 'inherit', borderRadius: '14px' } }}
           />
         </AuthProvider>
       </LanguageProvider>

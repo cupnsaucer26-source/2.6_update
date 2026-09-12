@@ -268,6 +268,12 @@ window.SB_LANG_TA = {
     'Browse products': 'பொருட்களைப் பார்க்க',
     'Your basket is empty. Add products from the catalog first': 'உங்கள் கூடை காலியாக உள்ளது. முதலில் பட்டியலிலிருந்து பொருட்களைச் சேர்க்கவும்',
 
+    // Notifications
+    'Voice search is coming soon. For now, type a crop or disease name': 'குரல் தேடல் விரைவில் வரும். இப்போதைக்கு பயிர் அல்லது நோயின் பெயரைத் தட்டச்சு செய்யுங்கள்',
+    'Wishlist is coming soon': 'விருப்பப் பட்டியல் விரைவில் வரும்',
+    'Call requested. Our agronomist will contact you shortly': 'அழைப்புக் கோரிக்கை பெறப்பட்டது. எங்கள் வேளாண் நிபுணர் விரைவில் உங்களைத் தொடர்புகொள்வார்',
+    'Unable to save your advisory subscription. Please try again': 'உங்கள் ஆலோசனைப் பதிவைச் சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்',
+
     // Popups: scanner, soil, ticket, expert, chat
     'Take or upload a leaf photo': 'இலைப் படம் எடுக்கவும் அல்லது பதிவேற்றவும்',
     'JPG or PNG · a clear, close-up photo': 'JPG அல்லது PNG · தெளிவான, அருகில் எடுத்த படம்',

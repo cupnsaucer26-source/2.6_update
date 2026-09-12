@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 const DEFAULT_CONTENT = {
   heroTitle: 'Grow More. Protect Better. Farm Smarter.',

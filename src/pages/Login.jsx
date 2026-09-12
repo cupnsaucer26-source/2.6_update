@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth, ROLE_HOME } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { Eye, EyeOff, Leaf, LogIn } from 'lucide-react'
 
 const ROLES = [

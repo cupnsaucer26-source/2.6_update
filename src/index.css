@@ -2299,10 +2299,35 @@ tbody td { padding: 13px 16px; font-size: 0.875rem; color: var(--text-secondary)
 .qty-value { font-size: 0.9rem; font-weight: 700; min-width: 24px; text-align: center; }
 
 /* =========================================
-   TOAST (via react-hot-toast - extra styles)
+   TOASTS (Sonner)
+   Close button inside the card on the right, as in the storefront's
+   js/toast.js. Sonner's default hangs it off the top-left corner, which a
+   12px mobile offset cut in half at the screen edge. Sonner's own rules use
+   :where(), so these plain selectors win without !important.
    ========================================= */
 
-.toast-success { background: var(--brand-900) !important; }
+[data-sonner-toaster] [data-sonner-toast] {
+  padding-right: 42px;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-close-button] {
+  left: auto;
+  right: 10px;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.55;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-close-button]:hover,
+[data-sonner-toaster] [data-sonner-toast] [data-close-button]:focus-visible {
+  opacity: 1;
+  background: rgba(15, 23, 42, 0.08);
+}
 
 /* =========================================
    ANIMATIONS

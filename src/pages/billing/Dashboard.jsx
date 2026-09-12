@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 const CATALOG = [
   { id: 'p1', name: 'BlastShield 75 WP', price: 480, hsn: '380899', gst: 18 },

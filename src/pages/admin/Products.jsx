@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import {
   Plus, Edit2, Trash2, Check, X, Search, User, Filter,
   ArrowUpDown, RefreshCw, Sparkles, Tag, ShieldAlert, BarChart3

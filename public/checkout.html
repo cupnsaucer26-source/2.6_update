@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="./css/style.css" />
   <link rel="stylesheet" href="./css/responsive.css" />
+  <script src="./js/toast.js"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     body { margin:0; background:#f0fdf4; color:#173b2a; }
@@ -351,7 +352,7 @@
     function customerDetails() {
       const data = Object.fromEntries(new FormData(form));
       if (!data.customerName || !data.customerPhone || !data.address) {
-        alert('Please fill in your name, mobile number and delivery address.');
+        toast.warning('Please fill in your name, mobile number and delivery address.');
         return null;
       }
       return data;
@@ -378,10 +379,13 @@
         cart = [];
         clearLocalCart();
         await persistCart();
-        alert('Order placed.' + (json.whatsapp === 'sent' ? ' We have sent the order and delivery details to your WhatsApp.' : '') + ' You can track it under Order Status.');
+        // Shown on the Order Status page: no blocking dialog before redirecting.
+        toast.flash('Order placed.', 'success', {
+          description: (json.whatsapp === 'sent' ? 'We have sent the order and delivery details to your WhatsApp. ' : '') + 'Track it below.',
+        });
         location.href = './order-status.html';
       } catch (err) {
-        alert(err.message || 'Unable to place order. Please try again.');
+        toast.error(err.message || 'Unable to place order. Please try again.');
         codBtn.disabled = false;
       }
     });
@@ -391,7 +395,7 @@
       if (!token || !user) return redirectToLogin('Login or Sign Up is mandatory to place an order. Please sign in.');
       const details = customerDetails();
       if (!details) return;
-      if (!window.Razorpay) { alert('Payment library did not load. Please refresh and try again.'); return; }
+      if (!window.Razorpay) { toast.error('Payment library did not load. Please refresh and try again.'); return; }
 
       payBtn.disabled = true;
       try {
@@ -430,16 +434,18 @@
               if (!verifyJson.success) throw new Error(verifyJson.message || 'Payment verification failed');
               cart = [];
               clearLocalCart();
-              alert('Payment successful. Your order is confirmed.' + (verifyJson.whatsapp === 'sent' ? ' We have sent the order and delivery details to your WhatsApp.' : ''));
+              toast.flash('Payment successful. Your order is confirmed.', 'success', {
+                description: verifyJson.whatsapp === 'sent' ? 'We have sent the order and delivery details to your WhatsApp.' : undefined,
+              });
               location.href = './order-status.html';
             } catch (err) {
-              alert(err.message || 'Payment verification failed');
+              toast.error(err.message || 'Payment verification failed');
               payBtn.disabled = false;
             }
           },
         }).open();
       } catch (err) {
-        alert(err.message || 'Failed to start payment');
+        toast.error(err.message || 'Failed to start payment');
         payBtn.disabled = false;
       }
     });

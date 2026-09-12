@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { GripVertical, Plus, Save, Trash2 } from 'lucide-react'
 
 const TYPES = ['text', 'email', 'tel', 'number', 'date', 'textarea', 'select']

@@ -1,7 +1,7 @@
 import { Mail, Heart } from 'lucide-react'
 import { useState } from 'react'
 import axios from 'axios'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export default function NewsletterSignup() {
   const [phone, setPhone] = useState('')

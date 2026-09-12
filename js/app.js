@@ -1272,7 +1272,7 @@ function initAdvisorySignup() {
       form.innerHTML = '<div style="padding:12px; color:#16a34a; font-weight:600;">Thank you! Your advisory subscription is confirmed.</div>';
     } catch {
       if (button) button.disabled = false;
-      alert('Unable to save your advisory subscription. Please try again.');
+      showToast('Unable to save your advisory subscription. Please try again.', 'error');
     }
   });
 }
@@ -2742,90 +2742,20 @@ function initFooterAccordions() {
 }
 
 // --- TOAST NOTIFICATIONS ---
-// In-page replacement for window.alert(), which blocks the page and renders as
-// a browser dialog titled "localhost:3000 says".
-
-function ensureToastHost() {
-  let host = document.getElementById('sbToastHost');
-  if (host) return host;
-
-  host = document.createElement('div');
-  host.id = 'sbToastHost';
-  document.body.appendChild(host);
-
-  const style = document.createElement('style');
-  style.textContent = `
-    #sbToastHost {
-      position: fixed; top: 18px; right: 18px; z-index: 99999;
-      display: flex; flex-direction: column; gap: 10px;
-      max-width: min(360px, calc(100vw - 36px));
-      pointer-events: none;
-    }
-    .sb-toast {
-      pointer-events: auto;
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 12px 14px; border-radius: 12px;
-      background: #ffffff; color: #14321f;
-      border: 1px solid #d8e6dc; border-left: 4px solid #16a34a;
-      box-shadow: 0 10px 30px rgba(15, 42, 25, 0.18);
-      font-size: 0.9rem; line-height: 1.35; font-weight: 500;
-      transform: translateX(120%); opacity: 0;
-      transition: transform .28s cubic-bezier(.22,1,.36,1), opacity .28s ease;
-    }
-    .sb-toast.show { transform: translateX(0); opacity: 1; }
-    .sb-toast.error   { border-left-color: #dc2626; }
-    .sb-toast.warning { border-left-color: #f59e0b; }
-    .sb-toast-icon { font-size: 1.05rem; line-height: 1.2; flex-shrink: 0; }
-    .sb-toast-text { flex: 1; white-space: pre-line; }
-    .sb-toast-close {
-      background: none; border: none; cursor: pointer;
-      color: #7d8f83; font-size: 1.05rem; line-height: 1; padding: 0 2px;
-    }
-    @media (max-width: 480px) {
-      #sbToastHost { top: 12px; right: 12px; left: 12px; max-width: none; }
-    }
-  `;
-  document.head.appendChild(style);
-  return host;
-}
-
-// type: 'success' | 'error' | 'warning' | 'info'
-function showToast(message, type = 'info', duration = 4500) {
-  const host = ensureToastHost();
-
-  const icons = { success: '✅', error: '⚠️', warning: '⚠️', info: 'ℹ️' };
-  const toast = document.createElement('div');
-  toast.className = `sb-toast ${type}`;
-  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
-
-  const icon = document.createElement('span');
-  icon.className = 'sb-toast-icon';
-  icon.textContent = icons[type] || icons.info;
-
-  // textContent, not innerHTML — messages can contain server/user text.
-  const text = document.createElement('span');
-  text.className = 'sb-toast-text';
-  text.textContent = String(message ?? '');
-
-  const close = document.createElement('button');
-  close.className = 'sb-toast-close';
-  close.setAttribute('aria-label', 'Dismiss');
-  close.textContent = '×';
-
-  toast.append(icon, text, close);
-  host.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('show'));
-
-  let timer;
-  const dismiss = () => {
-    clearTimeout(timer);
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  };
-
-  close.addEventListener('click', dismiss);
-  timer = setTimeout(dismiss, duration);
-  return dismiss;
+// js/toast.js (loaded before this file) provides window.toast: stacked,
+// swipeable, accessible notifications shared with checkout and order status,
+// styled like the Sonner toasts in the React app. showToast() keeps the
+// storefront's call signature. type: 'success' | 'error' | 'warning' | 'info'.
+// Returns a function that dismisses the toast.
+function showToast(message, type = 'info', duration) {
+  const api = window.toast;
+  if (!api) {
+    console.warn(message);
+    return () => {};
+  }
+  const show = typeof api[type] === 'function' ? api[type] : api;
+  const id = show(message, duration ? { duration } : {});
+  return () => api.dismiss(id);
 }
 
 window.showToast = showToast;

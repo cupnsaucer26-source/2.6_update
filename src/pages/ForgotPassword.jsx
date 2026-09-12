@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import axios from 'axios'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { ArrowLeft, Eye, EyeOff, KeyRound } from 'lucide-react'
 import { ROLE_HOME } from '../context/AuthContext'
 import { passwordChecks, isPasswordValid } from '../utils/passwordRules'

@@ -83,7 +83,7 @@
           </select>
         </div>
         <input type="text" id="headerSearchInput" data-i18n-placeholder="search_placeholder" placeholder="Search by crop, disease, chemical e.g. Blast, Paddy, Whitefly..." aria-label="Search products" enterkeyhint="search" autocomplete="off" />
-        <button type="button" class="voice-search-btn" title="Voice Search" aria-label="Voice search" onclick="alert('Voice Search Activated! Please speak crop or disease name.')">
+        <button type="button" class="voice-search-btn" title="Voice Search" aria-label="Voice search" onclick="showToast('Voice search is coming soon. For now, type a crop or disease name.', 'info')">
           <i class="fa-solid fa-microphone"></i>
         </button>
         <button type="button" id="headerSearchBtn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="search_btn">Search</span></button>
@@ -117,7 +117,7 @@
         </div>
 
         <!-- WISHLIST -->
-        <div class="action-item action-wishlist" onclick="alert('Wishlist saved!')">
+        <div class="action-item action-wishlist" onclick="showToast('Wishlist is coming soon.', 'info')">
           <div class="action-icon">
             <i class="fa-regular fa-heart"></i>
             <span class="cart-badge" style="background: var(--accent-amber);">0</span>
@@ -968,7 +968,7 @@
     <div class="modal-card">
       <button class="modal-close">&times;</button>
       <h3 style="color: var(--primary-dark); margin-bottom: 14px;"><i class="fa-solid fa-user-doctor"></i> Book Agronomist Call</h3>
-      <form onsubmit="event.preventDefault(); alert('Call requested! Our agronomist will contact you shortly.'); closeModal('expertModal');" style="display: flex; flex-direction: column; gap: 12px;">
+      <form onsubmit="event.preventDefault(); showToast('Call requested. Our agronomist will contact you shortly.', 'success'); closeModal('expertModal');" style="display: flex; flex-direction: column; gap: 12px;">
         <input type="text" class="text-input" placeholder="Your Name & Phone Number" required />
         <input type="datetime-local" class="text-input" required />
         <select class="select-input">
@@ -1317,6 +1317,7 @@
   </nav>
 
   <!-- JavaScript Application Engine -->
+  <script src="./js/toast.js" defer></script>
   <script src="./js/lang-ta.js" defer></script>
   <script src="./js/app.js" defer></script>
 
