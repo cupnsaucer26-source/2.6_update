@@ -2313,27 +2313,37 @@ pre {
 }
 
 @media (max-width: 1024px) {
+  /* A compact pill. min-height: 0 matters: the touch-device rule gives every
+     button a 44px minimum, which stretched it taller on real phones. The
+     invisible ::after keeps a comfortable ~44px tap area. */
   .lang-quick-btn {
+    position: relative;
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
-    gap: 5px;
-    height: 36px;
-    padding: 0 10px;
+    gap: 4px;
+    height: 30px;
+    min-height: 0;
+    padding: 0 8px;
     border: 1px solid #a7f3d0;
-    border-radius: 18px;
+    border-radius: 15px;
     background: #ecfdf5;
     color: var(--primary-dark);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 800;
     line-height: 1;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: background-color 0.15s ease, border-color 0.15s ease;
   }
+  .lang-quick-btn::after {
+    content: '';
+    position: absolute;
+    inset: -7px -4px;
+  }
   .lang-quick-btn i {
-    font-size: 1rem;
+    font-size: 0.88rem;
   }
   .lang-quick-btn[aria-expanded="true"],
   .lang-quick-btn:active {
