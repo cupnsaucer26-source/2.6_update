@@ -1,31 +1,54 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useAuth, ROLE_HOME } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import toast from 'react-hot-toast'
-import { Eye, EyeOff, LogIn } from 'lucide-react'
+import { Eye, EyeOff, Leaf, LogIn } from 'lucide-react'
 
-// Admin sign-in. Rendered at /admin while signed out; once the session is saved
-// the admin route shows the dashboard in its place. Farmers and other staff sign
-// in from the storefront.
+const ROLES = [
+  { key: 'farmer',   label: 'Farmer',   emoji: '👨‍🌾' },
+  { key: 'admin',    label: 'Admin',    emoji: '🛡️' },
+  { key: 'employee', label: 'Employee', emoji: '🏭' },
+  { key: 'delivery', label: 'Delivery', emoji: '🚚' },
+  { key: 'billing',  label: 'Billing',  emoji: '🧾' },
+]
+
 export default function Login() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
   const { t } = useLanguage()
-  const [mobile, setMobile]     = useState('')
+  const [selectedRole, setSelectedRole] = useState('farmer')
+  // Carried over when Register redirects an already-registered number here.
+  const [mobile, setMobile]             = useState(() => location.state?.identifier || '')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading]   = useState(false)
+
+  useEffect(() => {
+    if (location.state?.message) {
+      toast.error(location.state.message, { duration: 5000 })
+    }
+  }, [location.state])
+
+  const roleInfo = ROLES.find(r => r.key === selectedRole)
+
+  const handleRoleSelect = (role) => {
+    setSelectedRole(role)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!mobile || !password) { toast.error('Please fill in all fields'); return }
     setLoading(true)
     try {
-      const user = await login(mobile.trim(), password, { roles: ['admin'] })
+      const user = await login(mobile.trim(), password)
       toast.success(`Welcome back, ${user.name}! 🌿`)
+      navigate(ROLE_HOME[user.role] || '/', { replace: true })
     } catch (err) {
-      toast.error(err?.message || 'Invalid credentials')
+      toast.error(err?.message || err?.response?.data?.message || 'Invalid credentials')
+    } finally {
       setLoading(false)
     }
   }
@@ -48,8 +71,24 @@ export default function Login() {
           </div>
 
 
-          <h2 className="login-title">Admin sign in</h2>
-          <p className="login-subtitle">🛡️ This portal is for administrators only</p>
+          <h2 className="login-title">Welcome back</h2>
+          <p className="login-subtitle">Select your role, then sign in</p>
+
+          {/* Role Selector */}
+          <div className="role-selector">
+            {ROLES.map(r => (
+              <button
+                key={r.key}
+                className={`role-chip ${selectedRole === r.key ? 'active' : ''}`}
+                onClick={() => handleRoleSelect(r.key)}
+                type="button"
+              >
+                <span className="role-emoji">{r.emoji}</span>
+                {r.label}
+              </button>
+            ))}
+          </div>
+
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
@@ -92,9 +131,17 @@ export default function Login() {
             </div>
 
             <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading} style={{ marginTop: '8px' }}>
-              {loading ? <><div className="spinner" /> Signing in...</> : <><LogIn size={18} /> Sign In as Admin</>}
+              {loading ? <><div className="spinner" /> Signing in...</> : <><LogIn size={18} /> Sign In as {roleInfo?.label}</>}
             </button>
           </form>
+
+          <div className="divider"><span>New farmer?</span></div>
+
+          <Link to="/register">
+            <button className="btn btn-secondary btn-full">
+              🌱 Register as Farmer
+            </button>
+          </Link>
         </div>
       </div>
 
