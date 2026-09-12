@@ -2167,6 +2167,53 @@ function initModals() {
   initMobileMenu();
   initFooterAccordions();
   initMobileNavActiveState();
+  initViewportDocking();
+}
+
+// Measured safety net for the CSS docking in responsive.css: if the bottom
+// bar still ends below the visible screen (or floats above it), --dock-lift
+// moves every docked layer by exactly that difference.
+function initViewportDocking() {
+  const vv = window.visualViewport;
+  const nav = document.getElementById('mobileBottomNav');
+  if (!vv || !nav) return;
+  const root = document.documentElement;
+  let lift = 0;
+  let queued = false;
+
+  const typing = () => {
+    const el = document.activeElement;
+    return Boolean(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)));
+  };
+
+  const measure = () => {
+    queued = false;
+    let next = 0;
+    // Pinch-zoom and the on-screen keyboard are left to the browser.
+    if (getComputedStyle(nav).display !== 'none' && vv.scale <= 1.01 && !typing()) {
+      const naturalBottom = nav.getBoundingClientRect().bottom + lift;
+      next = Math.round(naturalBottom - (vv.offsetTop + vv.height));
+      if (Math.abs(next) <= 1 || Math.abs(next) > 200) next = 0;
+    }
+    if (next !== lift) {
+      lift = next;
+      root.style.setProperty('--dock-lift', `${lift}px`);
+    }
+  };
+  const queue = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(measure);
+  };
+
+  vv.addEventListener('resize', queue);
+  vv.addEventListener('scroll', queue);
+  window.addEventListener('scroll', queue, { passive: true });
+  window.addEventListener('resize', queue);
+  window.addEventListener('orientationchange', queue);
+  document.addEventListener('focusin', queue);
+  document.addEventListener('focusout', queue);
+  queue();
 }
 
 // A downward swipe dismisses a bottom card or sheet, like a native bottom
