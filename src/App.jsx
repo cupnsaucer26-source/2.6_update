@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
@@ -47,11 +48,21 @@ function PublicPageShell({ children }) {
   return <><Navigation /><main className="public-page-shell">{children}</main><Footer /></>
 }
 
+// The public home is the standalone storefront page. It is loaded as the page
+// itself, not in an iframe: an iframe sized 100vh is taller than a phone screen
+// while the browser toolbar shows, which hid the storefront's fixed bottom
+// navigation. index.html redirects before the bundle loads; this covers
+// in-app navigation to "/" (Back to store, after registering, unknown routes).
+function StorefrontRedirect() {
+  useEffect(() => {
+    window.location.replace(`/storefront.html${window.location.search}${window.location.hash}`)
+  }, [])
+  return null
+}
+
 export default function App() {
   const { user } = useAuth()
 
-  // Home page is now the vanilla HTML in public/index.html
-  // This component just returns null, letting the HTML handle the display
   const HomePage = () => {
     // If user is logged in as admin/staff, redirect them to their portal
     if (user) {
@@ -61,8 +72,8 @@ export default function App() {
         return <Navigate to={redirectPath} replace />
       }
     }
-    // For public users or unrecognized roles, show the vanilla HTML home page
-    return <iframe src="/storefront.html" title="Sathya Bio" style={{ border: 'none', width: '100%', height: '100vh', display: 'block' }} />
+    // Public visitors and farmers get the storefront
+    return <StorefrontRedirect />
   }
 
   return (

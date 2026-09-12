@@ -3,6 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    // Visitors get the storefront page itself, never inside an iframe. An
+    // iframe sized 100vh is taller than a phone screen while the browser
+    // toolbar is showing, which hid the storefront's fixed bottom navigation
+    // below the screen and stopped the address bar from auto-hiding. This runs
+    // before the app bundle and Razorpay load, so the redirect is instant.
+    // Staff sessions continue into their React portals.
+    (function () {
+      var path = location.pathname;
+      if (path !== '/' && path !== '/index.html') return;
+      var role;
+      try { role = (JSON.parse(localStorage.getItem('sathya_user') || 'null') || {}).role; } catch (e) {}
+      if (['admin', 'employee', 'delivery', 'billing'].indexOf(role) === -1) {
+        location.replace('/storefront.html' + location.search + location.hash);
+      }
+    })();
+  </script>
   <meta name="description" content="Sathya Bio - India's Leading Agricultural E-Commerce, Crop Protection & ERP Platform for Farmers" />
   <meta name="keywords" content="pesticides, agro chemicals, crop protection, bio pesticides, fertilizers, farmer portal, agricultural ERP" />
   <title>Sathya Bio - India's Agro Pesticides, Crop Protection & Agricultural ERP Platform</title>
