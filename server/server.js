@@ -11,7 +11,7 @@ import crypto from 'node:crypto';
 import Razorpay from 'razorpay';
 import { db, connectDB, newId } from './db.js';
 import adminRoutes from './adminRoutes.js';
-import { buildOtpMessage, forgetOtpLayout } from './otpTemplates.js';
+import { buildOtpMessage, buildResetOtpMessage, buildPasswordChangedMessage, forgetOtpLayout } from './otpTemplates.js';
 import { sendWhatsAppText } from './whatsapp.js';
 import { sendOrderConfirmation, sendDeliveryStatusUpdate } from './orderNotifications.js';
 import { estimatedDeliveryDate } from './orderMessages.js';
@@ -407,6 +407,173 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   } catch (err) {
     console.error('❌ Verify OTP error:', err.message);
     return res.status(500).json({ success: false, message: 'Unable to verify OTP.' });
+  }
+});
+
+// ============================================================
+// FORGOT PASSWORD - WhatsApp code to the registered number
+// ============================================================
+// Reset codes live under their own key, so a sign-up code can never reset a
+// password and a reset code can never verify a sign-up. Requesting a code
+// answers the same way - same message, same resend wait - whether or not the
+// number is registered, so the form cannot be used to find out which numbers
+// have accounts. (Nothing is sent to an unregistered number.)
+
+const resetOtpKey = (phone) => `reset-otp:${phone}`;
+const RESET_REQUEST_MESSAGE = 'If this number is registered with Sathya Bio, a 6-digit reset code has been sent to its WhatsApp.';
+
+app.post('/api/auth/forgot-password/send-otp', async (req, res) => {
+  try {
+    const phone = normalizePhone(req.body?.phone);
+    if (!phone) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit Indian mobile number.' });
+    }
+
+    const ipWait = await rateLimit(`reset-otp-ip:${clientIp(req)}`, 10, HOUR_MS);
+    if (ipWait) {
+      return tooManyRequests(res, ipWait, 'Too many reset requests. Please try again later.');
+    }
+    const phoneWait = await rateLimit(`reset-otp-phone:${phone}`, 5, HOUR_MS);
+    if (phoneWait) {
+      return tooManyRequests(res, phoneWait, 'Too many reset requests for this number. Please try again later.');
+    }
+
+    const now = Date.now();
+    const existing = await db.kvGet(resetOtpKey(phone));
+    const activeCooldownMs = existing?.resendAfterMs ?? OTP_RESEND_MIN_MS;
+    if (existing && existing.lastSentAt && now - existing.lastSentAt < activeCooldownMs) {
+      const waitSeconds = Math.ceil((activeCooldownMs - (now - existing.lastSentAt)) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${waitSeconds} seconds before requesting another code.`,
+        retryAfter: waitSeconds,
+      });
+    }
+
+    const resendAfterMs = nextResendCooldownMs();
+    const user = await db.getUserByIdentifier(phone);
+    const canReset = Boolean(user) && (!user.status || user.status === 'active');
+
+    let otpHash = null;
+    if (canReset) {
+      const otp = generateOtp();
+      await sendWhatsAppText(phone, buildResetOtpMessage(otp, user.name, phone, OTP_EXPIRY_MS));
+      otpHash = hashOtp(otp);
+      console.log(`🔑 Password reset code sent to +91 ${phone}`);
+    }
+
+    // An unknown number still gets a record (with no code), so the resend wait
+    // and every later answer look exactly like a real account's.
+    await db.kvSet(resetOtpKey(phone), {
+      otpHash,
+      expiresAt: now + OTP_EXPIRY_MS,
+      lastSentAt: now,
+      resendAfterMs,
+      attempts: 0,
+    }, OTP_RECORD_TTL_MS);
+
+    return res.json({
+      success: true,
+      message: RESET_REQUEST_MESSAGE,
+      expiresIn: OTP_EXPIRY_MS / 1000,
+      resendAfter: Math.ceil(resendAfterMs / 1000),
+    });
+  } catch (err) {
+    console.error('❌ Forgot password send error:', err.message);
+    return res.status(500).json({ success: false, message: 'Could not send the reset code right now. Please try again shortly.' });
+  }
+});
+
+app.post('/api/auth/forgot-password/reset', async (req, res) => {
+  try {
+    const ipWait = await rateLimit(`reset-ip:${clientIp(req)}`, 30, HOUR_MS);
+    if (ipWait) {
+      return tooManyRequests(res, ipWait, 'Too many attempts. Please try again later.');
+    }
+
+    const phone = normalizePhone(req.body?.phone);
+    const otp = String(req.body?.otp || '').replace(/\D/g, '');
+    const password = req.body?.password;
+
+    if (!phone) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit Indian mobile number.' });
+    }
+    if (!/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ success: false, message: 'Please enter the 6-digit code.' });
+    }
+    if (typeof password !== 'string' || !password) {
+      return res.status(400).json({ success: false, message: 'Please enter a new password.' });
+    }
+
+    const expired = { success: false, message: 'Code expired or not requested. Please request a new code.' };
+    const record = await db.kvGet(resetOtpKey(phone));
+    if (!record) {
+      return res.status(400).json(expired);
+    }
+    if (Date.now() > record.expiresAt) {
+      await db.kvDelete(resetOtpKey(phone));
+      forgetOtpLayout(`reset:${phone}`);
+      return res.status(400).json(expired);
+    }
+
+    // Counted atomically, so parallel guesses cannot slip past the limit.
+    const attempts = await db.kvIncrement(resetOtpKey(phone), 'attempts', OTP_RECORD_TTL_MS, { upsert: false });
+    if (attempts === 0) {
+      return res.status(400).json(expired);
+    }
+    if (attempts > OTP_MAX_ATTEMPTS) {
+      await db.kvDelete(resetOtpKey(phone));
+      return res.status(429).json({ success: false, message: 'Too many incorrect attempts. Please request a new code.' });
+    }
+
+    if (!record.otpHash || !safeEqual(hashOtp(otp), record.otpHash)) {
+      const remaining = Math.max(0, OTP_MAX_ATTEMPTS - attempts);
+      if (remaining === 0) await db.kvDelete(resetOtpKey(phone));
+      return res.status(400).json({
+        success: false,
+        message: remaining > 0
+          ? `Invalid code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`
+          : 'Invalid code. Please request a new code.',
+      });
+    }
+
+    const user = await db.getUserByIdentifier(phone, { includePassword: true });
+    if (!user || (user.status && user.status !== 'active')) {
+      await db.kvDelete(resetOtpKey(phone));
+      return res.status(403).json({ success: false, message: 'This account cannot be reset online. Please contact support.' });
+    }
+
+    // Rules are checked only after a correct code (they differ for staff), and a
+    // weak password leaves the code usable for another try within its attempts.
+    const passwordIssues = passwordProblems(password, { role: user.role || 'farmer', phone });
+    if (passwordIssues.length) {
+      return res.status(400).json({ success: false, message: weakPasswordMessage(passwordIssues), passwordIssues });
+    }
+    if ((await verifyPassword(password, user.password)).ok) {
+      return res.status(400).json({ success: false, message: 'Please choose a password different from your current one.' });
+    }
+
+    // Hashes the password. The new hash changes the token fingerprint, which
+    // signs out every session issued before the reset.
+    const updated = await db.updateUser(user.id, { password });
+    await db.kvDelete(resetOtpKey(phone));
+    forgetOtpLayout(`reset:${phone}`);
+
+    // A successful reset lifts any wrong-password lockout.
+    await clearRateLimit(`login-fail:${phone}`, LOGIN_WINDOW_MS);
+    if (user.email) await clearRateLimit(`login-fail:${String(user.email).toLowerCase()}`, LOGIN_WINDOW_MS);
+
+    try {
+      await sendWhatsAppText(phone, buildPasswordChangedMessage(user.name, phone));
+    } catch (notifyErr) {
+      console.warn('⚠️ Password-changed notice not sent:', notifyErr.message);
+    }
+
+    console.log(`🔑 Password reset completed for +91 ${phone}`);
+    const token = await issueToken(user.id);
+    return res.json({ success: true, message: 'Your password has been reset. You are now signed in.', user: toSafeUser(updated || user), token });
+  } catch (err) {
+    sendError(res, userInputError(err), 'Password reset');
   }
 });
 

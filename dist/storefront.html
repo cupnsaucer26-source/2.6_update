@@ -1068,7 +1068,7 @@
           <span id="authNoticeBannerText">Login or Sign Up is mandatory to access your basket and checkout.</span>
         </div>
 
-        <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border-light); padding-bottom: 8px;">
+        <div id="authTabsBar" style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border-light); padding-bottom: 8px;">
           <button id="authTabLogin" class="btn btn-outline" style="flex: 1; border: none; font-weight: 700; border-radius: 8px; background: rgba(52, 211, 153, 0.15); color: var(--primary);" onclick="switchAuthTab('login')">
             <i class="fa-solid fa-right-to-bracket"></i> Sign In
           </button>
@@ -1089,7 +1089,10 @@
           </div>
           <div>
             <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-main);">Password *</label>
-            <input type="password" id="loginPassword" class="text-input" placeholder="Enter password" required style="width: 100%; padding: 10px 12px; margin-top: 4px; border: 1px solid var(--border-light); border-radius: 8px;" />
+            <input type="password" id="loginPassword" class="text-input" placeholder="Enter password" required autocomplete="current-password" style="width: 100%; padding: 10px 12px; margin-top: 4px; border: 1px solid var(--border-light); border-radius: 8px;" />
+            <div class="forgot-link-row">
+              <button type="button" class="forgot-link" id="forgotPasswordLink" onclick="openForgotPassword()">Forgot password?</button>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary" id="loginSubmitBtn" style="justify-content: center; padding: 12px; font-weight: 700; font-size: 0.95rem; margin-top: 6px;">
             <i class="fa-solid fa-shield-halved"></i> Sign In to Sathya Bio
@@ -1142,6 +1145,52 @@
           <button type="submit" class="btn btn-primary" id="regSubmitBtn" style="justify-content: center; padding: 12px; font-weight: 700; margin-top: 4px;">
             <i class="fa-solid fa-seedling"></i> Register & Access Deals
           </button>
+        </form>
+
+        <!-- FORGOT PASSWORD -->
+        <form id="storefrontForgotForm" class="forgot-form" onsubmit="submitForgotPassword(event)" novalidate style="display: none;">
+          <button type="button" class="forgot-back" onclick="closeForgotPassword()">
+            <i class="fa-solid fa-arrow-left"></i> Back to sign in
+          </button>
+          <div class="forgot-head">
+            <div class="forgot-icon" aria-hidden="true"><i class="fa-solid fa-key"></i></div>
+            <h3>Reset your password</h3>
+            <p id="forgotIntro">Enter your registered mobile number. We'll send a 6-digit code to its WhatsApp.</p>
+          </div>
+
+          <div class="forgot-step" id="forgotStepPhone">
+            <div class="forgot-field">
+              <label for="forgotPhone">Registered mobile number *</label>
+              <input type="tel" id="forgotPhone" class="text-input" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="10-digit mobile number" />
+            </div>
+            <button type="submit" class="btn btn-primary" id="forgotSendBtn">
+              <i class="fa-brands fa-whatsapp"></i> Send reset code
+            </button>
+          </div>
+
+          <div class="forgot-step" id="forgotStepReset" hidden>
+            <!-- One wrapper per field: error hints are placed inside the input's parent. -->
+            <div class="forgot-field">
+              <label for="forgotOtp">6-digit code *</label>
+              <input type="text" id="forgotOtp" class="text-input forgot-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" />
+            </div>
+            <div class="forgot-resend">
+              <span id="forgotResendText">Code sent on WhatsApp.</span>
+              <button type="button" class="forgot-link" id="forgotResendBtn" onclick="sendForgotPasswordCode(true)" disabled>Resend code</button>
+            </div>
+            <div class="forgot-field">
+              <label for="forgotNewPassword">New password *</label>
+              <input type="password" id="forgotNewPassword" class="text-input" autocomplete="new-password" placeholder="8+ characters: letters & numbers" />
+            </div>
+            <div class="forgot-field">
+              <label for="forgotConfirmPassword">Confirm new password *</label>
+              <input type="password" id="forgotConfirmPassword" class="text-input" autocomplete="new-password" placeholder="Type it again" />
+            </div>
+            <button type="submit" class="btn btn-primary" id="forgotResetBtn">
+              <i class="fa-solid fa-lock"></i> Reset password &amp; sign in
+            </button>
+            <button type="button" class="forgot-link forgot-change-number" onclick="forgotChangeNumber()">Use a different number</button>
+          </div>
         </form>
       </div>
 

@@ -337,3 +337,96 @@ export function buildOtpMessage(otp, userName = 'Farmer', phone = '', expiryMs =
 }
 
 export const OTP_LAYOUT_COUNT = LAYOUTS.length;
+
+// ---------------------------------------------------------------
+// Password reset codes
+// The sign-up layouts talk about verifying a number or signing up, which is
+// wrong for a reset. Reset messages share the greeting, code, validity and
+// warning pools but have their own headers, lead-ins and footers.
+// ---------------------------------------------------------------
+
+const RESET_HEADERS = [
+  `*${BRAND}* — password reset`,
+  `🔐 *${BRAND}* password reset`,
+  `*${BRAND}* — reset your password`,
+  `🌿 *${BRAND}* account security`,
+  `*${BRAND}* | Password reset code`,
+];
+
+const RESET_LEAD_INS = [
+  'Use this code to reset your password:',
+  'Here is the code to set a new password:',
+  'Enter this code to reset your account password:',
+  'Your password reset code is:',
+  'To choose a new password, enter this code:',
+  'Use the code below to reset your password:',
+];
+
+const RESET_FOOTERS = [
+  '_Did not ask to reset your password? Ignore this message — your password stays the same._',
+  '_Not you? Your password has not been changed. You can safely ignore this._',
+  `_Sent automatically by ${BRAND}. No reply needed._`,
+  `_Need help? Call ${BRAND} support on 1800-425-9999._`,
+];
+
+const RESET_LAYOUTS = [
+  ({ name, otp, mins }) => [
+    pick(RESET_HEADERS), '',
+    pick(GREETINGS)(name),
+    pick(RESET_LEAD_INS), '',
+    pick(CODE_LINES)(otp), '',
+    pick(VALIDITY)(mins),
+    pick(WARNINGS), '',
+    pick(RESET_FOOTERS),
+  ],
+  ({ name, otp, mins }) => [
+    `*${otp}* is your *${BRAND}* password reset code.`, '',
+    `${pick(GREETINGS)(name)} ${pick(VALIDITY)(mins)}`, '',
+    `_${pick(WARNINGS)}_`, '',
+    pick(RESET_FOOTERS),
+  ],
+  ({ name, otp, mins }) => [
+    pick(GREETINGS)(name), '',
+    pick(RESET_LEAD_INS), '',
+    pick(CODE_LINES)(otp), '',
+    `• ${pick(VALIDITY)(mins)}`,
+    '• Can be used once',
+    `• ${pick(WARNINGS)}`, '',
+    `— *${BRAND}*`,
+  ],
+  ({ name, otp, mins }) => [
+    pick(RESET_HEADERS), '',
+    `${pick(GREETINGS)(name)} ${decap(pick(RESET_LEAD_INS))}`, '',
+    pick(CODE_LINES)(otp), '',
+    `${pick(VALIDITY)(mins)} ${pick(WARNINGS)}`, '',
+    pick(RESET_FOOTERS),
+  ],
+];
+
+export function buildResetOtpMessage(otp, userName = 'Farmer', phone = '', expiryMs = 5 * 60 * 1000) {
+  const mins = Math.round(expiryMs / 60000);
+  const name = safeFirstName(userName);
+  const key = `reset:${phone}`;
+
+  const previous = lastLayout.get(key);
+  const choices = RESET_LAYOUTS.map((_, i) => i).filter((i) => i !== previous);
+  const index = choices[crypto.randomInt(0, choices.length)];
+  if (phone) lastLayout.set(key, index);
+
+  return RESET_LAYOUTS[index]({ name, otp, mins })
+    .filter((line) => line !== null && line !== undefined)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// Security notice sent after a successful reset.
+export function buildPasswordChangedMessage(userName = 'Farmer', phone = '') {
+  const name = safeFirstName(userName);
+  const masked = phone ? `+91 ••••••${String(phone).slice(-4)}` : 'your number';
+  return [
+    `🔐 *${BRAND}* — password changed`, '',
+    `${pick(GREETINGS)(name)} the password for the ${BRAND} account on ${masked} was just changed, and any other devices were signed out.`, '',
+    `If this was not you, call ${BRAND} support on 1800-425-9999 right away.`,
+  ].join('\n');
+}

@@ -3016,6 +3016,12 @@ function switchAuthTab(tab) {
   const loginForm = document.getElementById('storefrontLoginForm');
   const regForm = document.getElementById('storefrontRegisterForm');
 
+  // Leaving the forgot-password view brings the tabs back.
+  const forgotForm = document.getElementById('storefrontForgotForm');
+  if (forgotForm) forgotForm.style.display = 'none';
+  const tabsBar = document.getElementById('authTabsBar');
+  if (tabsBar) tabsBar.style.display = 'flex';
+
   if (tab === 'login') {
     if (loginTabBtn) {
       loginTabBtn.style.background = 'rgba(52, 211, 153, 0.15)';
@@ -3046,6 +3052,273 @@ function switchAuthTab(tab) {
   }
 }
 window.switchAuthTab = switchAuthTab;
+
+// ============================================================
+// FORGOT PASSWORD - WhatsApp code to the registered number
+// Step 1: mobile number -> /api/auth/forgot-password/send-otp
+// Step 2: code + new password -> /api/auth/forgot-password/reset, which
+// signs the user in (and signs every other device out).
+// ============================================================
+
+let forgotPhone = '';
+let forgotResendTimer = null;
+
+function forgotEls() {
+  return {
+    form: document.getElementById('storefrontForgotForm'),
+    tabs: document.getElementById('authTabsBar'),
+    intro: document.getElementById('forgotIntro'),
+    stepPhone: document.getElementById('forgotStepPhone'),
+    stepReset: document.getElementById('forgotStepReset'),
+    phone: document.getElementById('forgotPhone'),
+    otp: document.getElementById('forgotOtp'),
+    password: document.getElementById('forgotNewPassword'),
+    confirm: document.getElementById('forgotConfirmPassword'),
+    sendBtn: document.getElementById('forgotSendBtn'),
+    resetBtn: document.getElementById('forgotResetBtn'),
+    resendBtn: document.getElementById('forgotResendBtn'),
+    resendText: document.getElementById('forgotResendText'),
+  };
+}
+
+function showForgotStep(step) {
+  const els = forgotEls();
+  if (!els.form) return;
+  els.stepPhone.hidden = step !== 'phone';
+  els.stepReset.hidden = step !== 'reset';
+  els.intro.textContent = step === 'phone'
+    ? "Enter your registered mobile number. We'll send a 6-digit code to its WhatsApp."
+    : `Enter the code sent to WhatsApp on +91 ${forgotPhone}, then choose a new password.`;
+}
+
+function resetForgotForm() {
+  const els = forgotEls();
+  forgotPhone = '';
+  clearInterval(forgotResendTimer);
+  ['phone', 'otp', 'password', 'confirm'].forEach(key => {
+    if (els[key]) { els[key].value = ''; clearField(els[key]); }
+  });
+  els.form?.querySelectorAll('.sb-password-rules').forEach(list => list.remove());
+}
+
+window.openForgotPassword = function() {
+  const els = forgotEls();
+  if (!els.form) return;
+  document.getElementById('storefrontLoginForm').style.display = 'none';
+  document.getElementById('storefrontRegisterForm').style.display = 'none';
+  if (els.tabs) els.tabs.style.display = 'none';
+  els.form.style.display = 'flex';
+  // Carry over a mobile number already typed into the sign-in form.
+  const typed = (document.getElementById('loginIdentifier')?.value || '').replace(/\D/g, '');
+  if (!els.phone.value && /^[6-9]\d{9}$/.test(typed)) els.phone.value = typed;
+  showForgotStep(forgotPhone ? 'reset' : 'phone');
+  (forgotPhone ? els.otp : els.phone)?.focus();
+};
+
+window.closeForgotPassword = function() {
+  const els = forgotEls();
+  if (els.form) els.form.style.display = 'none';
+  if (els.tabs) els.tabs.style.display = 'flex';
+  switchAuthTab('login');
+};
+
+window.forgotChangeNumber = function() {
+  resetForgotForm();
+  showForgotStep('phone');
+  forgotEls().phone?.focus();
+};
+
+function startForgotResendCountdown(seconds) {
+  const els = forgotEls();
+  clearInterval(forgotResendTimer);
+  let left = Math.max(0, Math.round(Number(seconds) || 0));
+  const tick = () => {
+    if (!els.resendBtn) return;
+    if (left <= 0) {
+      clearInterval(forgotResendTimer);
+      els.resendBtn.disabled = false;
+      els.resendBtn.textContent = 'Resend code';
+      els.resendText.textContent = "Didn't get it?";
+      return;
+    }
+    els.resendBtn.disabled = true;
+    els.resendBtn.textContent = `Resend in ${left}s`;
+    els.resendText.textContent = 'Code sent on WhatsApp.';
+    left -= 1;
+  };
+  tick();
+  forgotResendTimer = setInterval(tick, 1000);
+}
+
+window.sendForgotPasswordCode = async function(isResend = false) {
+  const els = forgotEls();
+  const phone = isResend ? forgotPhone : (els.phone?.value || '').replace(/\D/g, '');
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    if (!isResend) {
+      setFieldError(els.phone, 'Enter your 10-digit registered mobile number.');
+      els.phone?.focus();
+    }
+    return;
+  }
+  if (!isResend) clearField(els.phone);
+
+  if (isResend) {
+    if (els.resendBtn) els.resendBtn.disabled = true;
+  } else if (els.sendBtn) {
+    els.sendBtn.disabled = true;
+    els.sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending code...';
+  }
+
+  try {
+    const res = await fetch('/api/auth/forgot-password/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    // A code was sent moments ago: go straight to entering it.
+    if (res.status === 429 && data.retryAfter) {
+      forgotPhone = phone;
+      showForgotStep('reset');
+      startForgotResendCountdown(data.retryAfter);
+      showToast(data.message, 'warning');
+      return;
+    }
+    if (!res.ok || !data.success) {
+      showToast(data.message || 'Could not send the reset code. Please try again.', 'error');
+      if (isResend && els.resendBtn) els.resendBtn.disabled = false;
+      return;
+    }
+
+    forgotPhone = phone;
+    showForgotStep('reset');
+    startForgotResendCountdown(data.resendAfter || 30);
+    showToast(data.message || 'Reset code sent on WhatsApp.', 'success', 6000);
+    els.otp?.focus();
+  } catch (err) {
+    showToast('Could not reach the server. Please check your connection.', 'error');
+    if (isResend && els.resendBtn) els.resendBtn.disabled = false;
+  } finally {
+    if (!isResend && els.sendBtn) {
+      els.sendBtn.disabled = false;
+      els.sendBtn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Send reset code';
+    }
+  }
+};
+
+// Live checklist under the new password (farmer rules; the server applies the
+// stricter staff rules and explains them if they are not met).
+function validateResetPassword() {
+  const el = document.getElementById('forgotNewPassword');
+  if (!el) return false;
+  ensureFieldErrorStyles();
+  let list = el.nextElementSibling?.classList?.contains('sb-password-rules') ? el.nextElementSibling : null;
+  if (!list) {
+    list = document.createElement('ul');
+    list.className = 'sb-password-rules';
+    list.setAttribute('aria-live', 'polite');
+    el.insertAdjacentElement('afterend', list);
+  }
+  const checks = farmerPasswordChecks(el.value, forgotPhone);
+  list.replaceChildren(...checks.map(check => {
+    const item = document.createElement('li');
+    if (check.ok) item.className = 'ok';
+    item.textContent = `${check.ok ? '✓' : '○'} ${check.label}`;
+    return item;
+  }));
+  const ok = checks.every(check => check.ok);
+  el.classList.toggle('sb-input-valid', ok);
+  return ok;
+}
+
+window.submitForgotPassword = async function(e) {
+  e.preventDefault();
+  const els = forgotEls();
+  if (!els.stepReset || els.stepReset.hidden) {
+    sendForgotPasswordCode(false);
+    return;
+  }
+
+  const otp = (els.otp?.value || '').replace(/\D/g, '');
+  const password = els.password?.value || '';
+  const confirm = els.confirm?.value || '';
+  let bad = null;
+
+  if (otp.length !== 6) { setFieldError(els.otp, 'Enter the 6-digit code from WhatsApp.'); bad = bad || els.otp; }
+  else clearField(els.otp);
+  if (!validateResetPassword()) { setFieldError(els.password, 'Your new password does not meet all the rules above.'); bad = bad || els.password; }
+  if (!confirm || confirm !== password) { setFieldError(els.confirm, 'Passwords do not match.'); bad = bad || els.confirm; }
+  else clearField(els.confirm);
+  if (bad) {
+    bad.focus();
+    return;
+  }
+
+  if (els.resetBtn) {
+    els.resetBtn.disabled = true;
+    els.resetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Resetting...';
+  }
+
+  try {
+    const res = await fetch('/api/auth/forgot-password/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: forgotPhone, otp, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      showToast(data.message || 'Could not reset your password. Please try again.', 'error', 6000);
+      if (/expired|request a new code/i.test(data.message || '')) els.otp.value = '';
+      return;
+    }
+
+    localStorage.setItem('sathya_token', data.token);
+    localStorage.setItem('sathya_user', JSON.stringify(data.user));
+    resetForgotForm();
+    closeForgotPassword();
+    checkStorefrontAuth();
+    closeModal('authModal');
+    showToast(data.message || 'Your password has been reset. You are now signed in.', 'success', 5000);
+
+    await syncCartFromServer();
+
+    const ROLE_HOME = { admin: '/admin', employee: '/employee', delivery: '/delivery', billing: '/billing' };
+    const home = ROLE_HOME[data.user?.role];
+    if (home) {
+      window.top.location.href = home;
+      return;
+    }
+    fetchLiveProducts();
+  } catch (err) {
+    showToast('Could not reach the server. Please check your connection.', 'error');
+  } finally {
+    if (els.resetBtn) {
+      els.resetBtn.disabled = false;
+      els.resetBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Reset password &amp; sign in';
+    }
+  }
+};
+
+// Clears "Passwords do not match" as soon as the two fields agree.
+function syncResetConfirm() {
+  const password = document.getElementById('forgotNewPassword');
+  const confirm = document.getElementById('forgotConfirmPassword');
+  if (confirm?.value && confirm.value === password?.value) clearField(confirm);
+}
+
+document.getElementById('forgotNewPassword')?.addEventListener('input', () => {
+  validateResetPassword();
+  syncResetConfirm();
+});
+document.getElementById('forgotConfirmPassword')?.addEventListener('input', syncResetConfirm);
+document.getElementById('forgotOtp')?.addEventListener('input', event => {
+  event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6);
+});
+document.getElementById('forgotPhone')?.addEventListener('input', event => {
+  event.target.value = event.target.value.replace(/\D/g, '').slice(0, 10);
+});
 
 window.submitStorefrontLogin = async function(e) {
   e.preventDefault();

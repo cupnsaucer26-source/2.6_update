@@ -6,6 +6,7 @@ import PrivateRoute from './components/PrivateRoute'
 // Auth Pages
 import Login    from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
 import ProductDetail from './pages/ProductDetail'
 import IngredientDetail from './pages/IngredientDetail'
 import Navigation from './components/home/Navigation'
@@ -82,6 +83,7 @@ export default function App() {
       <Route path="/"        element={<HomePage />} />
       <Route path="/login"   element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/product/:id" element={<PublicPageShell><ProductDetail /></PublicPageShell>} />
       <Route path="/product/:id/ingredients" element={<PublicPageShell><IngredientDetail /></PublicPageShell>} />
       <Route path="/wishlist" element={<PublicPageShell><Wishlist /></PublicPageShell>} />

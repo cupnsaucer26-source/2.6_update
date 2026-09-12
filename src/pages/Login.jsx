@@ -119,9 +119,14 @@ export default function Login() {
                   onChange={e => setPassword(e.target.value)}
                   autoComplete="current-password"
                 />
-                <button type="button" className="input-icon input-icon-right" onClick={() => setShowPass(!showPass)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <button type="button" className="input-icon input-icon-right" aria-label={showPass ? 'Hide password' : 'Show password'} onClick={() => setShowPass(!showPass)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
+              </div>
+              <div className="forgot-link-row">
+                <Link to="/forgot-password" state={{ phone: /^[6-9]\d{9}$/.test(mobile) ? mobile : '' }} className="forgot-text-btn">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 
