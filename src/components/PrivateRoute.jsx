@@ -10,8 +10,10 @@ const ROLE_HOME = {
 /**
  * PrivateRoute — protects pages by role.
  * allowedRoles: array of roles that can access. Empty = any authenticated user.
+ * signIn: shown in place of the page while signed out. Without it, visitors
+ * are sent to the storefront's sign-in.
  */
-export default function PrivateRoute({ children, allowedRoles = [] }) {
+export default function PrivateRoute({ children, allowedRoles = [], signIn }) {
   const { user, loading } = useAuth()
   const location = useLocation()
 
@@ -22,10 +24,10 @@ export default function PrivateRoute({ children, allowedRoles = [] }) {
     </div>
   )
 
-  if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+  if (!user) return signIn || <Navigate to="/#login" state={{ from: location }} replace />
 
   if (allowedRoles.length && !allowedRoles.includes(user.role)) {
-    return <Navigate to={ROLE_HOME[user.role] || '/login'} replace />
+    return <Navigate to={ROLE_HOME[user.role] || '/'} replace />
   }
 
   return children

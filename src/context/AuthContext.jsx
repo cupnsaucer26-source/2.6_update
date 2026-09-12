@@ -115,14 +115,20 @@ return Promise.reject(err)
 return () => axios.interceptors.response.eject(interceptor)
 }, [])
 
-const login = async (identifier, password) => {
+// `roles` limits which accounts may sign in here; others are turned away
+// without a session being saved.
+const login = async (identifier, password, { roles } = {}) => {
+let data
 try {
-const { data } = await axios.post('/api/auth/login', { identifier: identifier.trim(), password })
-saveSession(data.token, data.user)
-return data.user
+({ data } = await axios.post('/api/auth/login', { identifier: identifier.trim(), password }))
 } catch (err) {
 throw new Error(err.response?.data?.message || 'Could not reach the server. Please try again.')
 }
+if (roles && !roles.includes(data.user?.role)) {
+throw new Error('This sign-in is for administrators only.')
+}
+saveSession(data.token, data.user)
+return data.user
 }
 
 // Send a WhatsApp OTP for registration (does not create the account)

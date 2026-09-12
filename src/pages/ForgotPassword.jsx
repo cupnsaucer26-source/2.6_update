@@ -84,7 +84,7 @@ export default function ForgotPassword() {
     <div className="login-page">
       <div className="login-left">
         <div className="login-card animate-slide-up">
-          <Link to="/login" className="forgot-back-link"><ArrowLeft size={16} /> Back to sign in</Link>
+          <Link to={location.state?.backTo || '/#login'} className="forgot-back-link"><ArrowLeft size={16} /> Back to sign in</Link>
 
           <div className="forgot-hero" aria-hidden="true"><KeyRound size={26} /></div>
           <h2 className="login-title">Reset your password</h2>

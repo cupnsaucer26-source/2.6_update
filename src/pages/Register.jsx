@@ -82,7 +82,7 @@ export default function Register() {
       // Already has an account — send them to sign in with the number carried over.
       if (err?.response?.data?.alreadyRegistered) {
         toast('This number is already registered. Please sign in.', { icon: 'ℹ️' })
-        navigate('/login', { state: { identifier: form.phone.trim() } })
+        navigate('/#login')
         return
       }
       toast.error(err?.response?.data?.message || 'Failed to send OTP')
@@ -269,7 +269,7 @@ export default function Register() {
         )}
 
         <div className="divider"><span>Already registered?</span></div>
-        <Link to="/login"><button className="btn btn-secondary btn-full">← Back to Login</button></Link>
+        <Link to="/#login"><button className="btn btn-secondary btn-full">← Back to Login</button></Link>
       </div>
     </div>
   )

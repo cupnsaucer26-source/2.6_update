@@ -7,8 +7,9 @@ export default function Sidebar({ items, roleName, roleEmoji, isOpen, onClose })
   const navigate = useNavigate()
 
   const handleLogout = () => {
+    const role = user?.role
     logout()
-    navigate('/login')
+    navigate(role === 'admin' ? '/admin' : '/#login')
   }
 
   return (

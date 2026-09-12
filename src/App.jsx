@@ -81,7 +81,6 @@ export default function App() {
     <Routes>
       {/* Public Home - Vanilla HTML Page */}
       <Route path="/"        element={<HomePage />} />
-      <Route path="/login"   element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/product/:id" element={<PublicPageShell><ProductDetail /></PublicPageShell>} />
@@ -97,8 +96,8 @@ export default function App() {
       <Route path="/support" element={<PublicPageShell><StoreSection type="support" /></PublicPageShell>} />
       <Route path="/agronomists" element={<PublicPageShell><StoreSection type="agronomists" /></PublicPageShell>} />
 
-      {/* Admin Routes */}
-      <Route path="/admin" element={<PrivateRoute allowedRoles={['admin']}><AdminLayout /></PrivateRoute>}>
+      {/* Admin Routes — signed-out visitors get the admin sign-in here */}
+      <Route path="/admin" element={<PrivateRoute allowedRoles={['admin']} signIn={<Login />}><AdminLayout /></PrivateRoute>}>
         <Route index             element={<AdminDashboard />} />
         <Route path="cms"        element={<AdminCMS />} />
         <Route path="users"      element={<AdminUsers />} />
