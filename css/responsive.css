@@ -2293,6 +2293,230 @@ pre {
 }
 
 /* ------------------------------------------------------------
+   7h. LANGUAGE QUICK SWITCH + TAMIL TYPOGRAPHY
+   A compact "EN / த" pill in the header on phones and tablets (the
+   desktop Language badge is hidden below 1024px). It opens a small
+   menu anchored under the pill.
+   ------------------------------------------------------------ */
+
+.lang-quick-btn {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .lang-quick-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 5px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #a7f3d0;
+    border-radius: 18px;
+    background: #ecfdf5;
+    color: var(--primary-dark);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .lang-quick-btn i {
+    font-size: 1rem;
+  }
+  .lang-quick-btn[aria-expanded="true"],
+  .lang-quick-btn:active {
+    background: #d1fae5;
+    border-color: #34d399;
+  }
+}
+
+.lang-quick-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  background: rgba(15, 23, 42, 0.18);
+}
+.lang-quick-menu {
+  position: fixed;
+  z-index: 10021;
+  right: 12px;
+  width: min(270px, calc(100vw - 24px));
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22), 0 2px 8px rgba(15, 23, 42, 0.08);
+  transform-origin: top right;
+  animation: langMenuIn 0.16s ease-out;
+}
+@keyframes langMenuIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lang-quick-menu { animation: none; }
+}
+.lang-quick-title {
+  padding: 6px 10px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.lang-quick-option {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--text-main);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.lang-quick-option:not(:disabled):hover,
+.lang-quick-option:focus-visible {
+  background: #f1f5f9;
+  outline: none;
+}
+.lang-quick-option[aria-checked="true"] {
+  background: #ecfdf5;
+}
+.lang-quick-option:disabled {
+  cursor: default;
+}
+.lang-quick-option:disabled .lang-quick-glyph,
+.lang-quick-option:disabled .lang-quick-names {
+  opacity: 0.5;
+}
+.lang-quick-glyph {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: var(--primary-dark);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.lang-quick-option[aria-checked="true"] .lang-quick-glyph {
+  background: var(--primary);
+  color: #ffffff;
+}
+.lang-quick-names {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.lang-quick-names strong {
+  font-size: 0.95rem;
+}
+.lang-quick-names small {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.lang-quick-check {
+  color: var(--primary);
+  visibility: hidden;
+}
+.lang-quick-option[aria-checked="true"] .lang-quick-check {
+  visibility: visible;
+}
+.lang-quick-soon {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lang-quick-divider {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--border-light);
+}
+
+/* Tamil runs longer and its vowel signs sit above and below the line, so
+   tight English line-heights clip it and fixed-width labels overflow. */
+html[lang="ta"] .bento-title[data-i18n="hero_title"] {
+  white-space: pre-line;
+}
+html[lang="ta"] h1,
+html[lang="ta"] h2,
+html[lang="ta"] h3,
+html[lang="ta"] h4,
+html[lang="ta"] .bento-title,
+html[lang="ta"] .section-title,
+html[lang="ta"] .deal-title,
+html[lang="ta"] .welcome-poster-title {
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+html[lang="ta"] .bento-tag,
+html[lang="ta"] .mms-title,
+html[lang="ta"] .lang-quick-title {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@media (max-width: 768px) {
+  html[lang="ta"] .bento-card.bento-span-2.bento-row-2 .bento-title {
+    font-size: 1.08rem !important;
+  }
+  html[lang="ta"] .bento-card .bento-title {
+    font-size: 0.98rem !important;
+  }
+  html[lang="ta"] .section-title {
+    font-size: 1.2rem;
+  }
+  html[lang="ta"] .mobile-nav-item {
+    min-width: 0;
+  }
+  /* Tags are one-line pills; a wrapped Tamil tag became a two-line blob. */
+  html[lang="ta"] .bento-tag {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  /* Wrap between words only (a long Tamil word was split mid-syllable) and
+     leave room for the vowel signs above the first line. */
+  html[lang="ta"] .mms-account-text strong,
+  html[lang="ta"] .mms-account-text span {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: normal;
+    word-break: normal;
+    line-height: 1.45;
+  }
+  html[lang="ta"] .mms-account-text strong {
+    font-size: 0.84rem;
+  }
+  html[lang="ta"] .mobile-nav-item > span:last-child {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 0.58rem;
+  }
+}
+
+/* ------------------------------------------------------------
    8. TOUCH DEVICES
    Comfortable hit areas and no iOS zoom-on-focus.
    ------------------------------------------------------------ */

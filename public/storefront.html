@@ -128,6 +128,13 @@
           </div>
         </div>
 
+        <!-- LANGUAGE QUICK SWITCH: phones and tablets, where the Language badge
+             above is hidden. The menu is built by initLanguageQuickSwitch(). -->
+        <button type="button" class="lang-quick-btn notranslate" id="langQuickBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="langQuickMenu" aria-label="Language: English">
+          <i class="fa-solid fa-language" aria-hidden="true"></i>
+          <span class="lang-quick-code" id="langQuickCode">EN</span>
+        </button>
+
         <!-- LOGIN / ACCOUNT -->
         <div class="action-item" id="headerAccountBtn" onclick="handleAccountClick()" style="cursor: pointer;">
           <i class="fa-regular fa-circle-user action-icon" id="headerAccountIcon"></i>
@@ -1310,6 +1317,7 @@
   </nav>
 
   <!-- JavaScript Application Engine -->
+  <script src="./js/lang-ta.js" defer></script>
   <script src="./js/app.js" defer></script>
 
 </body>

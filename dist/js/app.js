@@ -679,8 +679,30 @@ const TRANSLATIONS = {
 };
 
 
-let currentLang =
-  localStorage.getItem('sathya_bio_lang') || 'en';
+// Tamil ships in js/lang-ta.js. The other South Indian languages are listed
+// as "coming soon" until their packs exist.
+const TEXT_PACKS = {};
+if (window.SB_LANG_TA) {
+  TRANSLATIONS.ta = window.SB_LANG_TA.keys;
+  TEXT_PACKS.ta = window.SB_LANG_TA;
+}
+
+const LANGUAGES = [
+  { code: 'en', native: 'English', english: 'English', glyph: 'A' },
+  { code: 'ta', native: 'தமிழ்', english: 'Tamil', glyph: 'த' },
+  { code: 'te', native: 'తెలుగు', english: 'Telugu', glyph: 'తె' },
+  { code: 'kn', native: 'ಕನ್ನಡ', english: 'Kannada', glyph: 'ಕ' },
+  { code: 'ml', native: 'മലയാളം', english: 'Malayalam', glyph: 'മ' },
+  { code: 'tulu', native: 'ತುಳು', english: 'Tulu', glyph: 'ತು' },
+];
+const LANGUAGE_SELECT_IDS = ['langSelectTop', 'langSelectHeader', 'mobileMenuLang'];
+const isLanguageReady = code => Boolean(TRANSLATIONS[code]);
+
+let currentLang = (() => {
+  let saved = 'en';
+  try { saved = localStorage.getItem('sathya_bio_lang') || 'en'; } catch {}
+  return isLanguageReady(saved) ? saved : 'en';
+})();
 
 
 // The translation for key, or undefined when no dictionary has it.
@@ -699,31 +721,145 @@ function t(key) {
 
 
 function setLanguage(langCode) {
+  if (!isLanguageReady(langCode)) return;
   currentLang = langCode;
-
-  localStorage.setItem(
-    'sathya_bio_lang',
-    langCode
-  );
-
+  try { localStorage.setItem('sathya_bio_lang', langCode); } catch {}
   applyTranslations();
+  syncLanguageControls();
 }
 
+// Every language control (header selects, Menu sheet, quick switch) goes
+// through here so they always agree.
+function changeLanguage(langCode) {
+  if (langCode === currentLang || !isLanguageReady(langCode)) {
+    syncLanguageControls();
+    return;
+  }
+  setLanguage(langCode);
+  // Product cards build some labels with t(), so they are drawn again.
+  renderProducts();
+  renderTrendingProducts();
+  showToast(langCode === 'ta' ? 'மொழி தமிழுக்கு மாற்றப்பட்டது' : 'Language changed to English', 'success', 2500);
+}
+
+function syncLanguageControls() {
+  LANGUAGE_SELECT_IDS.forEach(id => {
+    const select = document.getElementById(id);
+    if (select) select.value = currentLang;
+  });
+  const lang = LANGUAGES.find(l => l.code === currentLang) || LANGUAGES[0];
+  const code = document.getElementById('langQuickCode');
+  if (code) code.textContent = currentLang === 'en' ? 'EN' : lang.glyph;
+  document.getElementById('langQuickBtn')?.setAttribute('aria-label', `Language: ${lang.english}`);
+  document.querySelectorAll('.lang-quick-option').forEach(option => {
+    option.setAttribute('aria-checked', String(option.dataset.lang === currentLang));
+  });
+}
 
 function initLanguageSelector() {
-  const selectors = ['langSelectTop', 'langSelectHeader', 'mobileMenuLang']
+  LANGUAGE_SELECT_IDS
     .map(id => document.getElementById(id))
-    .filter(Boolean);
-
-  selectors.forEach(select => {
-    select.value = currentLang;
-    select.addEventListener('change', (e) => {
-      const code = e.target.value;
-      setLanguage(code);
-      selectors.forEach(other => { other.value = code; });
-      renderProducts();
+    .filter(Boolean)
+    .forEach(select => {
+      [...select.options].forEach(option => {
+        if (!isLanguageReady(option.value)) {
+          option.disabled = true;
+          option.textContent = `${option.textContent} · soon`;
+        }
+      });
+      select.value = currentLang;
+      select.addEventListener('change', e => changeLanguage(e.target.value));
     });
-  });
+}
+
+// Header "EN / த" pill on phones and tablets: a small menu of languages.
+function initLanguageQuickSwitch() {
+  const button = document.getElementById('langQuickBtn');
+  if (!button) return;
+  let menu = null;
+  let backdrop = null;
+
+  const options = () => [...menu.querySelectorAll('.lang-quick-option:not(:disabled)')];
+
+  const onKey = e => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const list = options();
+      const at = list.indexOf(document.activeElement);
+      const next = e.key === 'ArrowDown' ? (at + 1) % list.length : (at - 1 + list.length) % list.length;
+      list[next]?.focus();
+    }
+  };
+
+  const closeQuietly = () => close({ restoreFocus: false });
+
+  function close({ restoreFocus = true } = {}) {
+    if (!menu) return;
+    menu.remove();
+    backdrop.remove();
+    menu = backdrop = null;
+    button.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', closeQuietly);
+    if (restoreFocus) button.focus({ preventScroll: true });
+  }
+
+  function open() {
+    backdrop = document.createElement('div');
+    backdrop.className = 'lang-quick-backdrop';
+    backdrop.addEventListener('click', () => close());
+
+    menu = document.createElement('div');
+    menu.id = 'langQuickMenu';
+    menu.className = 'lang-quick-menu notranslate';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', 'Choose language');
+
+    const title = document.createElement('div');
+    title.className = 'lang-quick-title';
+    title.textContent = 'மொழி · Language';
+    menu.append(title);
+
+    let dividerAdded = false;
+    LANGUAGES.forEach(lang => {
+      const ready = isLanguageReady(lang.code);
+      if (!ready && !dividerAdded) {
+        const divider = document.createElement('div');
+        divider.className = 'lang-quick-divider';
+        menu.append(divider);
+        dividerAdded = true;
+      }
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'lang-quick-option';
+      option.dataset.lang = lang.code;
+      option.disabled = !ready;
+      option.setAttribute('role', 'menuitemradio');
+      option.setAttribute('aria-checked', String(lang.code === currentLang));
+      option.innerHTML = `
+        <span class="lang-quick-glyph" aria-hidden="true">${lang.glyph}</span>
+        <span class="lang-quick-names"><strong>${lang.native}</strong><small>${lang.english}</small></span>
+        ${ready ? '<i class="fa-solid fa-check lang-quick-check" aria-hidden="true"></i>' : '<span class="lang-quick-soon">Coming soon</span>'}`;
+      option.addEventListener('click', () => {
+        close();
+        changeLanguage(lang.code);
+      });
+      menu.append(option);
+    });
+
+    menu.style.top = `${Math.round(button.getBoundingClientRect().bottom + 8)}px`;
+    document.body.append(backdrop, menu);
+    button.setAttribute('aria-expanded', 'true');
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', closeQuietly);
+    (menu.querySelector('[aria-checked="true"]') || options()[0])?.focus({ preventScroll: true });
+  }
+
+  button.addEventListener('click', () => (menu ? close() : open()));
+  syncLanguageControls();
 }
 
 
@@ -757,6 +893,129 @@ function applyTranslations() {
       el.placeholder =
         translationFor(key) || el.dataset.i18nPlaceholderDefault;
     });
+
+  document.documentElement.lang = currentLang;
+  localizeTree(document.body);
+  watchPageText(Boolean(TEXT_PACKS[currentLang]));
+}
+
+
+// ---- Untagged page text (gettext-style: the English text is the key) ----
+// Leading/trailing punctuation, symbols and emoji stay as written, so
+// "🌾 Paddy / Rice", "Password *" and "Forgot password?" share plain keys.
+const TEXT_AFFIX = /^([\s\p{P}\p{S}\p{M}‍]*)([\s\S]*?)([\s\p{P}\p{S}]*)$/u;
+const SKIP_TEXT = 'script, style, noscript, textarea, [data-i18n], .notranslate, #n8nExecutionLog';
+// Text node or element -> { source: English, shown: what we wrote }.
+const localizedSources = new WeakMap();
+
+function translatePageText(english) {
+  const pack = TEXT_PACKS[currentLang];
+  if (!pack) return null;
+  const clean = english.replace(/\s+/g, ' ').trim();
+  if (!clean) return null;
+
+  let translated = pack.text[clean];
+  let before = '';
+  let after = '';
+  if (!translated) {
+    let core;
+    [, before, core, after] = clean.match(TEXT_AFFIX);
+    translated = pack.text[core];
+    if (!translated) {
+      const rule = pack.patterns.find(([pattern]) => pattern.test(core));
+      if (rule) translated = core.replace(rule[0], rule[1]);
+    }
+  }
+  if (!translated) return null;
+  const lead = english.match(/^\s*/)[0];
+  const trail = english.match(/\s*$/)[0];
+  return `${lead}${before}${translated}${after}${trail}`;
+}
+
+// Returns the English source for a node, noticing when page code has since
+// replaced the text we wrote.
+// Text copied from nodes that were already translated (the ticker clones its
+// items to loop) carries no record, so it is mapped back through the packs.
+const reverseTextIndex = new Map();
+
+function englishSource(text) {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (!clean || !/[^ -ɏ -⃏]/.test(clean)) return text;
+  const [, before, core, after] = clean.match(TEXT_AFFIX);
+  for (const pack of Object.values(TEXT_PACKS)) {
+    if (!reverseTextIndex.has(pack)) {
+      reverseTextIndex.set(pack, new Map(Object.entries(pack.text).map(([english, translated]) => [translated, english])));
+    }
+    const index = reverseTextIndex.get(pack);
+    const exact = index.get(clean);
+    const english = exact ? exact : index.get(core) && `${before}${index.get(core)}${after}`;
+    if (english) return `${text.match(/^\s*/)[0]}${english}${text.match(/\s*$/)[0]}`;
+  }
+  return text;
+}
+
+function localizedValue(target, current) {
+  const record = localizedSources.get(target);
+  const source = record && current === record.shown ? record.source : englishSource(current);
+  const translated = translatePageText(source);
+  if (translated) localizedSources.set(target, { source, shown: translated });
+  else localizedSources.delete(target);
+  return translated ?? source;
+}
+
+function localizeTextNode(node) {
+  const parent = node.parentElement;
+  if (!parent || parent.closest(SKIP_TEXT)) return;
+  // An <option> without a value submits its text; keep submitting English.
+  if (parent.tagName === 'OPTION' && !parent.hasAttribute('value')) {
+    parent.setAttribute('value', localizedSources.get(node)?.source ?? node.nodeValue.trim());
+  }
+  const next = localizedValue(node, node.nodeValue);
+  if (node.nodeValue !== next) node.nodeValue = next;
+}
+
+function localizePlaceholder(el) {
+  if (el.closest(SKIP_TEXT) || el.hasAttribute('data-i18n-placeholder')) return;
+  const next = localizedValue(el, el.placeholder);
+  if (el.placeholder !== next) el.placeholder = next;
+}
+
+function localizeTree(root) {
+  if (!root) return;
+  if (root.nodeType === Node.TEXT_NODE) {
+    if (root.nodeValue.trim()) localizeTextNode(root);
+    return;
+  }
+  if (root.nodeType !== Node.ELEMENT_NODE) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: node => (node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+  });
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) localizeTextNode(node);
+  if (root.matches('[placeholder]')) localizePlaceholder(root);
+  root.querySelectorAll('[placeholder]').forEach(localizePlaceholder);
+}
+
+// While a non-English pack is active, text that page code adds later (product
+// cards, basket, toasts) is translated in the same task, before it paints.
+// English visitors never run the observer.
+let pageTextObserver = null;
+
+function watchPageText(on) {
+  if (!on) {
+    pageTextObserver?.disconnect();
+    pageTextObserver = null;
+    return;
+  }
+  if (pageTextObserver) return;
+  pageTextObserver = new MutationObserver(records => {
+    records.forEach(record => {
+      if (record.type === 'characterData') localizeTree(record.target);
+      else record.addedNodes.forEach(localizeTree);
+    });
+    // Our own writes are not new content.
+    pageTextObserver?.takeRecords();
+  });
+  pageTextObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
 }
 
 
@@ -854,6 +1113,7 @@ function initApp() {
   applyTranslations();
 
   initLanguageSelector();
+  initLanguageQuickSwitch();
 
   initNavigation();
 
