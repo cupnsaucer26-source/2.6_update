@@ -600,8 +600,40 @@ select.p2-input { cursor: pointer; }
 .p2-select-fit { flex: 0 1 220px; width: auto; }
 .p2-booking-topic { font-size: 0.86rem; color: var(--p2-ink-2); margin-top: 4px; }
 .p2-booking-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.p2-booking-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 0.82rem; color: var(--p2-muted); }
-.p2-booking-meta > span { display: inline-flex; align-items: center; gap: 5px; }
+.p2-booking-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 0.82rem; color: var(--p2-muted); }
+.p2-booking-meta > span, .p2-booking-meta > a, .p2-booking-meta > div { display: inline-flex; align-items: center; gap: 5px; }
+.p2-assign-select {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  line-height: 26px !important;
+  padding: 0 24px 0 8px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: var(--p2-ink) !important;
+  background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  vertical-align: middle !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+.p2-assign-select:hover:not(:disabled) {
+  border-color: var(--p2-green) !important;
+  background-color: #ffffff !important;
+}
+.p2-assign-select:focus {
+  border-color: var(--p2-green) !important;
+  box-shadow: 0 0 0 2px rgba(11, 122, 75, 0.15) !important;
+}
+.p2-assign-select:disabled {
+  opacity: 0.6;
+  cursor: wait !important;
+}
 .p2-complete { margin-top: 12px; display: grid; gap: 8px; }
 .p2-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .p2-staff .p2-split { margin-bottom: 8px; }

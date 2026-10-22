@@ -4,6 +4,16 @@ import { Sprout, RefreshCw, Phone, Calendar, CheckCircle2, Clock, Search, UserCh
 import { agronomyService } from '../../services/agronomyService'
 import { useAuth } from '../../context/AuthContext'
 
+function formatExpertSpec(spec) {
+  if (!spec) return ''
+  const s = String(spec).toLowerCase()
+  if (s.includes('disease') || s.includes('diagnostic')) return '(Diagnostics)'
+  if (s.includes('soil')) return '(Soil Science)'
+  if (s.includes('horticulture')) return '(Horticulture)'
+  if (s.includes('pest') || s.includes('biological') || s.includes('entomology')) return '(Bio-Control)'
+  return `(${spec.split(' ')[0]})`
+}
+
 // Staff view of farmers' agronomy callback bookings. The server decides what
 // each role sees: admins every booking, an expert the ones made with them.
 export default function AgronomyBookings() {
@@ -164,28 +174,28 @@ export default function AgronomyBookings() {
                   <span><Calendar size={14} /> {b.preferredDate || 'Any day'}{b.preferredSlot ? `, ${b.preferredSlot}` : ''}</span>
                   {isAdmin ? (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <UserCheck size={14} />
-                      <span>Assigned to:</span>
+                      <UserCheck size={14} style={{ color: 'var(--p2-green)', flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, color: 'var(--p2-ink-2)' }}>Assigned to:</span>
                       {!done ? (
                         <select
-                          className="p2-input p2-select-fit"
-                          style={{ padding: '2px 8px', height: 26, fontSize: '0.8rem', fontWeight: 600 }}
+                          className="p2-assign-select"
                           value={b.expertId || ''}
                           disabled={assigningId === b.id}
                           onChange={(e) => handleAssign(b.id, e.target.value)}
+                          title="Assign or reassign this consultation callback"
                         >
                           {experts.map(exp => (
                             <option key={exp.id} value={exp.id}>
-                              {exp.name} ({exp.specialization?.slice(0, 24) || 'Agronomist'})
+                              {exp.name} {formatExpertSpec(exp.specialization)}
                             </option>
                           ))}
                         </select>
                       ) : (
-                        <strong>{b.expertName}</strong>
+                        <strong style={{ color: 'var(--p2-green-dark)' }}>{b.expertName}</strong>
                       )}
                     </div>
                   ) : (
-                    <span>Expert: {b.expertName}</span>
+                    <span><UserCheck size={14} /> Expert: {b.expertName}</span>
                   )}
                 </div>
                 {b.notes && <div className="p2-quote" style={{ marginTop: 10 }}>Farmer's note: {b.notes}</div>}
