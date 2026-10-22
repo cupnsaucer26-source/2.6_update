@@ -3689,6 +3689,113 @@ app.get('/api/chat/records', requireAuth('admin', 'employee'), async (req, res) 
   }
 });
 
+// POST /api/chat/assistant — Grounded Gemini AI Crop & Store Assistant
+app.post('/api/chat/assistant', async (req, res) => {
+  try {
+    const { message, sessionId = 'SES-' + Date.now().toString(36).toUpperCase() } = req.body || {};
+    const query = String(message || '').trim();
+    if (!query) {
+      return res.status(400).json({ success: false, message: 'Message is required' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.json({ success: false, fallback: true, message: 'Gemini API key not configured' });
+    }
+
+    const wait = await rateLimit(`chat-ip:${clientIp(req)}`, 30, MINUTE_MS);
+    if (wait) {
+      return tooManyRequests(res, wait, 'Please wait a moment before sending another message.');
+    }
+
+    const all = await db.getProducts({ onlineOnly: true }).catch(() => []);
+    const products = Array.isArray(all) ? all : [];
+    const catalogSummary = products.slice(0, 50).map(p => {
+      const crops = Array.isArray(p.crops) ? p.crops.join(', ') : (p.crops || 'All Crops');
+      const pests = Array.isArray(p.diseases) ? p.diseases.join(', ') : (p.diseases || p.targetPests || '');
+      const active = p.activeIngredient || '';
+      const dose = p.dosage || '';
+      const price = p.price ? `₹${p.price}` : '';
+      return `- Product: "${p.name}" (ID: ${p.id}) | Category: ${p.category || 'Agro'} | Target Crops: ${crops} | Pests/Diseases: ${pests} | Active: ${active} | Dosage: ${dose} | Price: ${price}`;
+    }).join('\n');
+
+    const systemInstruction = `You are the official Senior Agronomy AI Doctor for Sathyam Agro Mart ("சத்யம் அக்ரோ மார்ட்"), India's leading agricultural inputs & crop protection platform.
+
+MISSION:
+Help Indian farmers diagnose crop diseases, pests, nutritional deficiencies, and weed issues, and recommend EXACT matching remedies from the Sathyam Agro Mart catalogue below.
+
+STORE POLICIES & SERVICES:
+- Free delivery on orders above ₹999. Cash on Delivery (COD) available across Tamil Nadu & South India.
+- Soil Health Analysis: recommend [[PAGE:/soil-test-report:Check Soil Health Report]]
+- Senior Agronomist 1-on-1 Consultation: recommend [[PAGE:/agronomy-experts:Book Expert Callback]]
+- Order Status & Issues: recommend [[PAGE:/support-tickets:Open Support Ticket]]
+- WhatsApp Helpline: recommend [[WHATSAPP:Chat with Agronomist]]
+
+LIVE PRODUCT CATALOGUE (RECOMMEND ONLY THESE):
+${catalogSummary}
+
+CRITICAL RULES:
+1. LANGUAGE: Respond in the exact language used by the farmer (Tamil, Tanglish, Hindi, Telugu, Kannada, or English). If Tamil or Tanglish, use warm, respectful farmer Tamil ("வணக்கம் விவசாயி").
+2. 3-PART STRUCTURE:
+   - Part 1: Clear diagnosis of the crop pest, disease, or nutrient deficiency and its primary cause.
+   - Part 2: Exact recommended product and approved application dosage (e.g. grams/ml per acre or per liter of water).
+   - Part 3: Embed product action tag: [[PRODUCT:productId:ShortProductName]] (e.g. [[PRODUCT:sb-01:BlastShield 75 WP]]).
+   - Part 4: One practical field advice or safety warning (e.g., spray in early morning, wear mask/gloves).
+3. GROUNDING: NEVER invent chemical brand names or recommend products not in the catalogue. If no catalogue product matches, advise booking a consultation with an expert: [[PAGE:/agronomy-experts:Book Expert Callback]].
+4. LENGTH: Keep responses concise (under 140 words). Farmers read this on mobile screens in sunlight.`;
+
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const geminiRes = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: query }] }],
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        generationConfig: {
+          temperature: 0.25,
+          maxOutputTokens: 600
+        }
+      })
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      console.warn('⚠️ Gemini API error:', geminiRes.status, errText.slice(0, 150));
+      return res.json({ success: false, fallback: true, message: 'AI temporarily unavailable' });
+    }
+
+    const data = await geminiRes.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!reply) {
+      return res.json({ success: false, fallback: true, message: 'No response from AI' });
+    }
+
+    // Save to chat records if user is known or visitor
+    try {
+      if (typeof db.addChatRecord === 'function') {
+        const user = await getAuthenticatedUser(req);
+        await db.addChatRecord({
+          sessionId,
+          user: user?.name || `Farmer (${clientIp(req).slice(0, 8)})`,
+          date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+          messages: 2,
+          resolved: true,
+          preview: `Q: ${query.slice(0, 40)}... A: ${reply.slice(0, 60)}...`
+        });
+      }
+    } catch {
+      // non-blocking
+    }
+
+    res.json({ success: true, reply, model });
+  } catch (err) {
+    console.warn('⚠️ Assistant chat error:', err.message);
+    res.json({ success: false, fallback: true, message: err.message });
+  }
+});
+
 // ============================================================
 // STAFF PROFILE (employee self-service + admin viewer)
 // ============================================================

@@ -2374,6 +2374,13 @@ class DatabaseManager {
         return records.map(stripMongoFields);
   }
 
+  async addChatRecord(record) {
+        await connectDB();
+        const id = record.sessionId || record.id || ('CHAT-' + Date.now());
+        const doc = await ChatRecord.create({ ...record, _id: id, sessionId: id });
+        return serialize(doc);
+  }
+
   async getWishlistForOwner(ownerId) {
         if (!ownerId) return [];
         await connectDB();
