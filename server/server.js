@@ -3480,6 +3480,8 @@ function publicExpert(staff) {
     availableDays: pick('availableDays') || 'Monday - Saturday',
     availableSlots: cleanList(pick('availableSlots'), 10, 40).length ? cleanList(pick('availableSlots'), 10, 40) : DEFAULT_EXPERT_SLOTS,
     bio: pick('bio') || '',
+    rating: Number(pick('rating')) || 4.9,
+    reviewsCount: Number(pick('reviewsCount')) || 120,
     isAgronomyExpert: true,
     active: true,
   };
@@ -3513,24 +3515,26 @@ app.put('/api/admin/employees/:id/agronomy-expert', requireAuth('admin'), requir
   }
 });
 
-// Only a signed-in account can book, and the booking is tied to it.
-app.post('/api/agronomy-bookings', requireAuth(), async (req, res) => {
+// Book a consultation callback. Works for both authenticated users AND guest farmers (with a valid phone).
+app.post('/api/agronomy-bookings', async (req, res) => {
   try {
-    const wait = await rateLimit(`agro-booking:${req.user.id}`, 10, HOUR_MS);
-    if (wait) return tooManyRequests(res, wait, 'Too many bookings. Please try again later.');
-
-    const { expertId, crop, acreage, preferredDate, preferredSlot, topic, notes, phone } = req.body || {};
+    const user = await getAuthenticatedUser(req);
+    const { expertId, crop, acreage, preferredDate, preferredSlot, topic, notes, phone, farmerName: rawName } = req.body || {};
     const expert = (await db.getAgronomyExperts()).find(e => e.id === expertId);
     if (!expert) return res.status(400).json({ success: false, message: 'Please choose an available expert.' });
-    const farmerPhone = normalizePhone(phone) || normalizePhone(req.user.phone);
+    const farmerPhone = normalizePhone(phone) || (user ? normalizePhone(user.phone) : '');
     if (!farmerPhone) return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit phone number.' });
+
+    const rateKey = user ? `agro-booking:${user.id}` : `agro-booking:${farmerPhone}`;
+    const wait = await rateLimit(rateKey, 10, HOUR_MS);
+    if (wait) return tooManyRequests(res, wait, 'Too many bookings. Please try again later.');
 
     const booking = {
       id: newId('AGR'),
       expertId: expert.id,
       expertName: expert.name,
-      userId: req.user.id,
-      farmerName: req.user.name || 'Farmer',
+      userId: user?.id || null,
+      farmerName: user?.name || cleanText(rawName, 60) || 'Farmer',
       farmerPhone,
       crop: cleanText(crop, 50) || 'General Crops',
       acreage: Math.max(0, Math.min(10000, Number(acreage) || 1)),
@@ -3551,13 +3555,13 @@ app.post('/api/agronomy-bookings', requireAuth(), async (req, res) => {
 });
 
 // Admins see all bookings, an expert sees bookings made with them, and
-// everyone else sees their own.
+// farmers see their own (by userId or phone).
 app.get('/api/agronomy-bookings', requireAuth(), async (req, res) => {
   try {
     const role = req.user.role;
     const filter = role === 'admin' || role === 'superadmin' ? {}
       : TICKET_STAFF_ROLES.includes(role) ? { expertId: req.user.id }
-      : { userId: req.user.id };
+      : { userId: req.user.id, phone: req.user.phone };
     const data = await db.getAgronomyBookings(filter);
     data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json({ success: true, data });

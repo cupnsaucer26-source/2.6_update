@@ -71,10 +71,15 @@ export default function AgronomyExperts() {
       const expertList = await agronomyService.getExperts()
       setExperts(expertList)
 
+      let bookings = []
       if (user) {
-        const bookings = await agronomyService.getUserBookings(user.id || user._id, user.phone || user.mobile)
-        setUserBookings(bookings)
+        bookings = await agronomyService.getUserBookings(user.id || user._id, user.phone || user.mobile)
+      } else {
+        try {
+          bookings = JSON.parse(localStorage.getItem('sathyam:local_agronomy_bookings') || '[]')
+        } catch {}
       }
+      setUserBookings(bookings || [])
     } catch {
       toast.error('Could not load agronomy experts')
     } finally {
@@ -95,27 +100,22 @@ export default function AgronomyExperts() {
 
   // Handle click on "Book Session"
   const handleInitiateBooking = (expert) => {
-    if (!user) {
-      // User must have an account
-      setSelectedExpert(expert)
-      setShowAuthPrompt(true)
-      return
-    }
-
     setSelectedExpert(expert)
     // Default preferred date to tomorrow
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
     const dateStr = tomorrow.toISOString().split('T')[0]
 
+    const slots = expert.availableSlots?.length ? expert.availableSlots : ['10:00 AM - 12:00 PM', '02:00 PM - 04:00 PM', '04:00 PM - 06:00 PM']
     setBookingData({
-      crop: user.crop || 'Paddy/Rice',
-      acreage: user.acreage || 2,
+      farmerName: user?.name || '',
+      crop: user?.crop || 'Paddy/Rice',
+      acreage: user?.acreage || 2,
       preferredDate: dateStr,
-      preferredSlot: expert.availableSlots?.[0] || '10:00 AM - 12:00 PM',
+      preferredSlot: slots[0],
       topic: 'Pest & Disease Diagnostics',
       notes: '',
-      phone: user.phone || user.mobile || ''
+      phone: user?.phone || user?.mobile || ''
     })
     setShowBookingModal(true)
   }
@@ -133,6 +133,7 @@ export default function AgronomyExperts() {
       const created = await agronomyService.bookSession({
         expertId: selectedExpert.id,
         user,
+        farmerName: bookingData.farmerName || user?.name || 'Farmer',
         crop: bookingData.crop,
         acreage: bookingData.acreage,
         preferredDate: bookingData.preferredDate,
@@ -141,6 +142,13 @@ export default function AgronomyExperts() {
         notes: bookingData.notes,
         phone: bookingData.phone
       })
+
+      // Store in local storage for guest retention
+      try {
+        const stored = JSON.parse(localStorage.getItem('sathyam:local_agronomy_bookings') || '[]')
+        const updated = [created, ...stored.filter(b => b.id !== created.id)]
+        localStorage.setItem('sathyam:local_agronomy_bookings', JSON.stringify(updated))
+      } catch {}
 
       toast.success(`Session Booked with ${selectedExpert.name}!`, {
         description: `Expert will call you back on ${bookingData.preferredDate} (${bookingData.preferredSlot}) at ${bookingData.phone}.`
@@ -223,13 +231,7 @@ export default function AgronomyExperts() {
             role="tab"
             className="p2-tab"
             aria-selected={activeTab === 'my-sessions'}
-            onClick={() => {
-              if (!user) {
-                setShowAuthPrompt(true)
-                return
-              }
-              setActiveTab('my-sessions')
-            }}
+            onClick={() => setActiveTab('my-sessions')}
           >
             📅 My Scheduled Sessions
             {userBookings.length > 0 && <span className="p2-count">{userBookings.length}</span>}
@@ -444,6 +446,19 @@ export default function AgronomyExperts() {
 
             <form onSubmit={handleConfirmBooking}>
               <div className="p2-modal-body">
+                {!user && (
+                  <div className="p2-field">
+                    <label className="p2-label">Farmer / Contact Name *</label>
+                    <input
+                      type="text"
+                      className="p2-input"
+                      required
+                      value={bookingData.farmerName || ''}
+                      onChange={e => setBookingData({ ...bookingData, farmerName: e.target.value })}
+                      placeholder="Enter your name"
+                    />
+                  </div>
+                )}
                 {/* Phone confirmation */}
                 <div className="p2-field">
                   <label className="p2-label">Callback Phone Number *</label>
@@ -481,7 +496,7 @@ export default function AgronomyExperts() {
                       value={bookingData.preferredSlot}
                       onChange={e => setBookingData({ ...bookingData, preferredSlot: e.target.value })}
                     >
-                      {selectedExpert.availableSlots?.map(slot => (
+                      {(selectedExpert.availableSlots?.length ? selectedExpert.availableSlots : ['10:00 AM - 12:00 PM', '02:00 PM - 04:00 PM', '04:00 PM - 06:00 PM']).map(slot => (
                         <option key={slot} value={slot}>{slot}</option>
                       ))}
                     </select>

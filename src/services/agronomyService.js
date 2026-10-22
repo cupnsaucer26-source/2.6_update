@@ -39,12 +39,19 @@ export const agronomyService = {
     return experts
   },
 
-  // Book a callback with an expert (requires a signed-in account)
-  async bookSession({ expertId, user, crop, acreage = 1, preferredDate, preferredSlot, topic, notes = '', phone }) {
-    if (!user) {
-      throw new Error('You must be signed in to your account to book an Agronomy Expert session.')
-    }
-    const res = await axios.post('/api/agronomy-bookings', { expertId, crop, acreage, preferredDate, preferredSlot, topic, notes, phone })
+  // Book a callback with an expert (works for signed-in accounts and guest farmers)
+  async bookSession({ expertId, user, crop, acreage = 1, preferredDate, preferredSlot, topic, notes = '', phone, farmerName }) {
+    const res = await axios.post('/api/agronomy-bookings', {
+      expertId,
+      crop,
+      acreage,
+      preferredDate,
+      preferredSlot,
+      topic,
+      notes,
+      phone,
+      farmerName: farmerName || user?.name || ''
+    })
     const booking = unwrap(res, 'Could not book the session')
     notify('sathyam:bookings-updated', booking)
     return booking
