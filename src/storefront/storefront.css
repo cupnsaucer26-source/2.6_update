@@ -12609,7 +12609,7 @@ body.poster-open .sb-portal .help-fab {
   outline-offset: 3px;
 }
 .sb-portal .call-fab-label {
-  display: none;
+  display: none !important;
 }
 body.overlay-open .sb-portal .call-fab,
 body.poster-open .sb-portal .call-fab {
@@ -12637,37 +12637,11 @@ body.poster-open .sb-portal .call-fab {
     font-size: 1rem;
   }
 }
-@media (min-width: 1025px) {
-  /* The number, on hover or keyboard focus: a desktop has no dialler, so
-     the visitor needs to read it. */
-  .sb-portal .call-fab .call-fab-label {
-    position: absolute;
-    top: 50%;
-    right: calc(100% + 10px);
-    display: block;
-    padding: 8px 14px;
-    border: 1px solid #cfe3d8;
-    border-radius: 999px;
-    background: #ffffff;
-    color: #14231C;
-    font: 600 0.875rem/1.2 'Plus Jakarta Sans', var(--script-font, sans-serif), sans-serif;
-    white-space: nowrap;
-    box-shadow: 0 8px 24px rgba(20, 35, 28, 0.12);
-    opacity: 0;
-    visibility: hidden;
-    transform: translate(6px, -50%);
-    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
-    pointer-events: none;
-  }
-  .sb-portal .call-fab .call-fab-label strong {
-    color: #8B5E1A;
-  }
-  .sb-portal .call-fab:hover .call-fab-label,
-  .sb-portal .call-fab:focus-visible .call-fab-label {
-    opacity: 1;
-    visibility: visible;
-    transform: translate(0, -50%);
-  }
+/* Call label removed to avoid product card obstruction */
+.sb-portal .call-fab:hover,
+.sb-portal .call-fab:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(107, 68, 18, 0.45);
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-portal .call-fab,
@@ -14282,64 +14256,7 @@ body.poster-open .sb-portal .call-fab {
   0% { transform: scale(1); opacity: 0.7; }
   100% { transform: scale(1.9); opacity: 0; }
 }
-@keyframes sbCallLabel {
-  0% { opacity: 0; transform: translate(10px, -50%) scale(0.96); }
-  9%, 88% { opacity: 1; transform: translate(0, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(10px, -50%) scale(0.96); }
-}
-@keyframes sbCallLabelFade {
-  0%, 100% { opacity: 0; }
-  9%, 88% { opacity: 1; }
-}
-.sb-portal .call-fab.is-intro > i {
-  animation: sbCallRing 1.2s ease-in-out 0.2s 2;
-}
-.sb-portal .call-fab.is-intro::before,
-.sb-portal .call-fab.is-intro::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border: 2px solid rgba(168, 113, 31, 0.55);
-  border-radius: 50%;
-  opacity: 0;
-  pointer-events: none;
-  animation: sbCallPulse 1.6s ease-out 0.2s 2;
-}
-.sb-portal .call-fab.is-intro::after {
-  animation-delay: 0.7s;
-}
-.sb-portal .call-fab.is-intro .call-fab-label {
-  position: absolute;
-  top: 50%;
-  right: calc(100% + 10px);
-  display: block;
-  padding: 8px 14px;
-  border: 1px solid #cfe3d8;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #14231C;
-  font: 600 0.875rem/1.2 'Plus Jakarta Sans', var(--script-font, sans-serif), sans-serif;
-  white-space: nowrap;
-  box-shadow: 0 8px 24px rgba(20, 35, 28, 0.14);
-  visibility: visible;
-  pointer-events: none;
-  opacity: 0;
-  animation: sbCallLabel 4.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-.sb-portal .call-fab.is-intro .call-fab-label strong {
-  color: #8B5E1A;
-}
-@media (prefers-reduced-motion: reduce) {
-  .sb-portal .call-fab.is-intro > i,
-  .sb-portal .call-fab.is-intro::before,
-  .sb-portal .call-fab.is-intro::after {
-    animation: none;
-  }
-  .sb-portal .call-fab.is-intro .call-fab-label {
-    transform: translate(0, -50%);
-    animation-name: sbCallLabelFade;
-  }
-}
+/* Intro call animations removed */
 
 /* Phase 2 pages (soil test report, support tickets): their two-column layout
    reads --p2-split from an inline style; phones stack it into one column. */
