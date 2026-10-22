@@ -2,7 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../StoreContext'
 import { WHATSAPP_EXPERT_URL } from '../data'
-import { CHAT_OPEN_EVENT } from './HelpFab'
+export const CHAT_OPEN_EVENT = 'sb:open-chat'
 
 // Crop Assistant: canned answers matched on keywords (no AI model behind it).
 // Product buttons only ever offer a live catalogue product.
@@ -88,6 +88,23 @@ export default memo(function Chatbot({ t }) {
 
   return (
     <>
+      <div
+        className="chatbot-trigger-btn"
+        id="chatbotTriggerBtn"
+        onClick={() => setOpen(current => !current)}
+        role="button"
+        tabIndex={0}
+        aria-label="Chat assistant"
+        aria-expanded={open}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setOpen(current => !current)
+          }
+        }}
+      >
+        <i className={open ? 'fa-solid fa-xmark' : 'fa-solid fa-comments'}></i>
+      </div>
       <div className={`chatbot-window${open ? ' active' : ''}`} id="chatbotWindow">
         <div className="chatbot-header">
           <div className="chatbot-id">

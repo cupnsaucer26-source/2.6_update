@@ -43,6 +43,13 @@ export default memo(function EnquirySheet() {
     openerRef.current?.focus?.({ preventScroll: true })
   }
 
+  const openSheet = event => {
+    openerRef.current = event.currentTarget
+    setDone(false)
+    setErrors({})
+    setOpen(true)
+  }
+
   // The Help menu and the phone Menu's Enquiry tile ask for the sheet with this event.
   // detail.opener is where focus goes back to on close.
   useEffect(() => {
@@ -155,6 +162,18 @@ export default memo(function EnquirySheet() {
 
   return (
     <>
+      <button
+        type="button"
+        id="enquiryFab"
+        className="enq-fab"
+        onClick={openSheet}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Farmer Enquiry"
+      >
+        <i className="fa-solid fa-clipboard-question" aria-hidden="true"></i>
+        <span className="enq-fab-label">Enquiry</span>
+      </button>
       <div
         id="enquiryModal"
         className={['modal-overlay', open && 'active'].filter(Boolean).join(' ')}
