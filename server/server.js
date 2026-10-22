@@ -12,6 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '.env') });
 import Razorpay from 'razorpay';
 import { db, connectDB, newId, STAFF_ROLES } from './db.js';
 import { productNameKey } from '../src/shared/productName.js';
@@ -3744,32 +3746,56 @@ CRITICAL RULES:
 3. GROUNDING: NEVER invent chemical brand names or recommend products not in the catalogue. If no catalogue product matches, advise booking a consultation with an expert: [[PAGE:/agronomy-experts:Book Expert Callback]].
 4. LENGTH: Keep responses concise (under 140 words). Farmers read this on mobile screens in sunlight.`;
 
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const userModel = process.env.GEMINI_MODEL;
+    const modelCandidates = [
+      userModel,
+      'gemini-3.5-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-3.8-flash'
+    ].filter(Boolean);
+    const candidateList = [...new Set(modelCandidates)];
 
-    const geminiRes = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: query }] }],
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: {
-          temperature: 0.25,
-          maxOutputTokens: 600
+    let reply = null;
+    let selectedModel = null;
+
+    for (const m of candidateList) {
+      try {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const geminiRes = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey
+          },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: query }] }],
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            generationConfig: {
+              temperature: 0.25,
+              maxOutputTokens: 600
+            }
+          })
+        });
+
+        if (geminiRes.ok) {
+          const data = await geminiRes.json();
+          reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply) {
+            selectedModel = m;
+            break;
+          }
+        } else {
+          const errText = await geminiRes.text();
+          console.warn(`⚠️ Gemini API model ${m} returned ${geminiRes.status}:`, errText.slice(0, 100));
         }
-      })
-    });
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.warn('⚠️ Gemini API error:', geminiRes.status, errText.slice(0, 150));
-      return res.json({ success: false, fallback: true, message: 'AI temporarily unavailable' });
+      } catch (callErr) {
+        console.warn(`⚠️ Gemini API model ${m} exception:`, callErr.message);
+      }
     }
 
-    const data = await geminiRes.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!reply) {
-      return res.json({ success: false, fallback: true, message: 'No response from AI' });
+      return res.json({ success: false, fallback: true, message: 'AI temporarily unavailable' });
     }
 
     // Save to chat records if user is known or visitor
@@ -3789,7 +3815,7 @@ CRITICAL RULES:
       // non-blocking
     }
 
-    res.json({ success: true, reply, model });
+    res.json({ success: true, reply, model: selectedModel });
   } catch (err) {
     console.warn('⚠️ Assistant chat error:', err.message);
     res.json({ success: false, fallback: true, message: err.message });
