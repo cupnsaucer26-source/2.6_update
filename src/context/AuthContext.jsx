@@ -134,6 +134,7 @@ throw new Error(err.response?.data?.message || 'Could not reach the server. Plea
 // says whether the number already has an account.
 const sendAuthOtp = async (phone) => {
 const { data } = await axios.post('/api/auth/send-otp', { phone, purpose: 'auth' })
+if (data?.directLogin && data?.token) saveSession(data.token, data.user)
 return data
 }
 

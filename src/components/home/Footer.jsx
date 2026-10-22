@@ -51,6 +51,7 @@ const HELP = [
   ['Agronomy Experts', '/agronomy-experts'],
   ['Soil Test Report', '/soil-test-report'],
   ['Blog', '/blog'],
+  ['Staff & Admin Portal', '/login'],
   ['Privacy Policy', '/privacy-policy'],
   ['Terms of Sale', '/terms-of-sale'],
   ['Refund Policy', '/refund-policy'],
@@ -159,7 +160,9 @@ export default function Footer() {
           </ul>
         </div>
         <p className="public-footer-copy">© 2026 Sathyam Agro Mart. All rights reserved.</p>
-        <p className="public-footer-credit">Designed by cupnsaucer</p>
+        <p className="public-footer-credit">
+          Designed by cupnsaucer &bull; <Link to="/login" style={{ color: '#A8711F', fontWeight: 600, textDecoration: 'none' }}><i className="fa-solid fa-shield-halved" style={{ marginRight: '4px' }}></i>Staff &amp; Admin Sign In</Link>
+        </p>
       </div>
     </footer>
   )
