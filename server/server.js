@@ -3570,6 +3570,29 @@ app.get('/api/agronomy-bookings', requireAuth(), async (req, res) => {
   }
 });
 
+// Admin assigns / reassigns a booking to another expert/employee
+app.put('/api/agronomy-bookings/:id/assign', requireAuth('admin'), async (req, res) => {
+  try {
+    const { expertId } = req.body || {};
+    const booking = await db.getAgronomyBookingById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    const experts = await db.getAgronomyExperts();
+    const expert = experts.find(e => e.id === expertId);
+    if (!expert) return res.status(400).json({ success: false, message: 'Please select a valid agronomy expert' });
+
+    const updated = await db.updateAgronomyBooking(booking.id, {
+      expertId: expert.id,
+      expertName: expert.name,
+      assignedBy: req.user.name,
+      assignedAt: new Date().toISOString()
+    });
+    res.json({ success: true, message: `Assigned to ${expert.name}`, data: updated });
+  } catch (err) {
+    sendError(res, err, 'Assign agronomy booking');
+  }
+});
+
 app.put('/api/agronomy-bookings/:id/complete', requireAuth('admin', 'employee'), async (req, res) => {
   try {
     const booking = await db.getAgronomyBookingById(req.params.id);

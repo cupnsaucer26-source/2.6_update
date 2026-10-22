@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Sprout, RefreshCw, Phone, Calendar, CheckCircle2, Clock, Search } from 'lucide-react'
+import { Sprout, RefreshCw, Phone, Calendar, CheckCircle2, Clock, Search, UserCheck } from 'lucide-react'
 import { agronomyService } from '../../services/agronomyService'
 import { useAuth } from '../../context/AuthContext'
 
@@ -16,6 +16,28 @@ export default function AgronomyBookings() {
   const [openId, setOpenId] = useState(null)
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const [experts, setExperts] = useState([])
+  const [assigningId, setAssigningId] = useState(null)
+
+  useEffect(() => {
+    if (isAdmin) {
+      agronomyService.getExperts().then(res => setExperts(res || [])).catch(() => {})
+    }
+  }, [isAdmin])
+
+  const handleAssign = async (bookingId, expertId) => {
+    setAssigningId(bookingId)
+    try {
+      await agronomyService.assignBooking(bookingId, expertId)
+      const exp = experts.find(e => e.id === expertId)
+      toast.success(`Booking assigned to ${exp?.name || 'expert'}`)
+      load()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err.message || 'Could not reassign booking')
+    } finally {
+      setAssigningId(null)
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -140,7 +162,31 @@ export default function AgronomyBookings() {
                 <div className="p2-booking-meta">
                   <a href={`tel:+91${b.farmerPhone}`} className="p2-link"><Phone size={14} /> {b.farmerPhone}</a>
                   <span><Calendar size={14} /> {b.preferredDate || 'Any day'}{b.preferredSlot ? `, ${b.preferredSlot}` : ''}</span>
-                  {isAdmin && <span>Expert: {b.expertName}</span>}
+                  {isAdmin ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <UserCheck size={14} />
+                      <span>Assigned to:</span>
+                      {!done ? (
+                        <select
+                          className="p2-input p2-select-fit"
+                          style={{ padding: '2px 8px', height: 26, fontSize: '0.8rem', fontWeight: 600 }}
+                          value={b.expertId || ''}
+                          disabled={assigningId === b.id}
+                          onChange={(e) => handleAssign(b.id, e.target.value)}
+                        >
+                          {experts.map(exp => (
+                            <option key={exp.id} value={exp.id}>
+                              {exp.name} ({exp.specialization?.slice(0, 24) || 'Agronomist'})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <strong>{b.expertName}</strong>
+                      )}
+                    </div>
+                  ) : (
+                    <span>Expert: {b.expertName}</span>
+                  )}
                 </div>
                 {b.notes && <div className="p2-quote" style={{ marginTop: 10 }}>Farmer's note: {b.notes}</div>}
                 {done && (

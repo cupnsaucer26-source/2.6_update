@@ -69,6 +69,14 @@ export const agronomyService = {
     return Array.isArray(list) ? list : []
   },
 
+  // Admin assigns or reassigns a booking to an expert/employee
+  async assignBooking(bookingId, expertId) {
+    const res = await axios.put(`/api/agronomy-bookings/${encodeURIComponent(bookingId)}/assign`, { expertId })
+    const booking = unwrap(res, 'Could not assign the booking')
+    notify('sathyam:bookings-updated', booking)
+    return booking
+  },
+
   // Mark a callback as done and record the consultation notes
   async completeCallback(bookingId, { callbackNotes }) {
     const res = await axios.put(`/api/agronomy-bookings/${encodeURIComponent(bookingId)}/complete`, { callbackNotes })
