@@ -1700,6 +1700,41 @@ app.post('/api/payments/create-order', async (req, res) => {
   }
 });
 
+// STANDARD RAZORPAY ORDER CREATION - POST /api/create-order
+// Supports standard checkout order creation as specified in Razorpay docs/wizard
+app.post('/api/create-order', async (req, res) => {
+  try {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret) {
+      return res.status(500).json({ success: false, message: 'Razorpay keys are missing. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env' });
+    }
+
+    const amount = Number(req.body?.amount);
+    if (!amount || isNaN(amount) || amount < 100) {
+      return res.status(400).json({ success: false, message: 'Amount is required and must be at least 100 paise (Rs 1.00).' });
+    }
+
+    const razorpay = getRazorpayInstance();
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount),
+      currency: req.body?.currency || 'INR',
+      receipt: req.body?.receipt || newId('rcpt'),
+    });
+
+    return res.json({
+      success: true,
+      order_id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId,
+    });
+  } catch (err) {
+    sendError(res, err, 'Create generic Razorpay order');
+  }
+});
+
 // Turns a paid Razorpay order into exactly one store order. The browser
 // callback and the webhook both call this; whichever arrives second, or any
 // replay, gets the existing order back instead of creating a duplicate.
@@ -1797,6 +1832,51 @@ app.post('/api/payments/verify', async (req, res) => {
     return res.json({ success: true, data: order, whatsapp });
   } catch (err) {
     sendError(res, err, 'Verify payment');
+  }
+});
+
+// STANDARD RAZORPAY PAYMENT VERIFICATION - POST /api/verify-payment
+// Supports standard verification endpoint requested by Razorpay standard checkout
+app.post('/api/verify-payment', async (req, res) => {
+  try {
+    const razorpay_order_id = req.body?.razorpay_order_id || req.body?.order_id;
+    const razorpay_payment_id = req.body?.razorpay_payment_id || req.body?.payment_id;
+    const razorpay_signature = req.body?.razorpay_signature || req.body?.signature;
+
+    if (![razorpay_order_id, razorpay_payment_id, razorpay_signature].every((v) => typeof v === 'string' && v)) {
+      return res.status(400).json({ success: false, message: 'Missing payment verification fields.' });
+    }
+
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return res.status(500).json({ success: false, message: 'Razorpay key secret is missing.' });
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', keySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (!safeEqual(expectedSignature, razorpay_signature)) {
+      return res.status(400).json({ success: false, message: 'Payment verification failed. Signature mismatch.' });
+    }
+
+    let order = null;
+    try {
+      order = await finalizePaidOrder(razorpay_order_id, razorpay_payment_id);
+    } catch {
+      // Direct test order without active cart session
+    }
+
+    return res.json({
+      success: true,
+      message: 'Payment verified successfully.',
+      order_id: razorpay_order_id,
+      payment_id: razorpay_payment_id,
+      order,
+    });
+  } catch (err) {
+    sendError(res, err, 'Verify generic payment');
   }
 });
 
