@@ -403,9 +403,6 @@ export default function MobileBottomNav() {
           <button type="button" className="mms-tile" aria-haspopup="dialog" onClick={openEnquiry}>
             <span className="mms-tile-icon" style={{ '--tile': '#0d9488' }}><i className="fa-solid fa-clipboard-question"></i></span>Enquiry
           </button>
-          <TransitionLink to="/login" className="mms-tile" onClick={closeMenu}>
-            <span className="mms-tile-icon" style={{ '--tile': '#b45309' }}><i className="fa-solid fa-shield-halved"></i></span>Staff Login
-          </TransitionLink>
         </div>
 
         <h3 className="mms-title">Shop by category</h3>

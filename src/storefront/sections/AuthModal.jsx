@@ -1147,13 +1147,6 @@ export default memo(function AuthModal({ t, state, user, notice, loginRequest })
             </button>
             <p className="auth-foot">New here? The same code creates your account.</p>
           </div>
-
-          <div className="auth-staff-link" style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
-            <a href="/login" style={{ color: '#A8711F', fontWeight: 600, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <i className="fa-solid fa-shield-halved" aria-hidden="true"></i>
-              Staff &amp; Admin Portal Sign In &rarr;
-            </a>
-          </div>
         </form>
 
         {/* STEP 2: the WhatsApp code. Getting it right is the sign-in. */}
