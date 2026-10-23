@@ -21,9 +21,12 @@ export default memo(function CallFab() {
       className="call-fab"
       href={href}
       aria-label={`Call us: ${phone}`}
-      title={`Call us: ${phone}`}
     >
       <i className="fa-solid fa-phone" aria-hidden="true"></i>
+      <span className="call-fab-label" aria-hidden="true">
+        <span className="call-fab-text">Call:</span>{' '}
+        <strong className="call-fab-number notranslate">{phone}</strong>
+      </span>
     </a>
   )
 })
