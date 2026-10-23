@@ -36,8 +36,8 @@ export async function connectDB() {
         mongoose.set('strictQuery', false);
             cached.promise = mongoose.connect(uri, {
                   bufferCommands: false,
-                  serverSelectionTimeoutMS: 5000,
-                  connectTimeoutMS: 5000,
+                  serverSelectionTimeoutMS: 15000,
+                  connectTimeoutMS: 15000,
             }).then(m => m);
   }
 
@@ -477,6 +477,36 @@ const INITIAL_USERS = [
   ];
 
 const INITIAL_PRODUCTS = [
+  {
+    id: 'sb-demo-01',
+    name: 'Demo Product',
+    tagline: 'Live Payment Verification · ₹1 Test Item',
+    category: 'Bio-Stimulant',
+    price: 1,
+    originalPrice: 1,
+    mrp: 1,
+    discount: '0% OFF',
+    stock: 9999,
+    crops: ['All Crops'],
+    diseases: ['General Test'],
+    activeIngredient: 'Live Payment Gateway Test Formulation',
+    dosage: '1 Unit',
+    packSizes: ['1 Unit'],
+    selectedPack: '1 Unit',
+    packagePrices: { '1 Unit': 1 },
+    packageMrps: { '1 Unit': 1 },
+    badge: 'Test Item',
+    images: ['/assets/products/gold-gel.jpg'],
+    image: '/assets/products/gold-gel.jpg',
+    description: 'Demo product created for testing live Razorpay payments and order creation.',
+    detailedDescription: 'This product is created with a ₹1 price for testing live payment gateway checkouts, signature verification, and automated order confirmations.',
+    visibility: 'both',
+    online: true,
+    gstRate: 0,
+    cgstRate: 0,
+    sgstRate: 0,
+    igstRate: 0,
+  },
   {
         id: 'sb-01',
         name: 'Sathyam Agro Mart BlastShield 75 WP',
