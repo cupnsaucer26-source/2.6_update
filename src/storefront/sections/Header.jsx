@@ -119,7 +119,7 @@ export const Header = memo(function Header(props) {
   // Off the home page there is no StoreContext for the language control to
   // reach, so it is handed the app's own setter. That is what `onSelect` on
   // LanguageQuickSwitch exists for.
-  const onSelectLanguage = offPage ? setLang : undefined
+  const onSelectLanguage = offPage ? (code) => { setLang(code); showToast(TEXT_PACKS[code]?.languageChanged || 'Language changed to English', 'success', 2500); } : undefined
 
   // Voice search in the shopper's own language. Products are in English, so
   // spoken Tamil (Hindi, Kannada, Telugu) crop, pest and category words are

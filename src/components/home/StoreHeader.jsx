@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBasket, useCheckoutActions } from '../../hooks/useCheckout'
 import HomeLogoLink from './HomeLogoLink'
 import { setBodyFlag } from '../../storefront/bodyFlags'
+import { TEXT_PACKS } from '../../storefront/i18n'
+import { showToast } from '../../storefront/toast'
 
 // Phones: the header row - logo, language, account, basket - drawn once above
 // every store page (StoreTopChrome in App.jsx), so it stays in place between
@@ -104,6 +107,7 @@ export default function StoreHeader() {
   const chooseLanguage = code => {
     setMenuOpen(false)
     setLang(code) // saved under the storefront's key too
+    showToast(TEXT_PACKS[code]?.languageChanged || 'Language changed to English', 'success', 2500)
   }
 
   return (
@@ -156,11 +160,10 @@ export default function StoreHeader() {
         <span className="slogan-road"><span className="slogan-fill"></span><i className="fa-solid fa-truck-fast slogan-truck"></i></span>
       </div>
 
-
-      {menuOpen && (
-        <>
+      {menuOpen && createPortal(
+        <div className="sb-portal">
           <div className="sb-lang-backdrop" onClick={() => setMenuOpen(false)} />
-          <div className="sb-lang-menu notranslate" role="menu" aria-label="Choose language" style={{ top: menuTop }}>
+          <div className="sb-lang-menu notranslate" role="menu" aria-label="Choose language" style={{ top: `${menuTop}px` }}>
             <div className="sb-lang-title">Language</div>
             {LANGS.map(item => (
               <button
@@ -180,7 +183,8 @@ export default function StoreHeader() {
               </button>
             ))}
           </div>
-        </>
+        </div>,
+        document.body
       )}
     </header>
   )

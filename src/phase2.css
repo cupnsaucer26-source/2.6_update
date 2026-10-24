@@ -446,6 +446,121 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-list-title {
   line-height: var(--script-leading, 1.4);
 }
 
+/* ---- Language Quick Switch dropdown across all store pages ---- */
+.lang-quick-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  background: rgba(20, 35, 28, 0.18);
+}
+.lang-quick-menu {
+  position: fixed;
+  z-index: 10021;
+  right: 12px;
+  width: min(270px, calc(100vw - 24px));
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(20, 35, 28, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(20, 35, 28, 0.22), 0 2px 8px rgba(20, 35, 28, 0.08);
+  transform-origin: top right;
+  animation: langMenuIn 0.16s ease-out;
+}
+@media (min-width: 1025px) {
+  .lang-quick-menu {
+    right: var(--lang-menu-right, 12px);
+  }
+}
+.lang-quick-title {
+  padding: 6px 10px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+.lang-quick-option {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: #0f172a;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.lang-quick-option:not(:disabled):hover,
+.lang-quick-option:focus-visible {
+  background: #F4F3EF;
+  outline: none;
+}
+.lang-quick-option[aria-checked="true"] {
+  background: #EEF6F1;
+}
+.lang-quick-option:disabled {
+  cursor: default;
+}
+.lang-quick-option:disabled .lang-quick-glyph,
+.lang-quick-option:disabled .lang-quick-names {
+  opacity: 0.5;
+}
+.lang-quick-glyph {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F4F3EF;
+  color: #15803d;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.lang-quick-option[aria-checked="true"] .lang-quick-glyph {
+  background: #3FBE86;
+  color: #ffffff;
+}
+.lang-quick-names {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.lang-quick-names strong {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: inherit;
+}
+.lang-quick-names small {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+.lang-quick-check {
+  margin-left: auto;
+  color: #15803d;
+  font-size: 0.9rem;
+}
+.lang-quick-soon {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 2px 6px;
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+.lang-quick-divider {
+  height: 1px;
+  background: rgba(15, 23, 42, 0.08);
+  margin: 6px 0;
+}
+
 /* ---- Soil test report -------------------------------------------------- */
 .p2-section-label { display: flex; align-items: center; gap: 6px; font-size: 0.84rem; font-weight: 800; color: var(--p2-ink-2); margin-bottom: 10px; }
 .p2-section-label svg { color: var(--p2-green); }

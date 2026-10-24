@@ -34,7 +34,7 @@ export default function StoreLayout() {
   const t = useCallback(key => translationFor(appliedLang, key) || key, [appliedLang])
 
   return (
-    <>
+    <div id="top" className="store-layout-root">
       <div className="desktop-only-nav">
         {/* The same chrome the home page renders. It used to be a second
             copy (components/home/Navigation.jsx) kept in step by hand. */}
@@ -49,6 +49,6 @@ export default function StoreLayout() {
         </Suspense>
       </main>
       <Footer />
-    </>
+    </div>
   )
 }

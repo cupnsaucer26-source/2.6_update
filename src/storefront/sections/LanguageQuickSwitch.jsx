@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../StoreContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { LANGUAGES, isLanguageReady } from '../i18n'
 
 const firstSoonIndex = LANGUAGES.findIndex(language => !isLanguageReady(language.code))
@@ -11,7 +12,8 @@ const firstSoonIndex = LANGUAGES.findIndex(language => !isLanguageReady(language
 // implementation of it.
 export default function LanguageQuickSwitch({ appliedLang, t, onSelect }) {
   const store = useStore()
-  const changeLanguage = onSelect || store?.changeLanguage
+  const { setLang } = useLanguage()
+  const changeLanguage = onSelect || store?.changeLanguage || setLang
   const [menuTop, setMenuTop] = useState(null) // null while closed
   const [menuRight, setMenuRight] = useState(12)
   const buttonRef = useRef(null)
@@ -80,9 +82,9 @@ export default function LanguageQuickSwitch({ appliedLang, t, onSelect }) {
         <span className="lang-quick-code" id="langQuickCode">{appliedLang === 'en' ? 'EN' : current.glyph}</span>
       </button>
 
-      {/* Drawn inside the page wrapper (#top), where the storefront styles apply. */}
+      {/* Drawn in body or #top, wrapped in .sb-portal so storefront styles apply on all pages */}
       {open && createPortal(
-        <>
+        <div className="sb-portal">
           <div className="lang-quick-backdrop" onClick={() => close()} />
           <div ref={menuRef} id="langQuickMenu" className="lang-quick-menu notranslate" role="menu" aria-label="Choose language" style={{ top: `${menuTop}px`, '--lang-menu-right': `${menuRight}px` }}>
             {/* In the current language, with "Language" alongside for anyone who cannot read it. */}
@@ -114,7 +116,7 @@ export default function LanguageQuickSwitch({ appliedLang, t, onSelect }) {
               )
             })}
           </div>
-        </>,
+        </div>,
         document.getElementById('top') || document.body,
       )}
     </>
