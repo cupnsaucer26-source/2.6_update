@@ -37,17 +37,21 @@ export default memo(function CallFab() {
 
   const callLabel = CALL_LABELS[lang] || CALL_LABELS.en
   const displayPhone = formatPhoneDisplay(phone)
+  const accessibleLabel = `Call Sathyam Agro Mart at ${displayPhone}`
 
   return (
     <a
       id="callFab"
       className="call-fab"
       href={href}
-      aria-label={`${callLabel} ${phone}`}
+      aria-label={accessibleLabel}
+      title=""
     >
       <i className="fa-solid fa-phone" aria-hidden="true"></i>
-      <span className="call-fab-label" aria-hidden="true">
-        <span className="call-fab-pulse-dot"></span>
+      <span className="call-fab-label" role="tooltip" aria-hidden="true">
+        <span className="call-fab-icon-pill" aria-hidden="true">
+          <i className="fa-solid fa-phone"></i>
+        </span>
         <span className="call-fab-text">{callLabel}</span>
         <strong className="call-fab-number notranslate">{displayPhone}</strong>
       </span>
