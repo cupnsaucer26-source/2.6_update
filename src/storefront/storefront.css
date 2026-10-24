@@ -12423,10 +12423,10 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-act
   padding: 0;
   border: 1.5px solid rgba(255, 255, 255, 0.4);
   border-radius: 999px;
-  background: linear-gradient(135deg, #059669 0%, #047857 55%, #064e3b 100%);
+  background: linear-gradient(135deg, #A8711F, #6B4412);
   color: #ffffff;
   font: 700 0.95rem/1 'Plus Jakarta Sans', var(--script-font, sans-serif), sans-serif;
-  box-shadow: 0 8px 22px rgba(4, 120, 87, 0.35);
+  box-shadow: 0 8px 22px rgba(107, 68, 18, 0.35);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -12437,12 +12437,12 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-act
   color: #ffffff;
 }
 .sb-portal .help-fab .help-fab-button:hover {
-  background: linear-gradient(135deg, #10b981 0%, #059669 55%, #047857 100%);
+  background: #5C3A0E;
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(4, 120, 87, 0.45);
+  box-shadow: 0 12px 28px rgba(107, 68, 18, 0.45);
 }
 .sb-portal .help-fab .help-fab-button:focus-visible {
-  outline: 3px solid rgba(16, 185, 129, 0.55);
+  outline: 3px solid rgba(139, 94, 26, 0.55);
   outline-offset: 3px;
 }
 /* Phones: icon only (the label is still read out). */
@@ -12581,13 +12581,13 @@ body.poster-open .sb-portal .help-fab {
   height: 46px;
   display: grid;
   place-items: center;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 60%, #14532d 100%);
+  background: linear-gradient(135deg, #A8711F, #6B4412);
   color: #ffffff;
   font-size: 1.1rem;
   text-decoration: none;
-  box-shadow: 0 8px 24px rgba(21, 128, 61, 0.35);
+  box-shadow: 0 8px 24px rgba(107, 68, 18, 0.35);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background 0.2s ease;
@@ -12599,7 +12599,7 @@ body.poster-open .sb-portal .help-fab {
 }
 .sb-portal .call-fab:hover,
 .sb-portal .call-fab:active {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 60%, #15803d 100%);
+  background: #5C3A0E;
   color: #ffffff;
 }
 /* On the icon itself: the store's `:is(...) a { color: inherit }` outranks
@@ -12612,7 +12612,7 @@ body.poster-open .sb-portal .help-fab {
   transform: scale(1.08);
 }
 .sb-portal .call-fab:focus-visible {
-  outline: 3px solid rgba(34, 197, 94, 0.55);
+  outline: 3px solid rgba(139, 94, 26, 0.55);
   outline-offset: 3px;
 }
 .sb-portal .call-fab .call-fab-label {
@@ -12635,7 +12635,7 @@ body.poster-open .sb-portal .help-fab {
   line-height: 1.25;
   white-space: nowrap;
   box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.08);
-  border: 1.5px solid rgba(22, 128, 61, 0.22);
+  border: 1.5px solid rgba(168, 113, 31, 0.25);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -12646,8 +12646,8 @@ body.poster-open .sb-portal .help-fab {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #16a34a;
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+  background: #A8711F;
+  box-shadow: 0 0 0 2px rgba(168, 113, 31, 0.25);
   flex-shrink: 0;
   position: relative;
 }
@@ -12656,7 +12656,7 @@ body.poster-open .sb-portal .help-fab {
   position: absolute;
   inset: -2px;
   border-radius: 50%;
-  background: #22c55e;
+  background: #D97706;
   opacity: 0.7;
   animation: fabDotPulse 1.8s infinite ease-out;
 }
@@ -12665,12 +12665,12 @@ body.poster-open .sb-portal .help-fab {
   100% { transform: scale(2.2); opacity: 0; }
 }
 .sb-portal .call-fab .call-fab-label .call-fab-text {
-  color: #475569;
+  color: #5A6B63;
   font-size: 0.82rem;
   font-weight: 600;
 }
 .sb-portal .call-fab .call-fab-label .call-fab-number {
-  color: #15803d;
+  color: #8B5E1A;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -12715,7 +12715,7 @@ body.poster-open .sb-portal .call-fab {
 .sb-portal .call-fab:hover,
 .sb-portal .call-fab:focus-visible {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(21, 128, 61, 0.48);
+  box-shadow: 0 10px 28px rgba(107, 68, 18, 0.45);
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-portal .call-fab,
