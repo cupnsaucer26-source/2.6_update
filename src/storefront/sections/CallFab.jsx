@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { cmsText, useCms } from '../../context/CmsContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { telHref, SUPPORT_PHONE } from '../../shared/phoneLink'
 
 // A round "Call us" button on every store page, bottom right, above the AI
@@ -8,24 +9,47 @@ import { telHref, SUPPORT_PHONE } from '../../shared/phoneLink'
 // checkout, sign-in or any other sheet is open (body.overlay-open), and under
 // the phone Menu and the welcome poster, so it never sits over a total or a
 // Pay button.
-// Styles: storefront.css, "Floating call button".
+// Styles: storefront.css & phase2.css, "Floating call button".
+
+const CALL_LABELS = {
+  en: 'Call us:',
+  ta: 'அழைக்க:',
+  kn: 'ಕರೆ ಮಾಡಿ:',
+  te: 'కాల్ చేయండి:',
+  hi: 'कॉल करें:',
+}
+
+function formatPhoneDisplay(phone) {
+  if (!phone) return ''
+  const cleaned = phone.replace(/[^\d+]/g, '')
+  if (cleaned.startsWith('+91') && cleaned.length === 13) {
+    return `+91 ${cleaned.slice(3, 8)} ${cleaned.slice(8)}`
+  }
+  return phone.replace('-', ' ')
+}
 
 export default memo(function CallFab() {
   const { cms } = useCms()
+  const { lang } = useLanguage()
   const phone = cmsText(cms, 'phone', SUPPORT_PHONE)
   const href = telHref(phone)
   if (!href) return null
+
+  const callLabel = CALL_LABELS[lang] || CALL_LABELS.en
+  const displayPhone = formatPhoneDisplay(phone)
+
   return (
     <a
       id="callFab"
       className="call-fab"
       href={href}
-      aria-label={`Call us: ${phone}`}
+      aria-label={`${callLabel} ${phone}`}
     >
       <i className="fa-solid fa-phone" aria-hidden="true"></i>
       <span className="call-fab-label" aria-hidden="true">
-        <span className="call-fab-text">Call:</span>{' '}
-        <strong className="call-fab-number notranslate">{phone}</strong>
+        <span className="call-fab-pulse-dot"></span>
+        <span className="call-fab-text">{callLabel}</span>
+        <strong className="call-fab-number notranslate">{displayPhone}</strong>
       </span>
     </a>
   )

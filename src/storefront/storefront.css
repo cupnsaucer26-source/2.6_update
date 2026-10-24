@@ -12423,23 +12423,26 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-act
   padding: 0;
   border: 1.5px solid rgba(255, 255, 255, 0.4);
   border-radius: 999px;
-  background: linear-gradient(135deg, #A8711F, #6B4412);
+  background: linear-gradient(135deg, #059669 0%, #047857 55%, #064e3b 100%);
   color: #ffffff;
   font: 700 0.95rem/1 'Plus Jakarta Sans', var(--script-font, sans-serif), sans-serif;
-  box-shadow: 0 8px 22px rgba(107, 68, 18, 0.35);
+  box-shadow: 0 8px 22px rgba(4, 120, 87, 0.35);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background 0.2s ease;
 }
 .sb-portal .help-fab .help-fab-button > i {
   font-size: 1.15rem;
   color: #ffffff;
 }
 .sb-portal .help-fab .help-fab-button:hover {
-  background: #5C3A0E;
+  background: linear-gradient(135deg, #10b981 0%, #059669 55%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(4, 120, 87, 0.45);
 }
 .sb-portal .help-fab .help-fab-button:focus-visible {
-  outline: 3px solid rgba(139, 94, 26, 0.55);
+  outline: 3px solid rgba(16, 185, 129, 0.55);
   outline-offset: 3px;
 }
 /* Phones: icon only (the label is still read out). */
@@ -12578,16 +12581,16 @@ body.poster-open .sb-portal .help-fab {
   height: 46px;
   display: grid;
   place-items: center;
-  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
   border-radius: 50%;
-  background: linear-gradient(135deg, #A8711F, #6B4412);
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 60%, #14532d 100%);
   color: #ffffff;
   font-size: 1.1rem;
   text-decoration: none;
-  box-shadow: 0 8px 24px rgba(107, 68, 18, 0.35);
+  box-shadow: 0 8px 24px rgba(21, 128, 61, 0.35);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  transition: opacity 0.2s ease, visibility 0.2s ease, background-color 0.15s ease, color 0.15s ease;
+  transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background 0.2s ease;
 }
 @media (max-width: 768px) {
   body.buy-bar-open .sb-portal .call-fab {
@@ -12596,62 +12599,79 @@ body.poster-open .sb-portal .help-fab {
 }
 .sb-portal .call-fab:hover,
 .sb-portal .call-fab:active {
-  background: #5C3A0E;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 60%, #15803d 100%);
   color: #ffffff;
 }
 /* On the icon itself: the store's `:is(...) a { color: inherit }` outranks
    `.sb-portal .call-fab`, so a colour on the link never reaches the glyph. */
 .sb-portal .call-fab > i {
   color: #ffffff;
+  transition: transform 0.2s ease;
+}
+.sb-portal .call-fab:hover > i {
+  transform: scale(1.08);
 }
 .sb-portal .call-fab:focus-visible {
-  outline: 3px solid rgba(139, 94, 26, 0.55);
+  outline: 3px solid rgba(34, 197, 94, 0.55);
   outline-offset: 3px;
 }
 .sb-portal .call-fab .call-fab-label {
   position: absolute;
   top: 50%;
-  right: calc(100% + 12px);
-  transform: translateY(-50%) translateX(6px);
+  right: calc(100% + 14px);
+  transform: translateY(-50%) translateX(8px);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #14231C;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #0f172a;
   font-family: 'Plus Jakarta Sans', var(--script-font, sans-serif), sans-serif;
   font-size: 0.875rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
   white-space: nowrap;
-  box-shadow: 0 8px 24px rgba(20, 35, 28, 0.16), 0 2px 6px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(168, 113, 31, 0.25);
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.08);
+  border: 1.5px solid rgba(22, 128, 61, 0.22);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s ease;
-  z-index: 10;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s ease;
+  z-index: 20;
 }
-.sb-portal .call-fab .call-fab-label::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -5px;
-  transform: translateY(-50%) rotate(45deg);
+.sb-portal .call-fab .call-fab-label .call-fab-pulse-dot {
   width: 8px;
   height: 8px;
-  background: #ffffff;
-  border-top: 1px solid rgba(168, 113, 31, 0.25);
-  border-right: 1px solid rgba(168, 113, 31, 0.25);
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+  flex-shrink: 0;
+  position: relative;
+}
+.sb-portal .call-fab .call-fab-label .call-fab-pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: #22c55e;
+  opacity: 0.7;
+  animation: fabDotPulse 1.8s infinite ease-out;
+}
+@keyframes fabDotPulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
 }
 .sb-portal .call-fab .call-fab-label .call-fab-text {
-  color: #5A6B63;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 .sb-portal .call-fab .call-fab-label .call-fab-number {
-  color: #8B5E1A;
+  color: #15803d;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -12692,16 +12712,18 @@ body.poster-open .sb-portal .call-fab {
     font-size: 1rem;
   }
 }
-/* Call label removed to avoid product card obstruction */
 .sb-portal .call-fab:hover,
 .sb-portal .call-fab:focus-visible {
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(107, 68, 18, 0.45);
+  box-shadow: 0 12px 28px rgba(21, 128, 61, 0.48);
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-portal .call-fab,
   .sb-portal .call-fab-label {
     transition: none;
+  }
+  .sb-portal .call-fab .call-fab-label .call-fab-pulse-dot::before {
+    animation: none;
   }
 }
 @media print {
