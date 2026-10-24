@@ -36,13 +36,29 @@ export function ReferralCodeField({ value, onChange }) {
 
   const typed = String(value || '').trim()
   const complete = Boolean(normalizeReferralCode(typed))
+  const statusClass = check ? (check.valid ? 'sb-input-valid' : 'sb-input-invalid') : (!check && typed.length >= 9 && !complete ? 'sb-input-invalid' : '')
+
   return (
     <div className="auth-field">
-      <label className="auth-label" htmlFor="regReferral">Referral code, if you have one</label>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+        <label className="auth-label" htmlFor="regReferral" style={{ margin: 0 }}>
+          Referral code <span className="auth-optional">Optional</span>
+        </label>
+        {!value && (
+          <button
+            type="button"
+            className="auth-link"
+            style={{ fontSize: '0.8rem', color: '#64748b', cursor: 'pointer' }}
+            onClick={() => setOpen(false)}
+          >
+            Hide
+          </button>
+        )}
+      </div>
       <div className="auth-control">
         <input
           id="regReferral"
-          className="notranslate"
+          className={`auth-input notranslate ${statusClass}`.trim()}
           type="text"
           inputMode="text"
           autoCapitalize="characters"
@@ -53,16 +69,33 @@ export function ReferralCodeField({ value, onChange }) {
           value={value}
           onChange={event => onChange(event.target.value.toUpperCase())}
           aria-describedby="regReferralHint"
+          style={{ letterSpacing: '0.04em', fontWeight: 600 }}
         />
         <i className="fa-solid fa-tag auth-control-icon" aria-hidden="true"></i>
+        {check?.valid && (
+          <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: '#16a34a', pointerEvents: 'none', fontSize: '1.1rem' }}>
+            <i className="fa-solid fa-circle-check" aria-hidden="true"></i>
+          </span>
+        )}
       </div>
       {check?.valid && (
         <small id="regReferralHint" className="sb-field-ok">
+          <i className="fa-solid fa-circle-check" style={{ marginRight: '5px' }}></i>
           <span>{`${check.referrerName} invited you.`}</span> <span>{`You get ₹${check.welcomeDiscount} off your first order of ₹${check.minOrder} or more.`}</span>
         </small>
       )}
-      {check && !check.valid && <small id="regReferralHint" className="sb-field-error">{check.message}</small>}
-      {!check && typed.length >= 9 && !complete && <small id="regReferralHint" className="sb-field-error">That referral code was not found.</small>}
+      {check && !check.valid && (
+        <small id="regReferralHint" className="sb-field-error">
+          <i className="fa-solid fa-circle-exclamation" style={{ marginRight: '5px' }}></i>
+          {check.message}
+        </small>
+      )}
+      {!check && typed.length >= 9 && !complete && (
+        <small id="regReferralHint" className="sb-field-error">
+          <i className="fa-solid fa-circle-exclamation" style={{ marginRight: '5px' }}></i>
+          That referral code was not found.
+        </small>
+      )}
     </div>
   )
 }
