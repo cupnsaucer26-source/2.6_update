@@ -24,6 +24,12 @@ const productsInFlight = new Map()
 let optionsCache = null
 let optionsInFlight = null
 
+// Empties the in-memory tab catalogue cache so queries re-fetch fresh DB data.
+export function invalidateCatalogProductsCache() {
+  productsCache.clear()
+  optionsCache = null
+}
+
 // A product the home, Shop or Categories page has already loaded, so its page
 // can show it the moment it is opened (ProductDetail.jsx) while a fresh copy
 // is fetched behind it. undefined when this tab has not loaded it yet.
@@ -155,22 +161,30 @@ export function useCatalogProducts({
     fetchCatalogOptions()
   }, [fetchProducts, fetchCatalogOptions])
 
-  // Real-time synchronization via BroadcastChannel & visibilitychange
+  // Real-time synchronization via BroadcastChannel & window event & visibilitychange
   useEffect(() => {
     const channel = 'BroadcastChannel' in window ? new BroadcastChannel('sathya_catalog') : null
+
+    const handleRefresh = () => {
+      productsCache.clear()
+      optionsCache = null
+      fetchProducts()
+      fetchCatalogOptions()
+    }
 
     // An admin changed something: the cache is wrong, so drop it and reload.
     const handleMessage = (event) => {
       if (event.data === 'products-changed') {
-        productsCache.clear()
-        optionsCache = null
-        fetchProducts()
-        fetchCatalogOptions()
+        handleRefresh()
       }
     }
 
     if (channel) {
       channel.addEventListener('message', handleMessage)
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('sathya_catalog_changed', handleRefresh)
     }
 
     // Coming back to the tab re-checks the server, but quietly: the products
@@ -190,6 +204,9 @@ export function useCatalogProducts({
       if (channel) {
         channel.removeEventListener('message', handleMessage)
         channel.close()
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('sathya_catalog_changed', handleRefresh)
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }

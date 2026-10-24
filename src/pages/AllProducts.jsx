@@ -221,14 +221,17 @@ export default function AllProducts() {
       navigate(`/product/${encodeURIComponent(product.id)}`)
       return
     }
-    const currentSize = explicitSize || selectedSizes[product.id] || product.selectedSize || product.sizes?.[0]?.size || 'Standard'
-    const sizeObj = product.sizes?.find(s => s.size === currentSize)
+    const packSizes = Array.isArray(product.packSizes) && product.packSizes.length > 0 ? product.packSizes : ['Standard']
+    const firstPackName = typeof packSizes[0] === 'object' ? packSizes[0].size : packSizes[0]
+    const currentSize = explicitSize || selectedSizes[product.id] || product.selectedSize || product.selectedPack || firstPackName || 'Standard'
+    const finalPackPrice = packPrice(product, currentSize, product.selectedPack || firstPackName)
+    const finalPackMrp = packMrp(product, currentSize, finalPackPrice)
     addItem({
       id: product.id,
       name: product.name,
       brand: product.brand,
-      price: Number(sizeObj?.price || product.price) || 0,
-      originalPrice: sizeObj?.originalPrice || product.originalPrice,
+      price: finalPackPrice,
+      originalPrice: finalPackMrp,
       selectedPack: currentSize,
       image: product.image,
       gstRate: product.gstRate,
@@ -256,15 +259,23 @@ export default function AllProducts() {
 
   const todaysOffersList = useMemo(() => {
     // A product not priced yet is no offer.
-    return dbProducts.filter(p => hasPrice(p) && (p.discount || (p.originalPrice && p.originalPrice > p.price))).map(p => ({
-      ...p,
-      sizes: (Array.isArray(p.packSizes) ? p.packSizes : ['Standard']).map(size => ({
-        size,
-        price: p.price,
-        originalPrice: p.originalPrice || p.price,
-        save: Math.max(0, (p.originalPrice || p.price) - p.price)
-      }))
-    }))
+    return dbProducts.filter(p => hasPrice(p) && (p.discount || (p.originalPrice && p.originalPrice > p.price))).map(p => {
+      const basePack = p.selectedPack || p.packSizes?.[0] || 'Standard'
+      return {
+        ...p,
+        sizes: (Array.isArray(p.packSizes) && p.packSizes.length ? p.packSizes : ['Standard']).map(size => {
+          const sName = typeof size === 'object' ? size.size : size
+          const sPrice = packPrice(p, sName, basePack)
+          const sMrp = packMrp(p, sName, sPrice)
+          return {
+            size: sName,
+            price: sPrice,
+            originalPrice: sMrp || sPrice,
+            save: Math.max(0, (sMrp || sPrice) - sPrice)
+          }
+        })
+      }
+    })
   }, [dbProducts])
 
   // "Best Selling" rendered BEST_SELLING from src/data/allProductsData.js,
@@ -280,26 +291,39 @@ export default function AllProducts() {
       || dbProducts.filter(p => p.badge === 'Best Seller' || p.badge === '100% Organic' || p.rating >= 4.8).slice(0, 8))
       .map(p => ({
         ...p,
-        sizes: (Array.isArray(p.packSizes) && p.packSizes.length ? p.packSizes : ['Standard']).map(size => ({
-          size: typeof size === 'object' ? size.size : size,
-          price: p.price,
-          originalPrice: p.originalPrice || p.price,
-          save: Math.max(0, (p.originalPrice || p.price) - p.price),
-        })),
+        sizes: (Array.isArray(p.packSizes) && p.packSizes.length ? p.packSizes : ['Standard']).map(size => {
+          const sName = typeof size === 'object' ? size.size : size
+          const sPrice = packPrice(p, sName, p.selectedPack || p.packSizes?.[0] || 'Standard')
+          const sMrp = packMrp(p, sName, sPrice)
+          return {
+            size: sName,
+            price: sPrice,
+            originalPrice: sMrp || sPrice,
+            save: Math.max(0, (sMrp || sPrice) - sPrice),
+          }
+        }),
       })),
     [dbProducts],
   )
 
   const growthPromotersList = useMemo(() => {
-    return dbProducts.filter(p => (p.category || '').toLowerCase().includes('growth') || (p.category || '').toLowerCase().includes('bio-stimulant')).map(p => ({
-      ...p,
-      sizes: (Array.isArray(p.packSizes) ? p.packSizes : ['Standard']).map(size => ({
-        size,
-        price: p.price,
-        originalPrice: p.originalPrice || p.price,
-        save: Math.max(0, (p.originalPrice || p.price) - p.price)
-      }))
-    }))
+    return dbProducts.filter(p => (p.category || '').toLowerCase().includes('growth') || (p.category || '').toLowerCase().includes('bio-stimulant')).map(p => {
+      const basePack = p.selectedPack || p.packSizes?.[0] || 'Standard'
+      return {
+        ...p,
+        sizes: (Array.isArray(p.packSizes) && p.packSizes.length ? p.packSizes : ['Standard']).map(size => {
+          const sName = typeof size === 'object' ? size.size : size
+          const sPrice = packPrice(p, sName, basePack)
+          const sMrp = packMrp(p, sName, sPrice)
+          return {
+            size: sName,
+            price: sPrice,
+            originalPrice: sMrp || sPrice,
+            save: Math.max(0, (sMrp || sPrice) - sPrice)
+          }
+        })
+      }
+    })
   }, [dbProducts])
 
 

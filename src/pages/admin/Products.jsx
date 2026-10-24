@@ -12,6 +12,7 @@ import { PRODUCT_FORMS, productForm } from '../../shared/productForm.js'
 import { cropList, joinCrops, CROP_CHOICES } from '../../shared/profileFieldRules'
 import { packUnits } from '../../shared/packPricing'
 import ProductTranslations from './ProductTranslations'
+import { invalidateCatalogProductsCache } from '../../hooks/useCatalogProducts'
 
 const PFORM_SECTIONS = [
   { id: 'pform-basic', label: 'Basic details', hint: 'Title, category, badge' },
@@ -834,7 +835,7 @@ export default function AdminProducts() {
                     {/* Price & MRP */}
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ fontWeight: 700, color: 'var(--brand-400)' }}>₹{p.price}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>₹{p.originalPrice || p.mrp}</div>
+                      {Number(p.originalPrice || p.mrp) > Number(p.price) && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>₹{p.originalPrice || p.mrp}</div>}
                     </td>
 
                     {/* Stock Status */}
@@ -1057,14 +1058,49 @@ export default function AdminProducts() {
                       <label>Selling Price (₹) *</label>
                       <div className="pform-affix">
                         <span className="pform-affix-pre" aria-hidden="true">₹</span>
-                        <input type="number" required placeholder="680" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
+                        <input
+                          type="number"
+                          required
+                          placeholder="680"
+                          value={form.price}
+                          onChange={e => {
+                            const val = e.target.value
+                            setForm(current => {
+                              const base = current.selectedPack || current.packDetails?.[0]?.size
+                              const nextPacks = (current.packDetails || []).map(pd => {
+                                if (!base || pd.size === base || current.packDetails.length === 1) {
+                                  return { ...pd, price: val }
+                                }
+                                return pd
+                              })
+                              return { ...current, price: val, packDetails: nextPacks }
+                            })
+                          }}
+                        />
                       </div>
                     </div>
                     <div className="pform-field">
                       <label>MRP (₹)</label>
                       <div className="pform-affix">
                         <span className="pform-affix-pre" aria-hidden="true">₹</span>
-                        <input type="number" placeholder="850" value={form.mrp} onChange={e => setForm({ ...form, mrp: e.target.value })} />
+                        <input
+                          type="number"
+                          placeholder="850"
+                          value={form.mrp}
+                          onChange={e => {
+                            const val = e.target.value
+                            setForm(current => {
+                              const base = current.selectedPack || current.packDetails?.[0]?.size
+                              const nextPacks = (current.packDetails || []).map(pd => {
+                                if (!base || pd.size === base || current.packDetails.length === 1) {
+                                  return { ...pd, mrp: val }
+                                }
+                                return pd
+                              })
+                              return { ...current, mrp: val, packDetails: nextPacks }
+                            })
+                          }}
+                        />
                       </div>
                       <p className={`pform-hint pform-discount ${discountPercent > 0 ? 'on' : ''}`}>
                         {discountPercent > 0 ? `${discountPercent}% off shown to shoppers` : 'No discount shown'}

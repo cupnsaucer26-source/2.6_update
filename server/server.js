@@ -1163,11 +1163,26 @@ function productInputError(body, { partial = false } = {}) {
       if (!Number.isFinite(value) || value < 0) return `${label} must be a number of 0 or more.`;
     }
   }
+  for (const [field, label] of [['originalPrice', 'MRP'], ['mrp', 'MRP']]) {
+    if (body[field] !== undefined && body[field] !== null && body[field] !== '') {
+      const value = Number(body[field]);
+      if (!Number.isFinite(value) || value < 0) return `${label} must be a number of 0 or more.`;
+    }
+  }
+  if (body.gstRate !== undefined && body.gstRate !== null && body.gstRate !== '') {
+    const value = Number(body.gstRate);
+    if (!Number.isFinite(value) || value < 0 || value > 100) return 'GST rate must be between 0 and 100.';
+  }
   return null;
 }
 
 app.get('/api/products', async (req, res) => {
   try {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     const { userId, category, crop, disease, search, sortBy, onlineOnly } = req.query;
     const data = await db.getProducts({ userId, category, crop, disease, search, sortBy, onlineOnly: onlineOnly === 'true' });
     res.json({ success: true, data });
@@ -1178,6 +1193,11 @@ app.get('/api/products', async (req, res) => {
 
 app.get('/api/products/:id', async (req, res) => {
   try {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     const product = await db.getProductById(req.params.id);
     // Offline products are sold at the billing counter only, never on the website.
     if (!product || product.online === false) {
@@ -1313,6 +1333,11 @@ app.delete('/api/products/:id', requireAuth('admin'), requireModule('products'),
 
 app.get('/api/catalog-options', async (req, res) => {
   try {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     const data = await db.getCatalogOptions();
     res.json({ success: true, data });
   } catch (err) {

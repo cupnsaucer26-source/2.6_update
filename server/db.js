@@ -253,8 +253,14 @@ function stripMongoFields(doc) {
 function normalizeProduct(product) {
     const reviews = Array.isArray(product.reviews) ? product.reviews : [];
     const visibility = product.visibility || (product.online === false ? 'offline' : 'both');
+    const packSizes = Array.isArray(product.packSizes) && product.packSizes.length
+      ? product.packSizes
+      : ['Standard'];
+    const selectedPack = product.selectedPack && packSizes.includes(product.selectedPack) ? product.selectedPack : packSizes[0];
     return {
           ...product,
+          packSizes,
+          selectedPack,
           visibility,
           online: visibility !== 'offline',
           taggedVideos: Array.isArray(product.taggedVideos) ? product.taggedVideos : [],
@@ -1594,12 +1600,22 @@ class DatabaseManager {
         }
       }
 
-      const price = Number(prodData.price) || 0;
-      const mrp = Number(prodData.originalPrice || prodData.mrp || price * 1.2);
+      const price = Math.max(0, Number(prodData.price) || 0);
+      const mrp = Math.max(0, Number(prodData.originalPrice || prodData.mrp || (price > 0 ? price : 0)));
       const packSizes = Array.isArray(prodData.packSizes) && prodData.packSizes.length
         ? prodData.packSizes.map(s => String(s).trim()).filter(Boolean)
         : ['250g', '500g', '1kg'];
       const discountPct = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+      const selectedPack = packSizes.includes(prodData.selectedPack) ? prodData.selectedPack : packSizes[0];
+
+      let packagePrices = packPriceMap(prodData.packagePrices, packSizes);
+      let packageMrps = packPriceMap(prodData.packageMrps, packSizes);
+      if (price > 0 && packagePrices[selectedPack] === undefined) {
+        packagePrices[selectedPack] = price;
+      }
+      if (mrp > 0 && packageMrps[selectedPack] === undefined) {
+        packageMrps[selectedPack] = mrp;
+      }
 
       const newProd = {
         _id: id,
@@ -1614,8 +1630,8 @@ class DatabaseManager {
         igstRate: Number(prodData.gstRate !== undefined ? prodData.gstRate : 18),
         price,
         originalPrice: mrp,
-        discount: prodData.discount || `${discountPct}% OFF`,
-        stock: Number(prodData.stock) || 0,
+        discount: prodData.discount !== undefined ? prodData.discount : (discountPct > 0 ? `${discountPct}% OFF` : ''),
+        stock: Math.max(0, Number(prodData.stock) || 0),
         unitsSold: 0, // a new product has sold nothing; only reserveStock moves this
         crops: Array.isArray(prodData.crops)
           ? prodData.crops
@@ -1631,13 +1647,9 @@ class DatabaseManager {
         activeIngredient: prodData.activeIngredient || '100% Bio-Active Botanical Extract',
         dosage: prodData.dosage || '250g - 500g per Acre',
         packSizes,
-        // The size a card starts on: the one asked for if the product has it,
-        // otherwise its first size (a fixed '500g' broke 1kg/5kg/10kg products).
-        selectedPack: packSizes.includes(prodData.selectedPack) ? prodData.selectedPack : packSizes[0],
-        // Each size's own price and MRP, as the admin form sends them. Without
-        // these every size was priced from the first one by weight.
-        packagePrices: packPriceMap(prodData.packagePrices, packSizes),
-        packageMrps: packPriceMap(prodData.packageMrps, packSizes),
+        selectedPack,
+        packagePrices,
+        packageMrps,
         // Powder, Pellets, Tablets... (src/shared/productForm.js); '' lets the store work it out.
         form: typeof prodData.form === 'string' ? prodData.form.trim().slice(0, 30) : '',
         badge: prodData.badge || (prodData.stock > 100 ? 'Best Seller' : 'New Launch'),
@@ -3535,4 +3547,5 @@ function splitTags(tags, fallback) {
 
 // Export singleton database instance
 export const db = new DatabaseManager();
+export { normalizeProduct };
 export default db;

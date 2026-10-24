@@ -4,6 +4,7 @@
 // (src/shared/__tests__/checkoutRules.test.js).
 
 import { normalizeIndianMobile } from '../shared/phoneLink.js'
+import { packMrp, packPrice } from '../shared/packPricing.js'
 
 export const GUEST_CART_KEY = 'sathya_cart_guest'
 export const STAFF_HOME = { superadmin: '/superadmin', admin: '/admin', employee: '/employee', delivery: '/delivery', billing: '/billing' }
@@ -107,11 +108,12 @@ export function withCurrentProducts(items, products) {
     const rate = Number(product.gstRate)
     if (product.gstRate !== undefined && product.gstRate !== null && product.gstRate !== '' && Number.isFinite(rate) && rate !== Number(item.gstRate)) update.gstRate = rate
     if (product.hsnCode !== undefined && product.hsnCode !== null && product.hsnCode !== item.hsnCode) update.hsnCode = product.hsnCode
-    const pack = item.selectedPack
-    const price = Number(product.packagePrices?.[pack])
-    if (pack && price > 0 && price !== Number(item.price)) update.price = price
-    const mrp = Number(product.packageMrps?.[pack])
-    if (pack && mrp > 0 && mrp !== Number(item.originalPrice)) update.originalPrice = mrp
+    const pack = item.selectedPack || product.selectedPack || product.packSizes?.[0]
+    const price = packPrice(product, pack, product.selectedPack || product.packSizes?.[0])
+    if (price > 0 && price !== Number(item.price)) update.price = price
+    const mrp = packMrp(product, pack, price)
+    if (mrp > 0 && mrp !== Number(item.originalPrice)) update.originalPrice = mrp
+    if (mrp > 0 && item.mrp !== undefined && mrp !== Number(item.mrp)) update.mrp = mrp
     if (!Object.keys(update).length) return item
     changed = true
     return { ...item, ...update }
