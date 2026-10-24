@@ -3728,7 +3728,7 @@ app.get('/api/agronomy-bookings', requireAuth(), async (req, res) => {
     const role = req.user.role;
     const filter = role === 'admin' || role === 'superadmin' ? {}
       : TICKET_STAFF_ROLES.includes(role) ? { expertId: req.user.id }
-      : { userId: req.user.id, phone: req.user.phone };
+      : { userId: req.user.id, phone: normalizePhone(req.user.phone) || req.user.phone };
     const data = await db.getAgronomyBookings(filter);
     data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json({ success: true, data });

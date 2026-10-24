@@ -2491,7 +2491,11 @@ class DatabaseManager {
         } else if (filter.userId || filter.phone) {
           const or = [];
           if (filter.userId) or.push({ userId: filter.userId });
-          if (filter.phone) or.push({ farmerPhone: filter.phone });
+          if (filter.phone) {
+            const clean = String(filter.phone).replace(/\D/g, '').slice(-10);
+            or.push({ farmerPhone: filter.phone });
+            if (clean && clean !== filter.phone) or.push({ farmerPhone: clean });
+          }
           if (or.length) query.$or = or;
         }
         const list = await AgronomyBooking.find(query).lean();

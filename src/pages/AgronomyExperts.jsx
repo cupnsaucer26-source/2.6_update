@@ -74,6 +74,14 @@ export default function AgronomyExperts() {
       let bookings = []
       if (user) {
         bookings = await agronomyService.getUserBookings(user.id || user._id, user.phone || user.mobile)
+        try {
+          const local = JSON.parse(localStorage.getItem('sathyam:local_agronomy_bookings') || '[]')
+          if (Array.isArray(local) && local.length > 0) {
+            const existingIds = new Set(bookings.map(b => b.id))
+            const missing = local.filter(b => !existingIds.has(b.id))
+            if (missing.length > 0) bookings = [...bookings, ...missing]
+          }
+        } catch {}
       } else {
         try {
           bookings = JSON.parse(localStorage.getItem('sathyam:local_agronomy_bookings') || '[]')
@@ -113,7 +121,7 @@ export default function AgronomyExperts() {
       acreage: user?.acreage || 2,
       preferredDate: dateStr,
       preferredSlot: slots[0],
-      topic: 'Pest & Disease Diagnostics',
+      topic: 'Pest & Disease Outbreak',
       notes: '',
       phone: user?.phone || user?.mobile || ''
     })

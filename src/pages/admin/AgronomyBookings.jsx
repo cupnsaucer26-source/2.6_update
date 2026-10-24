@@ -184,6 +184,9 @@ export default function AgronomyBookings() {
                           onChange={(e) => handleAssign(b.id, e.target.value)}
                           title="Assign or reassign this consultation callback"
                         >
+                          {!experts.some(exp => exp.id === b.expertId) && b.expertName && (
+                            <option value={b.expertId}>{b.expertName}</option>
+                          )}
                           {experts.map(exp => (
                             <option key={exp.id} value={exp.id}>
                               {exp.name} {formatExpertSpec(exp.specialization)}

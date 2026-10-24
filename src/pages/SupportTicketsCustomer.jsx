@@ -508,6 +508,7 @@ export default function SupportTicketsCustomer() {
                         {ord.id} — {ord.status || 'Confirmed'} (₹{Number(ord.total || 0).toLocaleString('en-IN')}) {ord.createdAt ? `· ${ord.createdAt.slice(0, 10)}` : ''}
                       </option>
                     ))}
+                    <option value="GENERAL-INQUIRY">General Inquiry / Pre-Purchase Question</option>
                     <option value="OTHER-OFFLINE-ORDER">Other / Offline Counter Purchase</option>
                   </select>
                   <span className="p2-hint">
