@@ -460,3 +460,17 @@ test('14. HISTORICAL INTEGRITY: Past orders do not mutate when product price is 
   assert.equal(historicalOrder.subtotal, 200);
   assert.equal(historicalOrder.total, 236);
 });
+
+test('15. CHECKOUT AUTHENTICATION: Unauthenticated orders and payment creations are rejected (401)', async () => {
+  const unauthOrderRes = await call('POST', '/api/orders', {
+    items: [{ id: 'sb-1', qty: 1 }],
+  });
+  assert.equal(unauthOrderRes.status, 401);
+  assert.match(unauthOrderRes.data.message, /sign in/i);
+
+  const unauthPaymentRes = await call('POST', '/api/payments/create-order', {
+    items: [{ id: 'sb-1', qty: 1 }],
+  });
+  assert.equal(unauthPaymentRes.status, 401);
+  assert.match(unauthPaymentRes.data.message, /sign in/i);
+});

@@ -366,7 +366,11 @@ export function CheckoutProvider({ enabled, children }) {
 
     // Checkout, on the basket step (and "Proceed to checkout" on a product page).
     const startCheckout = () => {
-      // Guest checkout allowed for verification without forcing login
+      if (!live.current.user || !hasToken()) {
+        if (!live.current.step) showStep('basket')
+        requireSignIn()
+        return
+      }
       if (!cartRef.current.length) {
         showToast('Your basket is empty. Add products from the catalog first.', 'warning')
         return
@@ -389,6 +393,10 @@ export function CheckoutProvider({ enabled, children }) {
         return
       }
       if (celebrate) celebrateSignIn(signedInUser)
+      if (live.current.step) {
+        showStep('address', { replace: true })
+        return
+      }
       leaveSignInFor(farmerLandingPath())
     }
 
@@ -741,7 +749,12 @@ export function CheckoutProvider({ enabled, children }) {
       return
     }
     if (step === 'basket') return
-    // Guest checkout enabled for verification: no sign-in required
+    // Signed out (or the session expired): must sign in to proceed past the basket.
+    if (!user) {
+      actions.showStep('basket', { replace: true })
+      actions.requireSignIn()
+      return
+    }
     if (!cartReady) return
     if (!cart.length) actions.showStep('basket', { replace: true })
     else if (step === 'payment' && !detailsReady) actions.showStep('address', { replace: true })
