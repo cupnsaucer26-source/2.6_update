@@ -236,6 +236,30 @@ function getTestPhones() {
 function isTestPhone(phone) {
   return getTestPhones().includes(phone);
 }
+
+// ============================================================
+// SIGNUP FLOW TEST NUMBER
+// ============================================================
+// Dedicated test number that ALWAYS triggers the new user sign-up flow.
+// Whenever this number is used:
+// 1. Any existing account on this number is cleared (clean slate every time).
+// 2. Fixed mock OTP (123456) is accepted without sending paid WhatsApp messages.
+// 3. /verify-otp always returns isNewUser: true to open the "Your details" form.
+// 4. Registration can be tested repeatedly without conflicts or rate limits.
+
+export const DEFAULT_SIGNUP_TEST_PHONE = '9876500000';
+
+function getSignupTestPhones() {
+  const envPhones = String(process.env.TEST_SIGNUP_PHONES || process.env.TEST_SIGNUP_PHONE || '')
+    .split(',')
+    .map((p) => normalizePhone(p.trim()))
+    .filter(Boolean);
+  return [...new Set([...envPhones, DEFAULT_SIGNUP_TEST_PHONE])];
+}
+
+function isSignupTestPhone(phone) {
+  return getSignupTestPhones().includes(phone);
+}
 const OTP_MAX_ATTEMPTS = 5;
 // How long a verified number may be used to finish creating the account.
 const VERIFIED_PHONE_TTL_MS = 10 * 60 * 1000;
@@ -433,6 +457,42 @@ app.post('/api/auth/send-otp', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit Indian mobile number.' });
     }
 
+    // SIGNUP TEST FLOW: Always triggers the new user registration flow from scratch
+    if (isSignupTestPhone(phone)) {
+      console.log(`🧪 Signup test flow activated for +91 ${phone}`);
+      try {
+        await db.deleteUsersByPhone(phone);
+      } catch (err) {
+        console.warn('Could not reset signup test user:', err.message);
+      }
+
+      const testOtp = '123456';
+      const now = Date.now();
+      await db.kvSet(
+        otpKey(phone),
+        {
+          otpHash: hashOtp(testOtp),
+          createdAt: now,
+          lastSentAt: now,
+          expiresAt: now + OTP_EXPIRY_MS,
+          resendCooldownMs: 10 * 1000,
+          attempts: 0,
+          resendCount: 0,
+        },
+        OTP_RECORD_TTL_MS
+      );
+
+      await db.kvDelete(verifiedKey(phone));
+
+      return res.json({
+        success: true,
+        message: 'Code sent! (Test OTP: 123456)',
+        testOtp,
+        isTestSignup: true,
+        resendAfter: 10,
+      });
+    }
+
     // DIRECT TEST BYPASS: If this is a test phone, immediately issue a valid login token without sending WhatsApp OTP
     if (isTestPhone(phone)) {
       console.log(`⚡ Direct test login bypass activated for +91 ${phone}`);
@@ -590,6 +650,30 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
     if (!/^\d{6}$/.test(otp)) {
       return res.status(400).json({ success: false, message: 'Please enter the 6-digit OTP.' });
+    }
+
+    // SIGNUP TEST FLOW: Always marks phone verified and returns isNewUser: true
+    if (isSignupTestPhone(phone)) {
+      if (otp === '123456') {
+        await db.kvDelete(otpKey(phone));
+        forgetOtpLayout(phone);
+        try {
+          await db.deleteUsersByPhone(phone);
+        } catch {}
+
+        await db.kvSet(verifiedKey(phone), { verifiedUntil: Date.now() + VERIFIED_PHONE_TTL_MS }, VERIFIED_PHONE_TTL_MS);
+        console.log(`✅ Signup test phone +91 ${phone} verified as new user`);
+        return res.json({
+          success: true,
+          verified: true,
+          isNewUser: true,
+          phone,
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid test OTP. Please enter 123456.',
+      });
     }
 
     const record = await db.kvGet(otpKey(phone));
@@ -865,9 +949,12 @@ app.post('/api/auth/forgot-password/reset', async (req, res) => {
 // its own role, and no body can set a password: farmers do not have one.
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const ipWait = await rateLimit(`register-ip:${clientIp(req)}`, 20, HOUR_MS);
-    if (ipWait) {
-      return tooManyRequests(res, ipWait, 'Too many registration attempts. Please try again later.');
+    const rawPhone = normalizePhone(req.body?.phone);
+    if (!isSignupTestPhone(rawPhone) && !isTestPhone(rawPhone)) {
+      const ipWait = await rateLimit(`register-ip:${clientIp(req)}`, 20, HOUR_MS);
+      if (ipWait) {
+        return tooManyRequests(res, ipWait, 'Too many registration attempts. Please try again later.');
+      }
     }
 
     const phone = normalizePhone(req.body?.phone);
@@ -908,7 +995,7 @@ app.post('/api/auth/register', async (req, res) => {
     // this farmer signup: one farmer account per number, not one account overall.
     const existing = await db.getUserByIdentifier(phone, { roles: ['farmer'] });
 
-    if (isTestPhone(phone)) {
+    if (isSignupTestPhone(phone) || isTestPhone(phone)) {
       // Test number: clear every account on it (there may be historical
       // duplicates) so the sign-up flow can be re-run from a clean slate.
       const removed = await db.deleteUsersByPhone(phone);

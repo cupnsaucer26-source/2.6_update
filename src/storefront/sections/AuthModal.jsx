@@ -604,6 +604,7 @@ export default memo(function AuthModal({ t, state, user, notice, loginRequest })
   const [focusedOtp, setFocusedOtp] = useState('')
   const [busy, setBusy] = useState('')
   const [otpPhone, setOtpPhone] = useState('')
+  const [testOtpNotice, setTestOtpNotice] = useState('')
   const [accountView, setAccountView] = useState('profile') // signed in: 'profile' | 'edit'
   const [referralCode, setReferralCode] = useState(() => storedReferralCode())
   const signupResend = useResendCountdown()
@@ -756,6 +757,7 @@ export default memo(function AuthModal({ t, state, user, notice, loginRequest })
   const clearOtp = () => {
     setField('storefrontOtpInput', '')
     clearField('storefrontOtpInput')
+    setTestOtpNotice('')
   }
 
   const goToOtp = phone => {
@@ -811,6 +813,12 @@ export default memo(function AuthModal({ t, state, user, notice, loginRequest })
         return
       }
       goToOtp(phone)
+      if (data?.isTestSignup && data?.testOtp) {
+        setTestOtpNotice(data.testOtp)
+        showToast(data.message || `Test OTP: ${data.testOtp}`, 'info')
+      } else {
+        setTestOtpNotice('')
+      }
       signupResend.start(data.resendAfter)
     } catch (err) {
       console.error('Send OTP error:', err)
@@ -1024,6 +1032,7 @@ export default memo(function AuthModal({ t, state, user, notice, loginRequest })
     signupResend.clear()
     sentTo.current = ''
     verifiedPhone.current = ''
+    setTestOtpNotice('')
     clearOtp()
     showView('phone', { focus: 'authPhone', select: true })
   }
@@ -1124,21 +1133,39 @@ export default memo(function AuthModal({ t, state, user, notice, loginRequest })
             <FieldHint id="authPhone" hint={hints.authPhone} />
           </div>
 
-          <div style={{ margin: '10px 0 14px', padding: '8px 12px', background: '#f0fdf4', border: '1px dashed #86efac', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <span style={{ fontSize: '0.82rem', color: '#166534' }}>
-              <i className="fa-solid fa-bolt" style={{ color: '#eab308', marginRight: '5px' }}></i>
-              Test bypass: <strong>9876543210</strong>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setField('authPhone', '9876543210')
-                clearField('authPhone')
-              }}
-              style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '5px', padding: '4px 8px', fontSize: '0.78rem', color: '#15803d', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Fill Test Number
-            </button>
+          <div style={{ margin: '10px 0 14px', padding: '10px 12px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <span style={{ fontSize: '0.82rem', color: '#0f766e', fontWeight: 600 }}>
+                <i className="fa-solid fa-user-plus" style={{ color: '#0d9488', marginRight: '6px' }}></i>
+                New User Sign-Up: <strong>9876500000</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setField('authPhone', '9876500000')
+                  clearField('authPhone')
+                }}
+                style={{ background: '#ccfbf1', border: '1px solid #99f6e4', borderRadius: '5px', padding: '4px 10px', fontSize: '0.78rem', color: '#0f766e', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Fill Sign-Up
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <span style={{ fontSize: '0.82rem', color: '#166534' }}>
+                <i className="fa-solid fa-bolt" style={{ color: '#eab308', marginRight: '6px' }}></i>
+                Instant Bypass: <strong>9876543210</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setField('authPhone', '9876543210')
+                  clearField('authPhone')
+                }}
+                style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '5px', padding: '4px 10px', fontSize: '0.78rem', color: '#15803d', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Fill Bypass
+              </button>
+            </div>
           </div>
 
           <div className="auth-actions">
@@ -1169,6 +1196,26 @@ export default memo(function AuthModal({ t, state, user, notice, loginRequest })
               <OtpCells value={fields.storefrontOtpInput} focused={focusedOtp === 'storefrontOtpInput'} />
             </div>
             <FieldHint id="storefrontOtpInput" hint={hints.storefrontOtpInput} />
+            {(testOtpNotice || sentTo.current === '9876500000') && (
+              <div style={{ margin: '10px 0 8px', padding: '8px 12px', background: '#eff6ff', border: '1px dashed #93c5fd', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <span style={{ fontSize: '0.82rem', color: '#1e40af', fontWeight: 600 }}>
+                  <i className="fa-solid fa-flask" style={{ color: '#2563eb', marginRight: '6px' }}></i>
+                  Test OTP: <strong>{testOtpNotice || '123456'}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = testOtpNotice || '123456';
+                    setField('storefrontOtpInput', code);
+                    clearField('storefrontOtpInput');
+                    verifyOtp(code);
+                  }}
+                  style={{ background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: '5px', padding: '4px 10px', fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Auto-fill &amp; Verify
+                </button>
+              </div>
+            )}
             {canPaste && (
               <div className="auth-paste">
                 <button type="button" id="storefrontOtpPasteBtn" className="auth-paste-btn" onClick={pasteOtp} disabled={busy === 'verify'} aria-describedby="storefrontOtpPasteNote">
