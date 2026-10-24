@@ -1136,7 +1136,7 @@ export default memo(function AuthModal({ t, state, user, notice, loginRequest })
           <div style={{ margin: '10px 0 14px', padding: '10px 12px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
               <span style={{ fontSize: '0.82rem', color: '#0f766e', fontWeight: 600 }}>
-                <i className="fa-solid fa-user-plus" style={{ color: '#0d9488', marginRight: '6px' }}></i>
+                <i className="fa-solid fa-user" style={{ color: '#0d9488', marginRight: '6px' }}></i>
                 New User Sign-Up: <strong>9876500000</strong>
               </span>
               <button

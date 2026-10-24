@@ -415,6 +415,37 @@ select.p2-input { cursor: pointer; }
 }
 .p2-tabs--fill .p2-tab { min-width: 0; white-space: normal; padding: 8px 6px; line-height: 1.25; }
 
+/* Indic scripts in farmer pages: prevent clipping of taller compound glyphs & improve layout in all sizes */
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-page {
+  --p2-head-font: var(--script-font, 'Outfit', sans-serif);
+}
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-tab {
+  white-space: normal;
+  text-align: center;
+  line-height: var(--script-leading, 1.4);
+}
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-btn {
+  white-space: normal;
+  line-height: var(--script-leading, 1.35);
+}
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-chip {
+  white-space: normal;
+  line-height: var(--script-leading, 1.4);
+}
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-perk {
+  white-space: normal;
+  line-height: 1.35;
+}
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-eyebrow {
+  white-space: normal;
+  line-height: 1.35;
+}
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-list-title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: var(--script-leading, 1.4);
+}
+
 /* ---- Soil test report -------------------------------------------------- */
 .p2-section-label { display: flex; align-items: center; gap: 6px; font-size: 0.84rem; font-weight: 800; color: var(--p2-ink-2); margin-bottom: 10px; }
 .p2-section-label svg { color: var(--p2-green); }
