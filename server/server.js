@@ -6,6 +6,7 @@
 
 import 'dotenv/config';
 import express from 'express';
+import mongoose from 'mongoose';
 import cors from 'cors';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -335,13 +336,100 @@ async function sendWhatsAppOtp(phone, otp, userName = 'Farmer', { banner = true 
 }
 
 // ============================================================
-// HEALTH CHECK
+// HEALTH, LIVENESS, READINESS & INTEGRATION CHECKS
 // ============================================================
 
+// 1. Application Liveness Check: verifies process is running (does not fail on dependency blips)
+app.get(['/api/health/liveness', '/api/live'], (req, res) => {
+  res.json({
+    status: 'ok',
+    liveness: true,
+    service: 'sathyam-agro-engine',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 2. Application Readiness Check: verifies database connectivity and readiness to serve traffic
+app.get(['/api/health/readiness', '/api/ready'], async (req, res) => {
+  try {
+    await connectDB();
+    const isReady = mongoose.connection.readyState === 1;
+    if (!isReady) {
+      return res.status(503).json({
+        status: 'error',
+        readiness: false,
+        message: 'Database connection is not in ready state',
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.json({
+      status: 'ok',
+      readiness: true,
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('❌ Readiness check error:', err.message);
+    res.status(503).json({
+      status: 'error',
+      readiness: false,
+      message: 'Database unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 3. Agronomist Integration Health: verifies agronomist data contract and store resolution
+app.get('/api/agronomy/health', async (req, res) => {
+  try {
+    await connectDB();
+    const experts = await db.getAgronomyExperts();
+    const stores = await db.getStores();
+    res.json({
+      status: 'ok',
+      agronomistIntegration: true,
+      activeAgronomistsCount: experts.length,
+      storesCount: stores.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('❌ Agronomist health check error:', err.message);
+    res.status(503).json({
+      status: 'error',
+      agronomistIntegration: false,
+      message: err.message || 'Agronomist subsystem failure',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// 4. Backwards-Compatible Comprehensive Health Check
 app.get('/api/health', async (req, res) => {
   try {
     await connectDB();
-    res.json({ status: 'ok', time: new Date().toISOString() });
+    const isDbConnected = mongoose.connection.readyState === 1;
+    if (!isDbConnected) {
+      return res.status(503).json({ status: 'error', message: 'Database unavailable' });
+    }
+    let agronomistOk = true;
+    let agronomistCount = 0;
+    try {
+      const experts = await db.getAgronomyExperts();
+      agronomistCount = experts.length;
+    } catch {
+      agronomistOk = false;
+    }
+    res.json({
+      status: 'ok',
+      liveness: true,
+      readiness: true,
+      database: 'connected',
+      agronomistIntegration: agronomistOk,
+      activeAgronomistsCount: agronomistCount,
+      uptimeSeconds: Math.floor(process.uptime()),
+      time: new Date().toISOString()
+    });
   } catch (err) {
     console.error('❌ Health check error:', err.message);
     res.status(503).json({ status: 'error', message: 'Database unavailable' });
@@ -3676,6 +3764,7 @@ function publicExpert(staff) {
     reviewsCount: Number(pick('reviewsCount')) || 120,
     isAgronomyExpert: true,
     active: true,
+    status: staff.status || 'active',
     storeId: staff.storeId || p.storeId || '',
     storeName: staff.storeName || p.storeName || '',
     storeLocation: staff.storeLocation || p.storeLocation || '',

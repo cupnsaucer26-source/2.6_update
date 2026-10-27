@@ -2344,19 +2344,19 @@ class DatabaseManager {
         return serialize(created.toObject());
   }
 
-  async getAgronomyExperts() {
+  async getAgronomyExperts(filters = {}) {
         await connectDB();
-        let staff = await this.listStaffProfiles();
-        let experts = staff.filter(s => s.isAgronomyExpert || s.profile?.isAgronomyExpert);
-        if (!experts.length) {
-          await this.seedDefaultAgronomyExperts();
-          staff = await this.listStaffProfiles();
-          experts = staff.filter(s => s.isAgronomyExpert || s.profile?.isAgronomyExpert);
-        }
-        return experts;
+        const staff = await this.listStaffProfiles(filters);
+        // Authoritative eligibility: must be an active employee explicitly designated as Agronomy Expert
+        return staff.filter(s =>
+          s.role === 'employee' &&
+          s.status === 'active' &&
+          (s.isAgronomyExpert === true || s.profile?.isAgronomyExpert === true)
+        );
   }
 
   async seedDefaultAgronomyExperts() {
+        if (process.env.SEED_DEMO_DATA !== 'true') return;
         await connectDB();
         const defaultExperts = [
           {
