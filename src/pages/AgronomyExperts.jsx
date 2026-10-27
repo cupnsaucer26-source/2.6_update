@@ -109,6 +109,10 @@ export default function AgronomyExperts() {
   // Handle click on "Book Session"
   const handleInitiateBooking = (expert) => {
     setSelectedExpert(expert)
+    if (!user) {
+      setShowAuthPrompt(true)
+      return
+    }
     // Default preferred date to tomorrow
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)

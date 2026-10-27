@@ -91,6 +91,7 @@ export default function AgronomyBookings() {
       toast.success('Callback marked as completed')
       setOpenId(null)
       setNotes('')
+      load()
     } catch (err) {
       toast.error(err?.response?.data?.message || err.message || 'Could not update the booking')
     } finally {
@@ -284,7 +285,7 @@ export default function AgronomyBookings() {
                 </div>
 
                 <div className="p2-booking-meta" style={{ flexWrap: 'wrap', gap: 12 }}>
-                  <a href={`tel:+91${b.farmerPhone}`} className="p2-link" style={{ minHeight: 32, display: 'inline-flex', alignItems: 'center' }}>
+                  <a href={`tel:+91${b.farmerPhone}`} className="p2-link" style={{ minHeight: 40, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', borderRadius: 6, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                     <Phone size={14} /> +91 {b.farmerPhone}
                   </a>
 
@@ -298,7 +299,7 @@ export default function AgronomyBookings() {
                           setRescheduleDate(b.preferredDate || todayStr)
                           setRescheduleSlot(b.preferredSlot || '10:00 AM - 12:00 PM')
                         }}
-                        style={{ border: 'none', background: 'transparent', color: '#0284c7', cursor: 'pointer', padding: '0 4px', fontSize: '0.75rem', textDecoration: 'underline' }}
+                        className="p2-reschedule-trigger" title="Reschedule session slot"
                       >
                         Reschedule
                       </button>

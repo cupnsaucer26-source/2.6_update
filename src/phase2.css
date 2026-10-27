@@ -749,11 +749,10 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-list-title {
 .p2-booking-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 0.82rem; color: var(--p2-muted); }
 .p2-booking-meta > span, .p2-booking-meta > a, .p2-booking-meta > div { display: inline-flex; align-items: center; gap: 5px; }
 .p2-assign-select {
-  height: 28px !important;
-  min-height: 28px !important;
-  max-height: 28px !important;
-  line-height: 26px !important;
-  padding: 0 24px 0 8px !important;
+  min-height: 40px !important;
+  height: 40px !important;
+  line-height: 38px !important;
+  padding: 0 28px 0 10px !important;
   font-size: 0.8rem !important;
   font-weight: 600 !important;
   color: var(--p2-ink) !important;
@@ -838,3 +837,23 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .p2-list-title {
 .p2-list-quick { position: absolute; right: 12px; bottom: 12px; }
 .p2-list-row .p2-list-item { padding-bottom: 16px; }
 @media (max-width: 768px) { .p2-filter-3 { grid-template-columns: minmax(0, 1fr); } }
+
+.p2-reschedule-trigger {
+  min-height: 38px !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  border: 1px solid #bae6fd !important;
+  background: #f0f9ff !important;
+  color: #0369a1 !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+.p2-reschedule-trigger:hover {
+  background: #e0f2fe !important;
+  border-color: #7dd3fc !important;
+}
