@@ -3343,23 +3343,24 @@ class DatabaseManager {
 
   async updateStore(id, updates) {
     await connectDB();
-    const store = await Store.findById(id);
-    if (!store) return null;
     const { _id, id: _ignored, ...rest } = updates || {};
-    Object.assign(store, rest);
-    store.updatedAt = new Date().toISOString();
-    await store.save();
+    const updated = await Store.findByIdAndUpdate(
+      id,
+      { $set: { ...rest, updatedAt: new Date().toISOString() } },
+      { returnDocument: 'after' }
+    ).lean();
+    if (!updated) return null;
 
     if (rest.adminId) {
       await User.findByIdAndUpdate(rest.adminId, {
         $set: {
           storeId: id,
-          storeName: store.name,
-          storeLocation: store.location
+          storeName: updated.name,
+          storeLocation: updated.location
         }
       });
     }
-    return serialize(store.toObject());
+    return serialize(updated);
   }
 
   async deleteStore(id) {

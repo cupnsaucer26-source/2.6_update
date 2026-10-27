@@ -2366,6 +2366,9 @@ app.put('/api/orders/:id/assign', requireAuth('admin'), requireModule('orders'),
       if (!agent || agent.role !== 'delivery' || (agent.status && agent.status !== 'active')) {
         return res.status(400).json({ success: false, message: 'Pick an active delivery staff member.' });
       }
+      if (req.user.role === 'admin' && req.user.storeId && agent.storeId && agent.storeId !== req.user.storeId) {
+        return res.status(400).json({ success: false, message: 'Pick a delivery staff member from your own store.' });
+      }
       updates = { assignedDeliveryBoy: agent.name, deliveryBoyPhone: agent.phone || '', assignedDeliveryUserId: agent.id };
     }
     updates.updatedAt = new Date().toISOString();
@@ -3953,6 +3956,9 @@ app.put('/api/admin/employees/:id/agronomy-expert', requireAuth('admin'), requir
   try {
     const staff = await findStaff(req.params.id);
     if (!staff) return res.status(404).json({ success: false, message: 'Staff member not found' });
+    if (req.user.role === 'admin' && req.user.storeId && staff.storeId && staff.storeId !== req.user.storeId) {
+      return res.status(403).json({ success: false, message: 'You cannot modify staff from another store.' });
+    }
     const b = req.body || {};
     const details = {};
     if (b.specialization !== undefined) details.specialization = cleanText(b.specialization, 120);
@@ -4498,7 +4504,7 @@ app.put('/api/staff-profile', requireAuth('employee', 'admin', 'superadmin', 'de
 // GET /api/admin/staff-profiles  — admin or superadmin views all staff profiles
 app.get('/api/admin/staff-profiles', requireAuth('admin', 'superadmin'), requireModule('employees'), async (req, res) => {
   try {
-    const storeId = req.query.storeId || (req.user.role === 'admin' ? req.user.storeId : undefined);
+    const storeId = req.user.role === 'admin' ? req.user.storeId : (req.query.storeId || undefined);
     const profiles = await db.listStaffProfiles(storeId ? { storeId } : {});
     res.json({ success: true, data: profiles });
   } catch (err) {
@@ -4509,8 +4515,13 @@ app.get('/api/admin/staff-profiles', requireAuth('admin', 'superadmin'), require
 // GET /api/admin/staff-profiles/:userId  — admin views one specific staff profile
 app.get('/api/admin/staff-profiles/:userId', requireAuth('admin', 'superadmin'), requireModule('employees'), async (req, res) => {
   try {
+    const staff = await db.getUserById(req.params.userId);
+    if (!staff) return res.json({ success: true, data: {} });
+    if (req.user.role === 'admin' && req.user.storeId && staff.storeId && staff.storeId !== req.user.storeId) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to view staff from another store.' });
+    }
     const profile = await db.getStaffProfile(req.params.userId);
-    res.json({ success: true, data: profile || {} });
+    res.json({ success: true, data: { ...staff, profile: profile || {} } });
   } catch (err) {
     sendError(res, err, 'Get staff profile by id');
   }
