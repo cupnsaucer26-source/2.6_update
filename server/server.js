@@ -3676,12 +3676,26 @@ function publicExpert(staff) {
     reviewsCount: Number(pick('reviewsCount')) || 120,
     isAgronomyExpert: true,
     active: true,
+    storeId: staff.storeId || p.storeId || '',
+    storeName: staff.storeName || p.storeName || '',
+    storeLocation: staff.storeLocation || p.storeLocation || '',
   };
 }
 
+app.get('/api/stores', async (req, res) => {
+  try {
+    const stores = await db.getStores();
+    res.json({ success: true, data: stores || [] });
+  } catch (err) {
+    sendError(res, err, 'List stores');
+  }
+});
+
 app.get('/api/agronomy-experts', async (req, res) => {
   try {
-    const experts = await db.getAgronomyExperts();
+    const filters = {};
+    if (req.query.storeId) filters.storeId = req.query.storeId;
+    const experts = await db.getAgronomyExperts(filters);
     res.json({ success: true, data: experts.filter(s => !s.status || s.status === 'active').map(publicExpert) });
   } catch (err) {
     sendError(res, err, 'Agronomy experts');
@@ -3707,26 +3721,60 @@ app.put('/api/admin/employees/:id/agronomy-expert', requireAuth('admin'), requir
   }
 });
 
-// Book a consultation callback. Works for both authenticated users AND guest farmers (with a valid phone).
+// Book a consultation callback. Must be authenticated to associate the booking with the user account.
 app.post('/api/agronomy-bookings', async (req, res) => {
   try {
     const user = await getAuthenticatedUser(req);
-    const { expertId, crop, acreage, preferredDate, preferredSlot, topic, notes, phone, farmerName: rawName } = req.body || {};
-    const expert = (await db.getAgronomyExperts()).find(e => e.id === expertId);
-    if (!expert) return res.status(400).json({ success: false, message: 'Please choose an available expert.' });
-    const farmerPhone = normalizePhone(phone) || (user ? normalizePhone(user.phone) : '');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Please sign in to book an agronomy consultation.' });
+    }
+    const { expertId, crop, acreage, preferredDate, preferredSlot, topic, notes, phone, farmerName: rawName, storeId, storeName } = req.body || {};
+
+    let expert = null;
+    if (expertId) {
+      expert = (await db.getAgronomyExperts()).find(e => e.id === expertId);
+      if (!expert) return res.status(400).json({ success: false, message: 'Please choose an available expert.' });
+      if (expert.status && expert.status !== 'active') {
+        return res.status(400).json({ success: false, message: 'Selected expert is currently inactive.' });
+      }
+    }
+
+    const farmerPhone = normalizePhone(phone) || normalizePhone(user.phone) || '';
     if (!farmerPhone) return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit phone number.' });
 
-    const rateKey = user ? `agro-booking:${user.id}` : `agro-booking:${farmerPhone}`;
+    // Validate preferredDate is not in the past
+    const today = new Date().toISOString().split('T')[0];
+    if (preferredDate && String(preferredDate).trim() < today) {
+      return res.status(400).json({ success: false, message: 'Appointment date cannot be in the past. Please select today or a future date.' });
+    }
+
+    // Check for scheduling conflict if expert is specified
+    if (expert && preferredDate && preferredSlot) {
+      const expertBookings = await db.getAgronomyBookings({ expertId: expert.id });
+      const conflict = expertBookings.some(b =>
+        b.status === 'Scheduled' &&
+        b.preferredDate === preferredDate &&
+        b.preferredSlot === preferredSlot
+      );
+      if (conflict) {
+        return res.status(409).json({ success: false, message: `${expert.name} is already booked for ${preferredSlot} on ${preferredDate}. Please select another time or expert.` });
+      }
+    }
+
+    const rateKey = `agro-booking:${user.id}`;
     const wait = await rateLimit(rateKey, 10, HOUR_MS);
     if (wait) return tooManyRequests(res, wait, 'Too many bookings. Please try again later.');
 
+    const initialStatus = expert ? 'Scheduled' : 'Pending';
+
     const booking = {
       id: newId('AGR'),
-      expertId: expert.id,
-      expertName: expert.name,
-      userId: user?.id || null,
-      farmerName: user?.name || cleanText(rawName, 60) || 'Farmer',
+      expertId: expert ? expert.id : null,
+      expertName: expert ? expert.name : null,
+      storeId: cleanText(storeId, 50) || expert?.storeId || user.storeId || '',
+      storeName: cleanText(storeName, 100) || expert?.storeName || user.storeName || '',
+      userId: user.id,
+      farmerName: user.name || cleanText(rawName, 60) || 'Farmer',
       farmerPhone,
       crop: cleanText(crop, 50) || 'General Crops',
       acreage: Math.max(0, Math.min(10000, Number(acreage) || 1)),
@@ -3734,13 +3782,13 @@ app.post('/api/agronomy-bookings', async (req, res) => {
       preferredSlot: cleanText(preferredSlot, 50),
       topic: cleanText(topic, 100) || 'General Agronomy Advisory',
       notes: cleanText(notes, 1000),
-      status: 'Scheduled',
+      status: initialStatus,
       callbackCompleted: false,
       callbackNotes: null,
       createdAt: new Date().toISOString(),
     };
     const created = await db.addAgronomyBooking(booking);
-    res.json({ success: true, message: 'Consultation callback booked successfully', data: created });
+    res.json({ success: true, message: expert ? 'Consultation callback booked successfully' : 'Advisory consultation request submitted', data: created });
   } catch (err) {
     sendError(res, err, 'Book agronomy consultation');
   }
@@ -3762,7 +3810,7 @@ app.get('/api/agronomy-bookings', requireAuth(), async (req, res) => {
   }
 });
 
-// Admin assigns / reassigns a booking to another expert/employee
+// Admin / Super Admin assigns or reassigns a booking to an eligible expert
 app.put('/api/agronomy-bookings/:id/assign', requireAuth('admin'), async (req, res) => {
   try {
     const { expertId } = req.body || {};
@@ -3772,16 +3820,110 @@ app.put('/api/agronomy-bookings/:id/assign', requireAuth('admin'), async (req, r
     const experts = await db.getAgronomyExperts();
     const expert = experts.find(e => e.id === expertId);
     if (!expert) return res.status(400).json({ success: false, message: 'Please select a valid agronomy expert' });
+    if (expert.status && expert.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'Selected expert is inactive and cannot receive new assignments.' });
+    }
+
+    // Store scoping: if booking is tied to a specific store and expert has a store, ensure they match (unless superadmin explicitly overrides)
+    if (booking.storeId && expert.storeId && booking.storeId !== expert.storeId && req.user.role !== 'superadmin') {
+      return res.status(400).json({
+        success: false,
+        message: `Expert ${expert.name} belongs to ${expert.storeName || expert.storeId}, but this booking is for store ${booking.storeName || booking.storeId}.`
+      });
+    }
+
+    // Prevent scheduling conflicts / double bookings
+    if (booking.preferredDate && booking.preferredSlot) {
+      const expertBookings = await db.getAgronomyBookings({ expertId: expert.id });
+      const conflict = expertBookings.some(b =>
+        b.id !== booking.id &&
+        b.status === 'Scheduled' &&
+        b.preferredDate === booking.preferredDate &&
+        b.preferredSlot === booking.preferredSlot
+      );
+      if (conflict) {
+        return res.status(409).json({
+          success: false,
+          message: `${expert.name} already has a confirmed booking for ${booking.preferredSlot} on ${booking.preferredDate}. Please reschedule or pick another expert.`
+        });
+      }
+    }
 
     const updated = await db.updateAgronomyBooking(booking.id, {
       expertId: expert.id,
       expertName: expert.name,
+      storeId: booking.storeId || expert.storeId || '',
+      storeName: booking.storeName || expert.storeName || '',
+      status: 'Scheduled',
       assignedBy: req.user.name,
       assignedAt: new Date().toISOString()
     });
     res.json({ success: true, message: `Assigned to ${expert.name}`, data: updated });
   } catch (err) {
     sendError(res, err, 'Assign agronomy booking');
+  }
+});
+
+// Cancel a booking
+app.put('/api/agronomy-bookings/:id/cancel', requireAuth(), async (req, res) => {
+  try {
+    const booking = await db.getAgronomyBookingById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
+    const isOwner = booking.userId === req.user.id || (booking.farmerPhone && booking.farmerPhone === normalizePhone(req.user.phone));
+    const isAssigned = booking.expertId === req.user.id;
+    if (!isAdmin && !isOwner && !isAssigned) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to cancel this booking.' });
+    }
+    const updated = await db.updateAgronomyBooking(booking.id, {
+      status: 'Cancelled',
+      cancelledBy: req.user.name,
+      cancelledAt: new Date().toISOString(),
+      cancellationReason: cleanText(req.body?.reason, 500) || 'Cancelled by user'
+    });
+    res.json({ success: true, message: 'Booking cancelled successfully', data: updated });
+  } catch (err) {
+    sendError(res, err, 'Cancel agronomy booking');
+  }
+});
+
+// Reschedule a booking
+app.put('/api/agronomy-bookings/:id/reschedule', requireAuth(), async (req, res) => {
+  try {
+    const booking = await db.getAgronomyBookingById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
+    const isOwner = booking.userId === req.user.id;
+    const isAssigned = booking.expertId === req.user.id;
+    if (!isAdmin && !isOwner && !isAssigned) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to reschedule this booking.' });
+    }
+    const { preferredDate, preferredSlot } = req.body || {};
+    const today = new Date().toISOString().split('T')[0];
+    if (preferredDate && String(preferredDate).trim() < today) {
+      return res.status(400).json({ success: false, message: 'Rescheduled date cannot be in the past.' });
+    }
+    if (booking.expertId && preferredDate && preferredSlot) {
+      const expertBookings = await db.getAgronomyBookings({ expertId: booking.expertId });
+      const conflict = expertBookings.some(b =>
+        b.id !== booking.id &&
+        b.status === 'Scheduled' &&
+        b.preferredDate === preferredDate &&
+        b.preferredSlot === preferredSlot
+      );
+      if (conflict) {
+        return res.status(409).json({ success: false, message: 'The assigned expert already has an appointment at this new time slot.' });
+      }
+    }
+    const updated = await db.updateAgronomyBooking(booking.id, {
+      preferredDate: cleanText(preferredDate, 30) || booking.preferredDate,
+      preferredSlot: cleanText(preferredSlot, 50) || booking.preferredSlot,
+      rescheduledBy: req.user.name,
+      rescheduledAt: new Date().toISOString(),
+    });
+    res.json({ success: true, message: 'Booking rescheduled successfully', data: updated });
+  } catch (err) {
+    sendError(res, err, 'Reschedule agronomy booking');
   }
 });
 

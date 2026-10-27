@@ -83,5 +83,21 @@ export const agronomyService = {
     const booking = unwrap(res, 'Could not update the booking')
     notify('sathyam:bookings-updated', booking)
     return booking
+  },
+
+  // Cancel a consultation callback
+  async cancelBooking(bookingId, reason = '') {
+    const res = await axios.put(`/api/agronomy-bookings/${encodeURIComponent(bookingId)}/cancel`, { reason })
+    const booking = unwrap(res, 'Could not cancel the booking')
+    notify('sathyam:bookings-updated', booking)
+    return booking
+  },
+
+  // Reschedule an appointment date and slot
+  async rescheduleBooking(bookingId, { preferredDate, preferredSlot }) {
+    const res = await axios.put(`/api/agronomy-bookings/${encodeURIComponent(bookingId)}/reschedule`, { preferredDate, preferredSlot })
+    const booking = unwrap(res, 'Could not reschedule the booking')
+    notify('sathyam:bookings-updated', booking)
+    return booking
   }
 }

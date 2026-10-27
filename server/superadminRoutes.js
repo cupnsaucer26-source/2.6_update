@@ -247,12 +247,15 @@ router.post('/users', async (req, res) => {
       userPermissions = (PORTAL_MODULES[role] || []).map(m => m.key);
     }
 
+    const isAgronomyExpert = role === 'employee' ? Boolean(req.body?.isAgronomyExpert) : false;
+
     const created = await db.createUser({
       name: name?.trim() || `${role.toUpperCase()} User`,
       phone,
       email,
       password,
       role,
+      isAgronomyExpert,
       storeId: storeId || '',
       storeName: storeName || '',
       storeLocation: storeLocation || '',
@@ -263,6 +266,13 @@ router.post('/users', async (req, res) => {
       permissions: userPermissions,
       createdBy: 'superadmin'
     });
+
+    if (role === 'employee') {
+      await db.setEmployeeAgronomyExpert(created.id, isAgronomyExpert, {
+        specialization: req.body?.specialization || 'Field Agronomy & Crop Advisory',
+        languages: ['Tamil', 'English']
+      });
+    }
 
     // If this new user is an Admin assigned to a store, link store's adminId
     if (role === 'admin' && storeId) {
@@ -294,6 +304,15 @@ router.put('/users/:id', async (req, res) => {
     // Disallow removing superadmin role from yourself
     if (req.params.id === req.user.id && updates.role && updates.role !== 'superadmin') {
       throw new HttpError(400, 'You cannot remove your own Super Admin access.');
+    }
+
+    if (updates.isAgronomyExpert !== undefined) {
+      const isExpert = (updates.role === 'employee' || (!updates.role && existing.role === 'employee')) ? Boolean(updates.isAgronomyExpert) : false;
+      await db.setEmployeeAgronomyExpert(req.params.id, isExpert, {
+        specialization: updates.specialization || undefined,
+        qualification: updates.qualification || undefined,
+      });
+      updates.isAgronomyExpert = isExpert;
     }
 
     const updated = await db.updateUser(req.params.id, updates);

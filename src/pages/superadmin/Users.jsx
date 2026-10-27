@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import PasswordChecklist from '../../components/PasswordChecklist'
 import PasswordError, { passwordBoxStyle, passwordErrorFrom } from '../../components/PasswordError'
 import { isPasswordValid } from '../../utils/passwordRules'
-import { Users, Plus, Search, Filter, ShieldCheck, MapPin, UserCheck, Key, Edit2, Trash2, CheckCircle, XCircle, ArrowRight, X } from 'lucide-react'
+import { Users, Plus, Search, Filter, ShieldCheck, MapPin, UserCheck, Key, Edit2, Trash2, CheckCircle, XCircle, ArrowRight, X, Sprout } from 'lucide-react'
 
 export default function PersonnelManagement() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -36,7 +36,9 @@ export default function PersonnelManagement() {
     assignedAdminId: '',
     assignedAdminName: '',
     department: '',
-    status: 'active'
+    status: 'active',
+    isAgronomyExpert: false,
+    specialization: ''
   })
 
   useEffect(() => {
@@ -78,7 +80,9 @@ export default function PersonnelManagement() {
       assignedAdminId: defaultStore?.adminId || '',
       assignedAdminName: defaultStore?.adminName || '',
       department: '',
-      status: 'active'
+      status: 'active',
+      isAgronomyExpert: false,
+      specialization: ''
     })
     setPasswordError('')
     setIsModalOpen(true)
@@ -98,7 +102,9 @@ export default function PersonnelManagement() {
       assignedAdminId: u.assignedAdminId || '',
       assignedAdminName: u.assignedAdminName || '',
       department: u.department || '',
-      status: u.status || 'active'
+      status: u.status || 'active',
+      isAgronomyExpert: Boolean(u.isAgronomyExpert || u.profile?.isAgronomyExpert),
+      specialization: u.specialization || u.profile?.specialization || ''
     })
     setPasswordError('')
     setIsModalOpen(true)
@@ -415,6 +421,54 @@ export default function PersonnelManagement() {
                       <option value="employee">ERP Employee (Operations)</option>
                     </select>
                   </div>
+
+                  {/* Explicit Employee Type / Agronomist Classification */}
+                  {formData.role === 'employee' && (
+                    <div className="sa-field sa-span-2" style={{ background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                      <label className="sa-label" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: '#15803d', fontWeight: 700 }}>
+                        <Sprout size={16} color="#15803d" /> Employee Classification *
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, border: `2px solid ${!formData.isAgronomyExpert ? '#15803d' : '#e2e8f0'}`, background: !formData.isAgronomyExpert ? '#f0fdf4' : '#fff', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="employeeTypeSelector"
+                            checked={!formData.isAgronomyExpert}
+                            onChange={() => setFormData(prev => ({ ...prev, isAgronomyExpert: false }))}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1e293b' }}>Normal Employee</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Store Operations & Inventory</div>
+                          </div>
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, border: `2px solid ${formData.isAgronomyExpert ? '#15803d' : '#e2e8f0'}`, background: formData.isAgronomyExpert ? '#f0fdf4' : '#fff', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="employeeTypeSelector"
+                            checked={Boolean(formData.isAgronomyExpert)}
+                            onChange={() => setFormData(prev => ({ ...prev, isAgronomyExpert: true }))}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#15803d' }}>Agronomist Expert</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Eligible for advisory & callbacks</div>
+                          </div>
+                        </label>
+                      </div>
+                      {formData.isAgronomyExpert && (
+                        <div style={{ marginTop: 12 }}>
+                          <label className="sa-label" style={{ fontSize: '0.78rem', marginBottom: 4 }}>Agronomist Specialization / Advisory Focus</label>
+                          <input
+                            type="text"
+                            className="sa-input"
+                            style={{ width: '100%' }}
+                            placeholder="e.g. Crop Protection & Pest Diagnostics / Soil Health"
+                            value={formData.specialization || ''}
+                            onChange={(e) => setFormData(prev => ({ ...prev, specialization: e.target.value }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Full Name */}
                   <div className="sa-field sa-span-2">

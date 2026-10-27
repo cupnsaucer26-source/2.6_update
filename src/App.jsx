@@ -192,6 +192,7 @@ export default function App() {
         <Route path="/superadmin" element={<PrivateRoute allowedRoles={['superadmin']} signIn={<Login />}><SuperAdminLayout /></PrivateRoute>}>
           <Route index element={<SuperAdminDashboard />} />
           <Route path="analytics" element={<SuperAdminShopAnalytics />} />
+          <Route path="agronomy-bookings" element={<AgronomyBookings />} />
           <Route path="support-tickets" element={<SuperAdminSupportTickets />} />
           <Route path="soil-reports" element={<SuperAdminSoilReports />} />
           <Route path="stores" element={<SuperAdminStores />} />
