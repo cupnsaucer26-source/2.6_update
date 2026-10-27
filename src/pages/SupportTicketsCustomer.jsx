@@ -18,7 +18,12 @@ import {
   Calendar,
   MessageSquare,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Paperclip,
+  Check,
+  RotateCcw,
+  X,
+  ExternalLink
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { ticketService } from '../services/ticketService'
@@ -62,6 +67,8 @@ export default function SupportTicketsCustomer() {
     description: '',
     attachment: null
   })
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
+  const fileInputRef = useRef(null)
   const [submitting, setSubmitting] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
@@ -84,11 +91,7 @@ export default function SupportTicketsCustomer() {
   const loadTickets = useCallback(async () => {
     setLoading(true)
     try {
-      const list = await ticketService.getTickets({
-        role: user?.role || 'farmer',
-        userId: user?.id || user?._id,
-        phone: user?.phone || user?.mobile
-      })
+      const list = await ticketService.getTickets()
       setTickets(list)
       const current = selectedTicketRef.current
       if (list.length > 0 && !current) {
@@ -102,7 +105,7 @@ export default function SupportTicketsCustomer() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [])
 
   useEffect(() => {
     loadOrders()
@@ -120,6 +123,26 @@ export default function SupportTicketsCustomer() {
       setShowModal(true)
     }
   }, [initialOrderId])
+
+  // Handle file attachment selection and upload
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Attachment exceeds 5MB limit')
+      return
+    }
+    setUploadingAttachment(true)
+    try {
+      const data = await ticketService.uploadAttachment(file)
+      setNewTicket(prev => ({ ...prev, attachment: data }))
+      toast.success('Photo attached successfully')
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload photo')
+    } finally {
+      setUploadingAttachment(false)
+    }
+  }
 
   // Handle new ticket submission
   const handleSubmitTicket = async (e) => {
@@ -141,11 +164,12 @@ export default function SupportTicketsCustomer() {
         priority: newTicket.priority,
         subject: newTicket.subject,
         description: newTicket.description,
-        orderItems: chosenOrder?.items || []
+        orderItems: chosenOrder?.items || [],
+        attachment: newTicket.attachment
       })
 
       toast.success(`Support Ticket ${created.id} raised successfully!`, {
-        description: 'Super Admin and our Agronomy Team have been notified.'
+        description: 'Your ticket has been logged and assigned to the support desk.'
       })
 
       setShowModal(false)
@@ -158,12 +182,39 @@ export default function SupportTicketsCustomer() {
         description: '',
         attachment: null
       })
+      if (fileInputRef.current) fileInputRef.current.value = ''
       await loadTickets()
       setSelectedTicket(created)
     } catch (err) {
-      toast.error('Failed to submit support ticket')
+      toast.error(err.message || 'Failed to submit support ticket')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // Handle customer resolution confirmation
+  const handleCustomerClose = async () => {
+    if (!selectedTicket) return
+    try {
+      const updated = await ticketService.updateTicketStatus(selectedTicket.id, 'Closed')
+      setSelectedTicket(updated)
+      toast.success('Thank you! Ticket has been confirmed and closed.')
+      await loadTickets()
+    } catch (err) {
+      toast.error(err.message || 'Failed to close ticket')
+    }
+  }
+
+  // Handle customer reopen
+  const handleCustomerReopen = async () => {
+    if (!selectedTicket) return
+    try {
+      const updated = await ticketService.updateTicketStatus(selectedTicket.id, 'In Progress')
+      setSelectedTicket(updated)
+      toast.info('Ticket reopened. You can now post additional details below.')
+      await loadTickets()
+    } catch (err) {
+      toast.error(err.message || 'Failed to reopen ticket')
     }
   }
 
@@ -210,8 +261,9 @@ export default function SupportTicketsCustomer() {
 
   const getStatusBadge = (status) => {
     switch (status?.toLowerCase()) {
-      case 'resolved':
       case 'closed':
+        return <span className="p2-chip p2-chip--green"><CheckCircle2 size={12} /> Closed</span>
+      case 'resolved':
         return <span className="p2-chip p2-chip--green"><CheckCircle2 size={12} /> Resolved</span>
       case 'in progress':
         return <span className="p2-chip p2-chip--blue"><RefreshCw size={12} /> In Progress</span>
@@ -390,8 +442,35 @@ export default function SupportTicketsCustomer() {
                   </div>
                 </div>
 
+                {/* Problem Description */}
+                {selectedTicket.description && (
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 8, fontSize: '0.9rem', color: '#334155', lineHeight: 1.5, margin: '12px 0', border: '1px solid #e2e8f0' }}>
+                    {selectedTicket.description}
+                  </div>
+                )}
+
+                {/* Attachment if present */}
+                {selectedTicket.attachment?.url && (
+                  <div style={{ marginTop: 10, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img
+                      src={selectedTicket.attachment.url}
+                      alt="Attached issue evidence"
+                      style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                      onClick={() => window.open(selectedTicket.attachment.url, '_blank')}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
+                        📎 Attached Photo ({selectedTicket.attachment.filename || 'Evidence'})
+                      </div>
+                      <a href={selectedTicket.attachment.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#15803d', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        View full size <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 {/* Meta details strip */}
-                <dl className="p2-meta-grid">
+                <dl className="p2-meta-grid" style={{ marginTop: 12 }}>
                   <div>
                     <dt>Category</dt>
                     <dd>{selectedTicket.category}</dd>
@@ -415,6 +494,36 @@ export default function SupportTicketsCustomer() {
                 </dl>
               </div>
 
+              {/* Resolution Confirmation Prompt for Customer */}
+              {selectedTicket.status === 'Resolved' && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '14px 16px', margin: '14px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#15803d', fontWeight: 700, marginBottom: 6 }}>
+                    <CheckCircle2 size={18} /> Resolution Provided
+                  </div>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.88rem', color: '#166534' }}>
+                    Our Agronomy / Support team has provided a resolution for this issue. Are you satisfied with the solution?
+                  </p>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={handleCustomerClose}
+                      className="p2-btn p2-btn--primary p2-btn--sm"
+                      style={{ background: '#15803d' }}
+                    >
+                      <Check size={14} /> Confirm &amp; Close Ticket
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCustomerReopen}
+                      className="p2-btn p2-btn--outline p2-btn--sm"
+                      style={{ color: '#b45309', borderColor: '#f59e0b' }}
+                    >
+                      <RotateCcw size={14} /> Not Satisfied? Reopen Ticket
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Conversation Messages Thread */}
               <div className="p2-messages">
                 <div className="p2-messages-label">
@@ -436,30 +545,42 @@ export default function SupportTicketsCustomer() {
                         <strong>{isFarmer ? 'You (Customer)' : `👨‍🌾 ${reply.senderName}`}</strong>
                         <span>· {reply.time}</span>
                       </div>
-                      <div className="p2-bubble">{reply.text}</div>
+                      <div className="p2-bubble">
+                        {reply.text}
+                        {reply.attachment?.url && (
+                          <div style={{ marginTop: 8 }}>
+                            <img
+                              src={reply.attachment.url}
+                              alt="Attachment in reply"
+                              style={{ maxWidth: 200, maxHeight: 150, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                              onClick={() => window.open(reply.attachment.url, '_blank')}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
               </div>
 
               {/* Reply Box */}
-              {selectedTicket.status !== 'Resolved' && selectedTicket.status !== 'Closed' ? (
+              {selectedTicket.status === 'Closed' ? (
+                <div className="p2-reply-done" style={{ background: '#f8fafc', color: '#64748b' }}>
+                  🔒 This support ticket has been confirmed and <strong>Closed</strong>. If you still need help, feel free to raise a new ticket.
+                </div>
+              ) : (
                 <form onSubmit={handleSendReply} className="p2-reply">
                   <textarea
                     rows={2}
                     className="p2-input"
                     value={replyText}
                     onChange={e => setReplyText(e.target.value)}
-                    placeholder="Type additional details, response, or question for the agronomist..."
+                    placeholder={selectedTicket.status === 'Resolved' ? "Type a reply to automatically reopen this ticket..." : "Type additional details, response, or question for the agronomist..."}
                   />
                   <button type="submit" className="p2-btn p2-btn--primary" disabled={sendingReply || !replyText.trim()}>
                     <Send size={16} /> Send
                   </button>
                 </form>
-              ) : (
-                <div className="p2-reply-done">
-                  ✅ This support ticket has been marked as <strong>Resolved</strong>. If you still need help, feel free to raise a new ticket.
-                </div>
               )}
             </div>
           ) : (
@@ -581,6 +702,48 @@ export default function SupportTicketsCustomer() {
                     onChange={e => setNewTicket(p => ({ ...p, description: e.target.value }))}
                   />
                 </div>
+
+                {/* Photo Attachment Picker */}
+                <div className="p2-field">
+                  <label className="p2-label">Attach Photo (Optional — Damaged package, leaf symptoms, batch stamp)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      style={{ display: 'none' }}
+                      id="ticket-photo-input"
+                    />
+                    <button
+                      type="button"
+                      className="p2-btn p2-btn--outline p2-btn--sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAttachment}
+                    >
+                      <Paperclip size={14} /> {uploadingAttachment ? 'Uploading Photo...' : newTicket.attachment ? 'Change Photo' : 'Select Photo (max 5MB)'}
+                    </button>
+                    {newTicket.attachment && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#15803d', background: '#f0fdf4', padding: '4px 10px', borderRadius: 6, border: '1px solid #bbf7d0' }}>
+                        <span>📎 {newTicket.attachment.filename}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewTicket(p => ({ ...p, attachment: null }))
+                            if (fileInputRef.current) fileInputRef.current.value = ''
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}
+                          title="Remove photo"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <span className="p2-hint">
+                    Accepted formats: PNG, JPG, WebP. Maximum size 5MB.
+                  </span>
+                </div>
               </div>
 
               {/* Modal Buttons */}
@@ -588,7 +751,7 @@ export default function SupportTicketsCustomer() {
                 <button type="button" className="p2-btn p2-btn--ghost" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="p2-btn p2-btn--primary" disabled={submitting}>
+                <button type="submit" className="p2-btn p2-btn--primary" disabled={submitting || uploadingAttachment}>
                   {submitting ? 'Submitting...' : 'Submit Support Ticket'}
                 </button>
               </div>

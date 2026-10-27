@@ -3507,9 +3507,34 @@ function stampTime(date = new Date()) {
   return date.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function makeReply(senderName, senderRole, text) {
+function makeReply(senderName, senderRole, text, isInternal = false, attachment = null) {
   const now = new Date();
-  return { id: newId('REP'), senderName, senderRole, text, time: stampTime(now), createdAt: now.toISOString() };
+  return {
+    id: newId('REP'),
+    senderName,
+    senderRole,
+    text,
+    isInternal: Boolean(isInternal),
+    attachment: parseTicketAttachment(attachment),
+    time: stampTime(now),
+    createdAt: now.toISOString()
+  };
+}
+
+function parseTicketAttachment(att) {
+  if (!att) return null;
+  if (typeof att === 'string' && att.trim()) {
+    return { url: cleanText(att, 500), filename: 'image.jpg' };
+  }
+  if (typeof att === 'object' && att.url) {
+    return {
+      url: cleanText(att.url, 500),
+      filename: cleanText(att.filename, 150) || 'image.jpg',
+      size: Number(att.size) || 0,
+      mimetype: cleanText(att.mimetype, 50) || 'image/jpeg'
+    };
+  }
+  return null;
 }
 
 // A farmer owns a ticket filed from their account, or (older, signed-out
@@ -3523,13 +3548,28 @@ function ownsRecord(user, record) {
 
 // Super Admin and head-office admins see every ticket, a store admin their
 // store's (server/ticketRouting.js); employees see tickets assigned to them
-// plus the unassigned queue; delivery/billing staff only tickets assigned to
-// them; farmers only their own.
+// plus unassigned tickets strictly within their store; delivery/billing staff
+// only tickets assigned to them; farmers only their own.
 function canSeeTicket(user, ticket) {
+  if (!user || !ticket) return false;
   if (user.role === 'superadmin' || user.role === 'admin') return adminCanSeeTicket(user, ticket);
-  if (user.role === 'employee') return !ticket.assignedToId || ticket.assignedToId === user.id;
+  if (user.role === 'employee') {
+    if (ticket.assignedToId === user.id) return true;
+    if (!ticket.assignedToId && ticket.storeId && user.storeId && ticket.storeId === user.storeId) return true;
+    return false;
+  }
   if (TICKET_STAFF_ROLES.includes(user.role)) return ticket.assignedToId === user.id;
   return ownsRecord(user, ticket);
+}
+
+// Ensure internal staff notes are never exposed in customer-facing responses.
+function sanitizeTicketForUser(user, ticket) {
+  if (!ticket) return null;
+  const t = { ...ticket };
+  if (user?.role === 'farmer') {
+    t.replies = (t.replies || []).filter(r => !r.isInternal);
+  }
+  return t;
 }
 
 async function findStaff(id) {
@@ -3540,9 +3580,58 @@ async function findStaff(id) {
 app.get('/api/tickets', requireAuth(), ticketModule, async (req, res) => {
   try {
     const all = await db.getTickets();
-    res.json({ success: true, data: all.filter(t => canSeeTicket(req.user, t)) });
+    const visible = all.filter(t => canSeeTicket(req.user, t));
+    res.json({ success: true, data: visible.map(t => sanitizeTicketForUser(req.user, t)) });
   } catch (err) {
     sendError(res, err, 'Tickets');
+  }
+});
+
+// Single ticket lookup by ID
+app.get('/api/tickets/:id', requireAuth(), ticketModule, async (req, res) => {
+  try {
+    const ticket = await db.getTicketById(req.params.id);
+    if (!ticket || !canSeeTicket(req.user, ticket)) {
+      return res.status(404).json({ success: false, message: 'Ticket not found' });
+    }
+    res.json({ success: true, data: sanitizeTicketForUser(req.user, ticket) });
+  } catch (err) {
+    sendError(res, err, 'Get ticket by id');
+  }
+});
+
+// Dedicated photo attachment upload for support tickets (PNG, JPEG, WebP, max 5MB)
+app.post('/api/tickets/upload', requireAuth(), async (req, res) => {
+  try {
+    const { filename, contentType } = req.body || {};
+    const raw = typeof req.body?.data === 'string' ? req.body.data : '';
+    const base64 = raw.includes(',') ? raw.slice(raw.indexOf(',') + 1) : raw;
+
+    if (!base64) return res.status(400).json({ success: false, message: 'No file data received' });
+    const ALLOWED_TICKET_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!ALLOWED_TICKET_TYPES.includes(contentType)) {
+      return res.status(400).json({ success: false, message: 'Only image files (PNG, JPEG, WebP) can be attached.' });
+    }
+
+    const buf = Buffer.from(base64, 'base64');
+    if (buf.length > 5 * 1024 * 1024) {
+      return res.status(413).json({ success: false, message: 'Image must be under 5MB.' });
+    }
+
+    const EXT_MAP = { 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+    const ext = EXT_MAP[contentType] || (filename ? path.extname(filename).slice(1) : 'jpg');
+    const id = `tkt-${Date.now().toString(36)}${crypto.randomBytes(4).toString('hex')}`;
+    const diskFile = `${id}.${ext}`;
+    const diskPath = path.join(UPLOADS_DIR, diskFile);
+
+    if (!uploadsDiskReady) {
+      return res.status(503).json({ success: false, message: 'Upload storage unavailable.' });
+    }
+    await fs.promises.writeFile(diskPath, buf);
+    const attachmentData = { url: `/uploads/${diskFile}`, filename: cleanText(filename, 150) || diskFile, size: buf.length, mimetype: contentType };
+    res.json({ success: true, url: `/uploads/${diskFile}`, data: attachmentData });
+  } catch (err) {
+    sendError(res, err, 'Ticket upload');
   }
 });
 
@@ -3554,7 +3643,7 @@ app.post('/api/tickets', async (req, res) => {
     if (wait) return tooManyRequests(res, wait, 'Too many tickets from this connection. Please try again later.');
 
     const user = await getAuthenticatedUser(req);
-    const { orderId, farmerName, phone, crop, subject, category, priority, description, orderItems } = req.body || {};
+    const { orderId, farmerName, phone, crop, subject, category, priority, description, orderItems, attachment } = req.body || {};
     const cleanSubject = cleanText(subject, 150);
     const cleanDescription = cleanText(description, 2000);
 
@@ -3562,11 +3651,36 @@ app.post('/api/tickets', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please describe your query or problem.' });
     }
 
+    let verifiedOrderItems = Array.isArray(orderItems)
+      ? orderItems.slice(0, 50).map(item => ({ name: cleanText(item?.name, 120), qty: Number(item?.qty ?? item?.quantity) || 1 }))
+      : [];
+
+    const cleanOrderId = cleanText(orderId, 50);
+    if (cleanOrderId && cleanOrderId !== 'GENERAL-INQUIRY') {
+      const order = await db.getOrderById(cleanOrderId).catch(() => null);
+      if (!order) {
+        return res.status(400).json({ success: false, message: `Order "${cleanOrderId}" not found.` });
+      }
+      if (user) {
+        const orderPhone = normalizePhone(order.customerPhone);
+        const userPhone = normalizePhone(user.phone);
+        const isOwner = (order.userId && order.userId === user.id) || (orderPhone && userPhone && orderPhone === userPhone);
+        if (!isOwner) {
+          return res.status(403).json({ success: false, message: 'This order does not belong to your account.' });
+        }
+      }
+      if (Array.isArray(order.items) && order.items.length) {
+        verifiedOrderItems = order.items.slice(0, 50).map(item => ({ name: cleanText(item?.name, 120), qty: Number(item?.qty ?? item?.quantity) || 1 }));
+      }
+    }
+
     const name = cleanText(farmerName, 80) || user?.name || 'Farmer';
     const now = new Date().toISOString();
+    const cleanAttachment = parseTicketAttachment(attachment);
+
     const newTicket = {
       id: newId('TCK'),
-      orderId: cleanText(orderId, 50) || null,
+      orderId: cleanOrderId || null,
       userId: user?.id || null,
       farmerName: name,
       phone: normalizePhone(phone) || normalizePhone(user?.phone) || '',
@@ -3579,18 +3693,16 @@ app.post('/api/tickets', async (req, res) => {
       assignedToName: 'Unassigned',
       assignedRole: null,
       assignedAt: null,
-      orderItems: Array.isArray(orderItems)
-        ? orderItems.slice(0, 50).map(item => ({ name: cleanText(item?.name, 120), qty: Number(item?.qty ?? item?.quantity) || 0 }))
-        : [],
-      attachment: null,
+      orderItems: verifiedOrderItems,
+      attachment: cleanAttachment,
       createdAt: now,
       updatedAt: now,
       resolvedAt: null,
-      replies: [makeReply(name, 'farmer', cleanDescription || cleanSubject)],
+      replies: [makeReply(name, 'farmer', cleanDescription || cleanSubject, false, cleanAttachment)],
     };
 
     const created = await db.addTicket(newTicket);
-    res.json({ success: true, message: 'Support ticket submitted successfully', ticket: created, data: created });
+    res.json({ success: true, message: 'Support ticket submitted successfully', ticket: sanitizeTicketForUser(user, created), data: sanitizeTicketForUser(user, created) });
   } catch (err) {
     sendError(res, err, 'Create ticket');
   }
@@ -3619,13 +3731,11 @@ app.get('/api/tickets/:id/assign-options', requireAuth('admin'), ticketModule, a
         ticket.userId ? db.getUserById(ticket.userId).catch(() => null) : null,
       ]);
       const active = stores.filter(st => (st.status || 'active') === 'active');
-      // Stores are located once from their address and the point is saved.
       for (const st of active) {
         if (st.geo || !(st.address || st.location)) continue;
         const point = await geocode({ text: st.address || st.location, district: st.location });
         if (point) { st.geo = point; await db.updateStore(st.id, { geo: point }).catch(() => {}); }
       }
-      // The farmer: GPS pin if they shared one, else their pincode/district.
       const place = ticketPlace(order, farmer);
       const point = place?.geo || (place ? await geocode(place) : null);
       const ranked = rankStores(point, active);
@@ -3662,9 +3772,7 @@ app.get('/api/tickets/:id/assign-options', requireAuth('admin'), ticketModule, a
 });
 
 // Super Admin assigns a ticket to an admin of the store it belongs to; a
-// store admin hands their store's ticket to their own staff. The rules are in
-// server/ticketRouting.js; the store and the staff are always re-read here,
-// never taken from the request.
+// store admin hands their store's ticket to their own staff.
 app.put('/api/tickets/:id/assign', requireAuth('admin'), ticketModule, async (req, res) => {
   try {
     const ticket = await db.getTicketById(req.params.id);
@@ -3690,47 +3798,97 @@ app.put('/api/tickets/:id/assign', requireAuth('admin'), ticketModule, async (re
     const where = storeName ? ` (${storeName})` : '';
     const updated = await db.addTicketReply(ticket.id, makeReply('System', 'system',
       `Ticket assigned to ${staff.name} (${staff.role.toUpperCase()})${where} by ${req.user.name}.`));
-    res.json({ success: true, message: 'Ticket assigned successfully', data: updated });
+    res.json({ success: true, message: 'Ticket assigned successfully', data: sanitizeTicketForUser(req.user, updated) });
   } catch (err) {
     sendError(res, err, 'Assign ticket');
   }
 });
 
-app.put('/api/tickets/:id/status', requireAuth('admin', 'employee'), ticketModule, async (req, res) => {
+// Status change endpoint: Admins and staff can change status; farmers can accept resolution (Closed) or reopen (In Progress)
+app.put('/api/tickets/:id/status', requireAuth(), ticketModule, async (req, res) => {
   try {
     const ticket = await db.getTicketById(req.params.id);
     if (!ticket || !canSeeTicket(req.user, ticket)) return res.status(404).json({ success: false, message: 'Ticket not found' });
-    const status = TICKET_STATUSES.find(s => s.toLowerCase() === String(req.body?.status || '').toLowerCase());
+    const requestedStatus = cleanText(req.body?.status, 30);
+    const status = TICKET_STATUSES.find(s => s.toLowerCase() === requestedStatus.toLowerCase());
     if (!status) return res.status(400).json({ success: false, message: 'Unknown ticket status.' });
 
+    // Validate permission by role
+    if (req.user.role === 'farmer') {
+      if (!ownsRecord(req.user, ticket)) {
+        return res.status(403).json({ success: false, message: 'You do not own this ticket.' });
+      }
+      const isAllowedForFarmer = (status === 'Closed' && (ticket.status === 'Resolved' || ticket.status === 'In Progress')) ||
+                                 (status === 'In Progress' && ticket.status === 'Resolved');
+      if (!isAllowedForFarmer) {
+        return res.status(403).json({ success: false, message: 'Farmers can only mark tickets as Closed or Reopen them from Resolved.' });
+      }
+    } else if (!['admin', 'superadmin', 'employee'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to change ticket status.' });
+    }
+
     const now = new Date().toISOString();
-    await db.updateTicket(ticket.id, { status, updatedAt: now, resolvedAt: status === 'Resolved' ? now : ticket.resolvedAt || null });
+    await db.updateTicket(ticket.id, {
+      status,
+      updatedAt: now,
+      resolvedAt: status === 'Resolved' ? now : (status === 'In Progress' ? null : ticket.resolvedAt || null)
+    });
     const updated = await db.addTicketReply(ticket.id, makeReply('System', 'system', `Status changed to ${status.toUpperCase()} by ${req.user.name}.`));
-    res.json({ success: true, data: updated });
+    res.json({ success: true, data: sanitizeTicketForUser(req.user, updated) });
   } catch (err) {
     sendError(res, err, 'Update status');
+  }
+});
+
+// Priority escalation endpoint (Admins only)
+app.put('/api/tickets/:id/priority', requireAuth('admin'), ticketModule, async (req, res) => {
+  try {
+    const ticket = await db.getTicketById(req.params.id);
+    if (!ticket || !canSeeTicket(req.user, ticket)) return res.status(404).json({ success: false, message: 'Ticket not found' });
+    
+    const requestedPriority = cleanText(req.body?.priority, 30);
+    const priority = ['Low', 'Medium', 'High', 'Urgent'].find(p => p.toLowerCase() === requestedPriority.toLowerCase());
+    if (!priority) return res.status(400).json({ success: false, message: 'Valid priority required (Low, Medium, High, Urgent).' });
+
+    const now = new Date().toISOString();
+    await db.updateTicket(ticket.id, { priority, updatedAt: now });
+    const updated = await db.addTicketReply(ticket.id, makeReply('System', 'system', `Priority set to ${priority.toUpperCase()} by ${req.user.name}.`));
+    res.json({ success: true, message: `Priority updated to ${priority}`, data: sanitizeTicketForUser(req.user, updated) });
+  } catch (err) {
+    sendError(res, err, 'Update priority');
   }
 });
 
 app.post('/api/tickets/:id/replies', requireAuth(), ticketModule, async (req, res) => {
   try {
     const text = cleanText(req.body?.text, 2000);
-    if (!text) return res.status(400).json({ success: false, message: 'Reply text cannot be empty' });
+    const attachment = parseTicketAttachment(req.body?.attachment);
+    if (!text && !attachment) return res.status(400).json({ success: false, message: 'Reply text or attachment cannot be empty.' });
     const ticket = await db.getTicketById(req.params.id);
     if (!ticket || !canSeeTicket(req.user, ticket)) return res.status(404).json({ success: false, message: 'Ticket not found' });
 
     const role = req.user.role === 'farmer' ? 'farmer' : req.user.role;
-    const updated = await db.addTicketReply(ticket.id, makeReply(req.user.name || 'User', role, text));
-    if (role !== 'farmer' && ticket.status === 'Open') {
+    const isInternal = role === 'farmer' ? false : Boolean(req.body?.isInternal);
+
+    const reply = makeReply(req.user.name || 'User', role, text, isInternal, attachment);
+    const updated = await db.addTicketReply(ticket.id, reply);
+
+    if (role !== 'farmer' && !isInternal && ticket.status === 'Open') {
       await db.updateTicket(ticket.id, { status: 'In Progress' });
       updated.status = 'In Progress';
     }
-    res.json({ success: true, data: updated });
+
+    if (role === 'farmer' && ticket.status === 'Resolved') {
+      await db.updateTicket(ticket.id, { status: 'In Progress', updatedAt: new Date().toISOString() });
+      updated.status = 'In Progress';
+      await db.addTicketReply(ticket.id, makeReply('System', 'system', 'Ticket automatically reopened by customer response.'));
+    }
+
+    res.json({ success: true, data: sanitizeTicketForUser(req.user, updated) });
   } catch (err) {
     sendError(res, err, 'Add reply');
   }
 });
-
 // ============================================================
 // AGRONOMY EXPERTS & CALLBACK BOOKINGS
 // ============================================================

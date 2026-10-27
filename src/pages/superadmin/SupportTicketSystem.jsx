@@ -19,7 +19,10 @@ import {
   Package,
   Calendar,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Paperclip,
+  Lock,
+  ExternalLink
 } from 'lucide-react'
 import { ticketService } from '../../services/ticketService'
 import { useAuth } from '../../context/AuthContext'
@@ -42,6 +45,7 @@ export default function SupportTicketSystem() {
 
   // Reply state
   const [adminReply, setAdminReply] = useState('')
+  const [isInternalNote, setIsInternalNote] = useState(false)
   const [sendingReply, setSendingReply] = useState(false)
 
   // Load tickets
@@ -81,12 +85,25 @@ export default function SupportTicketSystem() {
   const handleStatusChange = async (newStatus) => {
     if (!selectedTicket) return
     try {
-      const updated = await ticketService.updateTicketStatus(selectedTicket.id, newStatus, 'Super Admin')
+      const updated = await ticketService.updateTicketStatus(selectedTicket.id, newStatus)
       toast.success(`Status updated to ${newStatus}`)
       setSelectedTicket(updated)
       await loadTickets()
     } catch {
       toast.error('Could not update status')
+    }
+  }
+
+  // Update Priority
+  const handlePriorityChange = async (newPriority) => {
+    if (!selectedTicket) return
+    try {
+      const updated = await ticketService.updateTicketPriority(selectedTicket.id, newPriority)
+      toast.success(`Priority updated to ${newPriority}`)
+      setSelectedTicket(updated)
+      await loadTickets()
+    } catch {
+      toast.error('Could not update priority')
     }
   }
 
@@ -100,11 +117,13 @@ export default function SupportTicketSystem() {
       const updated = await ticketService.addReply(selectedTicket.id, {
         senderName: 'Super Admin Executive Desk',
         senderRole: 'superadmin',
-        text: adminReply.trim()
+        text: adminReply.trim(),
+        isInternal: isInternalNote
       })
       setAdminReply('')
+      setIsInternalNote(false)
       setSelectedTicket(updated)
-      toast.success('Reply broadcasted to ticket thread')
+      toast.success(isInternalNote ? 'Internal staff note logged' : 'Reply broadcasted to ticket thread')
     } catch {
       toast.error('Failed to send reply')
     } finally {
@@ -218,6 +237,7 @@ export default function SupportTicketSystem() {
                 placeholder="Search by ticket ID, order ID, farmer name, mobile..."
               />
             </div>
+
             <div className="p2-filter-3">
               <select className="p2-input" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                 <option value="all">All Statuses</option>
@@ -304,6 +324,33 @@ export default function SupportTicketSystem() {
               <div className="p2-hint" style={{ marginTop: 4 }}>
                 Raised by <strong>{selectedTicket.farmerName}</strong> (📱 {selectedTicket.phone})
               </div>
+
+              {/* Problem Description */}
+              {selectedTicket.description && (
+                <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 8, fontSize: '0.85rem', color: '#334155', lineHeight: 1.5, margin: '10px 0 6px', border: '1px solid #e2e8f0' }}>
+                  {selectedTicket.description}
+                </div>
+              )}
+
+              {/* Attachment if present */}
+              {selectedTicket.attachment?.url && (
+                <div style={{ margin: '8px 0', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <img
+                    src={selectedTicket.attachment.url}
+                    alt="Ticket evidence"
+                    style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                    onClick={() => window.open(selectedTicket.attachment.url, '_blank')}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>
+                      📎 Customer Attachment: {selectedTicket.attachment.filename || 'Photo'}
+                    </div>
+                    <a href={selectedTicket.attachment.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.74rem', color: '#15803d', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      Open Full Image <ExternalLink size={11} />
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p2-detail-pad p2-stack">
@@ -327,10 +374,48 @@ export default function SupportTicketSystem() {
                 <TicketAssignControls ticket={selectedTicket} onAssigned={updated => { if (updated) setSelectedTicket(updated); loadTickets() }} />
               </div>
 
-              {/* Quick Status Setter */}
+              {/* Priority & Status Controls */}
+              <div className="p2-grid-2" style={{ gap: 12 }}>
+                <div>
+                  <div className="p2-label" style={{ textTransform: 'uppercase', fontSize: '0.72rem', marginBottom: 6 }}>
+                    Ticket Priority
+                  </div>
+                  <select
+                    className="p2-input"
+                    value={selectedTicket.priority || 'Medium'}
+                    onChange={e => handlePriorityChange(e.target.value)}
+                    style={{ fontWeight: 600 }}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="p2-label" style={{ textTransform: 'uppercase', fontSize: '0.72rem', marginBottom: 6 }}>
+                    Ticket Status
+                  </div>
+                  <select
+                    className="p2-input"
+                    value={selectedTicket.status || 'Open'}
+                    onChange={e => handleStatusChange(e.target.value)}
+                    style={{ fontWeight: 600 }}
+                  >
+                    <option value="Open">Open</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Closed">Closed</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Quick Status Setter Tabs */}
               <div>
                 <div className="p2-label" style={{ textTransform: 'uppercase', fontSize: '0.72rem', marginBottom: 8 }}>
-                  Update Ticket Status
+                  Quick Status Selector
                 </div>
                 <div className="p2-tabs p2-tabs--fill" role="group">
                   {['Pending', 'In Progress', 'Resolved', 'Closed'].map(st => (
@@ -351,26 +436,62 @@ export default function SupportTicketSystem() {
                     rep.senderRole === 'system' ? (
                       <div key={rep.id || idx} className="p2-sys">{rep.text} · {rep.time}</div>
                     ) : (
-                      <div key={rep.id || idx} className={`p2-msg${rep.senderRole === 'farmer' ? '' : ' p2-msg--me'}`}>
-                        <div className="p2-msg-who"><strong>{rep.senderName} ({rep.senderRole?.toUpperCase()})</strong><span>· {rep.time}</span></div>
-                        <div className="p2-bubble">{rep.text}</div>
+                      <div
+                        key={rep.id || idx}
+                        className={`p2-msg${rep.senderRole === 'farmer' ? '' : ' p2-msg--me'}`}
+                        style={rep.isInternal ? { borderLeft: '3px solid #f59e0b', background: '#fffbeb' } : {}}
+                      >
+                        <div className="p2-msg-who">
+                          <strong>{rep.senderName} ({rep.senderRole?.toUpperCase()})</strong>
+                          {rep.isInternal && (
+                            <span className="p2-chip p2-chip--amber" style={{ fontSize: '0.68rem', padding: '2px 6px', marginLeft: 6 }}>
+                              🔒 Internal Staff Note
+                            </span>
+                          )}
+                          <span>· {rep.time}</span>
+                        </div>
+                        <div className="p2-bubble" style={rep.isInternal ? { background: '#fef3c7', color: '#92400e' } : {}}>
+                          {rep.text}
+                          {rep.attachment?.url && (
+                            <div style={{ marginTop: 6 }}>
+                              <img
+                                src={rep.attachment.url}
+                                alt="Attachment"
+                                style={{ maxWidth: 200, maxHeight: 150, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                                onClick={() => window.open(rep.attachment.url, '_blank')}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )
                   ))}
                 </div>
 
-                {/* Super Admin Direct Message / Reply */}
-                <form onSubmit={handleSendReply} className="p2-reply p2-reply--flat">
-                  <input
-                    type="text"
-                    className="p2-input"
-                    value={adminReply}
-                    onChange={e => setAdminReply(e.target.value)}
-                    placeholder="Post reply or executive note to ticket thread..."
-                  />
-                  <button type="submit" className="p2-btn p2-btn--primary" disabled={sendingReply || !adminReply.trim()}>
-                    <Send size={15} /> Send
-                  </button>
+                {/* Super Admin Direct Message / Reply with Internal Note toggle */}
+                <form onSubmit={handleSendReply} className="p2-reply p2-reply--flat" style={{ flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+                    <input
+                      type="text"
+                      className="p2-input"
+                      value={adminReply}
+                      onChange={e => setAdminReply(e.target.value)}
+                      placeholder={isInternalNote ? "Post private staff note (hidden from customer)..." : "Post reply visible to customer..."}
+                      style={{ flex: 1 }}
+                    />
+                    <button type="submit" className="p2-btn p2-btn--primary" disabled={sendingReply || !adminReply.trim()}>
+                      <Send size={15} /> Send
+                    </button>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: isInternalNote ? '#b45309' : '#64748b', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={isInternalNote}
+                      onChange={e => setIsInternalNote(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span>🔒 <strong>Internal Staff Note</strong> (Private — visible to staff only, hidden from farmer)</span>
+                  </label>
                 </form>
               </div>
             </div>

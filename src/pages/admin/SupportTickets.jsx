@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { MessageSquare, Clock, User, AlertCircle, CheckCircle, Hourglass, X, UserCheck, Send, RefreshCw } from 'lucide-react'
+import { MessageSquare, Clock, User, AlertCircle, CheckCircle, Hourglass, X, UserCheck, Send, RefreshCw, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { ticketService } from '../../services/ticketService'
 import { useAuth } from '../../context/AuthContext'
@@ -16,11 +16,10 @@ export default function SupportTickets() {
 
   // Assignment & reply
   const [replyText, setReplyText] = useState('')
+  const [isInternalReply, setIsInternalReply] = useState(false)
   const [submittingReply, setSubmittingReply] = useState(false)
 
   // Load tickets
-  // Read the selection through a ref so loadTickets stays stable; depending
-  // on selectedTicket re-ran the load effect after every refresh, forever.
   const selectedRef = useRef(null)
   useEffect(() => { selectedRef.current = selectedTicket }, [selectedTicket])
 
@@ -101,12 +100,23 @@ export default function SupportTickets() {
 
   const handleStatusUpdate = async (ticketId, newStatus) => {
     try {
-      const updated = await ticketService.updateTicketStatus(ticketId, newStatus, user?.name || 'Admin')
+      const updated = await ticketService.updateTicketStatus(ticketId, newStatus)
       toast.success(`Ticket marked as ${newStatus}`)
       setSelectedTicket(updated)
       await loadTickets()
     } catch {
       toast.error('Failed to update status')
+    }
+  }
+
+  const handlePriorityUpdate = async (ticketId, newPriority) => {
+    try {
+      const updated = await ticketService.updateTicketPriority(ticketId, newPriority)
+      toast.success(`Ticket priority set to ${newPriority}`)
+      setSelectedTicket(updated)
+      await loadTickets()
+    } catch {
+      toast.error('Failed to update priority')
     }
   }
 
@@ -120,11 +130,13 @@ export default function SupportTickets() {
       const updated = await ticketService.addReply(selectedTicket.id, {
         senderName: user?.name || 'Store Admin',
         senderRole: 'admin',
-        text: replyText.trim()
+        text: replyText.trim(),
+        isInternal: isInternalReply
       })
       setReplyText('')
+      setIsInternalReply(false)
       setSelectedTicket(updated)
-      toast.success('Reply recorded')
+      toast.success(isInternalReply ? 'Internal staff note recorded' : 'Reply recorded')
     } catch {
       toast.error('Failed to post reply')
     } finally {
@@ -160,101 +172,103 @@ export default function SupportTickets() {
         </button>
       </div>
 
-      {/* Stats (tap to filter) */}
+      {/* KPI Stats */}
       <div className="p2-stats p2-stats--4">
-        {stats.map(stat => (
+        {stats.map(s => (
           <button
-            key={stat.label}
+            key={s.label}
             type="button"
-            className={`p2-stat ${stat.tone}`}
-            aria-pressed={stat.filter !== null && filterStatus === stat.filter}
-            onClick={() => stat.filter !== null && setFilterStatus(stat.filter)}
+            className={`p2-stat ${s.tone}`}
+            aria-pressed={s.filter !== null && filterStatus === s.filter}
+            onClick={() => s.filter !== null && setFilterStatus(s.filter)}
           >
-            <span className="p2-stat-icon">{stat.icon}</span>
-            <span className="p2-stat-value">{stat.value}</span>
-            <span className="p2-stat-label">{stat.label}</span>
+            <span className="p2-stat-icon">{s.icon}</span>
+            <span className="p2-stat-value">{s.value}</span>
+            <span className="p2-stat-label">{s.label}</span>
           </button>
         ))}
       </div>
 
       <div className="p2-split">
-        {/* Ticket queue */}
+        {/* Left Column: Tickets Queue */}
         <div className="p2-card p2-queue">
           <div className="p2-queue-head">
             <div className="p2-search">
-              <MessageSquare size={16} />
               <input
                 type="text"
-                className="p2-input"
-                placeholder="Search by ticket ID, order ID, farmer name..."
+                placeholder="Search ticket ID, order ID, farmer name, subject..."
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
+                className="p2-input"
               />
             </div>
-            <div className="p2-grid-2 p2-grid-2--always">
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="p2-input">
+            <div className="p2-filter-2">
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="p2-input">
                 <option value="all">All Status</option>
-                <option value="resolved">Resolved</option>
+                <option value="pending">Pending</option>
                 <option value="in-progress">In Progress</option>
-                <option value="pending">Pending / Open</option>
+                <option value="resolved">Resolved</option>
                 <option value="rejected">Rejected</option>
               </select>
-              <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className="p2-input">
+              <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="p2-input">
                 <option value="all">All Priority</option>
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
                 <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
               </select>
             </div>
           </div>
 
           <div className="p2-queue-list">
-            {loading && tickets.length === 0 ? (
-              <div className="p2-loading">Loading…</div>
+            {loading ? (
+              <div className="p2-loading">Loading tickets...</div>
             ) : filtered.length === 0 ? (
               <div className="p2-empty">
-                <div className="p2-empty-icon"><MessageSquare size={28} /></div>
-                <h3>No tickets found</h3>
-                <p>Adjust your filters or search criteria</p>
+                <MessageSquare size={28} />
+                <p>No tickets found</p>
               </div>
             ) : (
-              filtered.map(ticket => (
-                <button
-                  key={ticket.id}
-                  type="button"
-                  className="p2-list-item"
-                  aria-current={selectedTicket?.id === ticket.id}
-                  onClick={() => setSelectedTicket(ticket)}
-                >
-                  <span className="p2-list-top">
-                    <span className="p2-list-id">{ticket.id}</span>
-                    <span className="p2-list-chips">
-                      <span className={`p2-chip ${priorityChip(ticket.priority)}`}>{(ticket.priority || 'MEDIUM').toUpperCase()}</span>
-                      <span className={`p2-chip ${statusChip(ticket.status)}`}>{(ticket.status || 'PENDING').toUpperCase()}</span>
+              filtered.map((ticket) => {
+                const sColor = getStatusColor(ticket.status)
+                const IconComponent = sColor.icon
+                const isSelected = selectedTicket?.id === ticket.id
+                return (
+                  <button
+                    key={ticket.id}
+                    type="button"
+                    className="p2-list-item"
+                    aria-current={isSelected}
+                    onClick={() => setSelectedTicket(ticket)}
+                  >
+                    <span className="p2-list-top">
+                      <span className="p2-list-id">{ticket.id}</span>
+                      <span className="p2-list-chips">
+                        <span className={`p2-chip ${priorityChip(ticket.priority)}`}>{(ticket.priority || 'MEDIUM').toUpperCase()}</span>
+                        <span className={`p2-chip ${statusChip(ticket.status)}`}>{(ticket.status || 'PENDING').toUpperCase()}</span>
+                      </span>
                     </span>
-                  </span>
-                  <span className="p2-list-title">{ticket.subject || ticket.title}</span>
-                  <span className="p2-list-desc">{ticket.description}</span>
-                  <span className="p2-list-meta">
-                    <span><User size={13} /> {ticket.farmerName || ticket.reporter}</span>
-                    <span><Clock size={13} /> {new Date(ticket.createdAt || ticket.createdDate).toLocaleDateString('en-IN')}</span>
-                  </span>
-                  {ticket.orderId && (
-                    <span className="p2-list-assigned p2-list-order">Order: {ticket.orderId}</span>
-                  )}
-                  {ticket.assignedToName && ticket.assignedToName !== 'Unassigned' && (
+                    <span className="p2-list-title">{ticket.subject || ticket.title}</span>
+                    <span className="p2-list-meta">
+                      <span><User size={12} /> {ticket.farmerName || ticket.reporter}</span>
+                      <span>· {ticket.category}</span>
+                    </span>
+                    {ticket.orderId && (
+                      <span className="p2-list-assigned p2-list-order">Order #{ticket.orderId}</span>
+                    )}
                     <span className="p2-list-assigned">
-                      <UserCheck size={12} /> Assigned: {ticket.assignedToName}
+                      {ticket.assignedToName && ticket.assignedToName !== 'Unassigned'
+                        ? <>Assigned: <strong>{ticket.assignedToName}</strong></>
+                        : <span className="p2-tone-red">⚠️ Unassigned</span>}
                     </span>
-                  )}
-                </button>
-              ))
+                  </button>
+                )
+              })
             )}
           </div>
         </div>
 
-        {/* Ticket Details Panel */}
+        {/* Right Column: Selected Ticket Details */}
         {selectedTicket ? (
           <div className="p2-card p2-thread">
             <div className="p2-thread-head">
@@ -265,7 +279,34 @@ export default function SupportTickets() {
               </div>
               <h2>{selectedTicket.subject || selectedTicket.title}</h2>
 
-              <dl className="p2-meta-grid">
+              {/* Problem Description */}
+              {selectedTicket.description && (
+                <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 8, fontSize: '0.85rem', color: '#334155', lineHeight: 1.5, margin: '8px 0', border: '1px solid #e2e8f0' }}>
+                  {selectedTicket.description}
+                </div>
+              )}
+
+              {/* Attachment if present */}
+              {selectedTicket.attachment?.url && (
+                <div style={{ margin: '8px 0', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <img
+                    src={selectedTicket.attachment.url}
+                    alt="Ticket evidence"
+                    style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                    onClick={() => window.open(selectedTicket.attachment.url, '_blank')}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>
+                      📎 Customer Attachment: {selectedTicket.attachment.filename || 'Photo'}
+                    </div>
+                    <a href={selectedTicket.attachment.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.74rem', color: '#15803d', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      Open Full Image <ExternalLink size={11} />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              <dl className="p2-meta-grid" style={{ marginTop: 10 }}>
                 <div>
                   <dt>Reporter</dt>
                   <dd>{selectedTicket.farmerName || selectedTicket.reporter}</dd>
@@ -291,10 +332,46 @@ export default function SupportTickets() {
                 <TicketAssignControls ticket={selectedTicket} compact onAssigned={updated => { if (updated) setSelectedTicket(updated); loadTickets() }} />
               </div>
 
-              {/* Status Update Buttons */}
+              {/* Priority & Status Controls */}
+              <div className="p2-grid-2" style={{ gap: 12 }}>
+                <div>
+                  <div className="p2-label" style={{ textTransform: 'uppercase', fontSize: '0.72rem', marginBottom: 6 }}>
+                    Ticket Priority
+                  </div>
+                  <select
+                    className="p2-input"
+                    value={selectedTicket.priority || 'Medium'}
+                    onChange={e => handlePriorityUpdate(selectedTicket.id, e.target.value)}
+                    style={{ fontWeight: 600 }}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="p2-label" style={{ textTransform: 'uppercase', fontSize: '0.72rem', marginBottom: 6 }}>
+                    Ticket Status
+                  </div>
+                  <select
+                    className="p2-input"
+                    value={selectedTicket.status || 'Open'}
+                    onChange={e => handleStatusUpdate(selectedTicket.id, e.target.value)}
+                    style={{ fontWeight: 600 }}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Status Update Quick Tabs */}
               <div>
                 <div className="p2-label" style={{ textTransform: 'uppercase', fontSize: '0.72rem', marginBottom: 8 }}>
-                  Update Status
+                  Quick Status
                 </div>
                 <div className="p2-tabs p2-tabs--fill" role="group">
                   {['Pending', 'In Progress', 'Resolved', 'Rejected'].map(status => (
@@ -314,32 +391,68 @@ export default function SupportTickets() {
               {/* Discussion Thread */}
               <div>
                 <div className="p2-label" style={{ textTransform: 'uppercase', fontSize: '0.72rem', marginBottom: 8 }}>
-                  Message Thread
+                  Message Thread ({selectedTicket.replies?.length || 0})
                 </div>
                 <div className="p2-messages p2-messages--compact">
                   {selectedTicket.replies?.map((rep, idx) => (
                     rep.senderRole === 'system' ? (
                       <div key={rep.id || idx} className="p2-sys">{rep.text} · {rep.time}</div>
                     ) : (
-                      <div key={rep.id || idx} className={`p2-msg${rep.senderRole === 'farmer' ? '' : ' p2-msg--me'}`}>
-                        <div className="p2-msg-who"><strong>{rep.senderName}</strong><span>· {rep.time}</span></div>
-                        <div className="p2-bubble">{rep.text}</div>
+                      <div
+                        key={rep.id || idx}
+                        className={`p2-msg${rep.senderRole === 'farmer' ? '' : ' p2-msg--me'}`}
+                        style={rep.isInternal ? { borderLeft: '3px solid #f59e0b', background: '#fffbeb' } : {}}
+                      >
+                        <div className="p2-msg-who">
+                          <strong>{rep.senderName}</strong>
+                          {rep.isInternal && (
+                            <span className="p2-chip p2-chip--amber" style={{ fontSize: '0.68rem', padding: '2px 6px', marginLeft: 6 }}>
+                              🔒 Internal Staff Note
+                            </span>
+                          )}
+                          <span>· {rep.time}</span>
+                        </div>
+                        <div className="p2-bubble" style={rep.isInternal ? { background: '#fef3c7', color: '#92400e' } : {}}>
+                          {rep.text}
+                          {rep.attachment?.url && (
+                            <div style={{ marginTop: 6 }}>
+                              <img
+                                src={rep.attachment.url}
+                                alt="Attachment"
+                                style={{ maxWidth: 200, maxHeight: 150, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                                onClick={() => window.open(rep.attachment.url, '_blank')}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )
                   ))}
                 </div>
 
-                <form onSubmit={handleAddReply} className="p2-reply p2-reply--flat">
-                  <input
-                    type="text"
-                    className="p2-input"
-                    value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
-                    placeholder="Reply as Admin..."
-                  />
-                  <button type="submit" className="p2-btn p2-btn--primary" disabled={submittingReply || !replyText.trim()}>
-                    <Send size={15} /> Send
-                  </button>
+                <form onSubmit={handleAddReply} className="p2-reply p2-reply--flat" style={{ flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+                    <input
+                      type="text"
+                      className="p2-input"
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      placeholder={isInternalReply ? "Reply as private staff note..." : "Reply visible to customer..."}
+                      style={{ flex: 1 }}
+                    />
+                    <button type="submit" className="p2-btn p2-btn--primary" disabled={submittingReply || !replyText.trim()}>
+                      <Send size={15} /> Send
+                    </button>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: isInternalReply ? '#b45309' : '#64748b', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={isInternalReply}
+                      onChange={e => setIsInternalReply(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span>🔒 <strong>Internal Staff Note</strong> (Private — visible to staff only, hidden from farmer)</span>
+                  </label>
                 </form>
               </div>
             </div>

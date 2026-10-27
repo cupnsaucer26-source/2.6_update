@@ -45,7 +45,7 @@ const ADMIN_NAV = [
       { to: '/admin/support-tickets', icon: <Ticket size={16} />, label: 'Support Tickets', moduleKey: 'support-tickets' },
       { to: '/admin/soil-reports', icon: <FlaskConical size={16} />, label: 'Soil Test Reports', moduleKey: 'soil-reports' },
       { to: '/admin/agronomy-bookings', icon: <Sprout size={16} />, label: 'Agronomy Bookings', moduleKey: 'employees' },
-      { to: '/admin/tickets', icon: <Bell size={16} />, label: 'Notifications', moduleKey: 'tickets' },
+      { to: '/admin/tickets', icon: <Ticket size={16} />, label: 'Assigned Tickets', moduleKey: 'tickets' },
       { to: '/admin/chat',    icon: <MessageCircle size={16} />, label: 'Chat Records', moduleKey: 'chat' },
     ]
   }

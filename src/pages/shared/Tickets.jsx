@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Ticket, User, CheckCircle2, Clock, AlertTriangle, RefreshCw, Send, Filter, Search } from 'lucide-react'
+import { Ticket, User, CheckCircle2, Clock, AlertTriangle, RefreshCw, Send, Filter, Search, ExternalLink } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { ticketService } from '../../services/ticketService'
 
@@ -11,6 +11,7 @@ export default function Tickets() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [replyText, setReplyText] = useState({})
+  const [isInternalReply, setIsInternalReply] = useState({})
   const [loading, setLoading] = useState(true)
 
   const loadTickets = useCallback(async () => {
@@ -39,14 +40,17 @@ export default function Tickets() {
     const text = replyText[id]
     if (!text?.trim()) return
 
+    const isInternal = Boolean(isInternalReply[id])
     try {
       await ticketService.addReply(id, {
-        senderName: user?.name || 'Assigned Agronomist',
-        senderRole: 'employee',
-        text: text.trim()
+        senderName: user?.name || 'Assigned Staff',
+        senderRole: user?.role || 'employee',
+        text: text.trim(),
+        isInternal
       })
       setReplyText(r => ({ ...r, [id]: '' }))
-      toast.success('Reply submitted to customer and Super Admin')
+      setIsInternalReply(r => ({ ...r, [id]: false }))
+      toast.success(isInternal ? 'Internal staff note added' : 'Reply submitted to customer and Super Admin')
       await loadTickets()
     } catch {
       toast.error('Could not send reply')
@@ -55,7 +59,7 @@ export default function Tickets() {
 
   const updateStatus = async (id, status) => {
     try {
-      await ticketService.updateTicketStatus(id, status, user?.name || 'Employee')
+      await ticketService.updateTicketStatus(id, status)
       toast.success(`Ticket marked as ${status}`)
       await loadTickets()
     } catch {
@@ -98,14 +102,14 @@ export default function Tickets() {
 
   return (
     <div className="animate-fade-in" style={{ padding: '8px 0 32px' }}>
-      <div className="page-header" style={{ marginBottom: 18 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: '20px' }}>
         <div>
-          <div className="eyebrow">Employee Operational Desk</div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Ticket size={26} color="#16a34a" /> Assigned Support Tickets
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--brand-700)', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+            <Ticket size={24} /> Support Tickets &amp; Inquiries
           </h1>
-          <p>
-            Monitor and resolve farmer tickets delegated to you by Super Admin and Store Managers.
+          <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+            {user?.role === 'employee' ? 'Directly handle customer support requests and agronomic doubts assigned to you' : 'Store tickets and staff assignments'}
           </p>
         </div>
 
@@ -115,85 +119,73 @@ export default function Tickets() {
           className="btn btn-secondary"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh Queue
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>
 
-      {/* Filter and Tab Bar */}
-      <div style={{ background: '#fff', padding: '14px 18px', borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 20 }}>
-        {/* Assignment tab */}
-        <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 6, padding: 2 }}>
-          <button
-            type="button"
-            onClick={() => setFilterMode('assigned_to_me')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 5,
-              border: 'none',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: filterMode === 'assigned_to_me' ? '#16a34a' : 'transparent',
-              color: filterMode === 'assigned_to_me' ? '#fff' : '#64748b'
-            }}
+      {/* Filter bar */}
+      <div className="card" style={{ padding: '14px 18px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="p2-tabs" style={{ display: 'inline-flex' }}>
+            <button
+              type="button"
+              className="p2-tab"
+              aria-selected={filterMode === 'assigned_to_me'}
+              onClick={() => setFilterMode('assigned_to_me')}
+            >
+              Assigned to Me
+            </button>
+            <button
+              type="button"
+              className="p2-tab"
+              aria-selected={filterMode === 'all'}
+              onClick={() => setFilterMode('all')}
+            >
+              All Visible Tickets ({tickets.length})
+            </button>
+          </div>
+
+          <select
+            className="form-input"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            style={{ width: 'auto', minWidth: 130, padding: '6px 10px', fontSize: '0.85rem' }}
           >
-            Assigned to Me ({tickets.filter(t => t.assignedToId === (user?.id || user?._id) || (ticketService && t.assignedRole === 'employee')).length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode('all')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 5,
-              border: 'none',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: filterMode === 'all' ? '#16a34a' : 'transparent',
-              color: filterMode === 'all' ? '#fff' : '#64748b'
-            }}
-          >
-            All Operational Tickets ({tickets.length})
-          </button>
+            <option value="all">All Statuses</option>
+            <option value="open">Open / Pending</option>
+            <option value="progress">In Progress</option>
+            <option value="resolved">Resolved / Closed</option>
+          </select>
         </div>
 
-        {/* Status Dropdown */}
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: '0.85rem', background: '#fff' }}
-        >
-          <option value="all">All Statuses</option>
-          <option value="open">Open / Pending</option>
-          <option value="progress">In Progress</option>
-          <option value="resolved">Resolved</option>
-        </select>
-
-        {/* Search */}
-        <div style={{ position: 'relative', flex: '1 1 200px' }}>
-          <Search size={15} style={{ position: 'absolute', left: 10, top: 10, color: '#94a3b8' }} />
+        <div style={{ position: 'relative', minWidth: 240, flex: '1 1 240px', maxWidth: 360 }}>
+          <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
           <input
             type="text"
+            className="form-input"
+            placeholder="Search tickets, orders, crops..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search ticket ID, order ID, farmer..."
-            style={{ width: '100%', padding: '7px 12px 7px 32px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+            style={{ paddingLeft: 32, fontSize: '0.85rem', width: '100%' }}
           />
         </div>
       </div>
 
-      {/* Tickets List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Ticket List */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading support tickets...</div>
+          <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+            <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px' }} />
+            Loading assigned support tickets...
+          </div>
         ) : filteredTickets.length === 0 ? (
-          <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-            <Ticket size={36} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
-            <h3 style={{ margin: '0 0 6px', color: '#475569' }}>No tickets found in this queue</h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>
+          <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+            <Ticket size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
+            <h3 style={{ margin: '0 0 6px', color: '#334155' }}>No tickets found</h3>
+            <p style={{ margin: 0, fontSize: '0.88rem' }}>
               {filterMode === 'assigned_to_me'
-                ? 'Super Admin has not assigned any tickets to your account yet.'
-                : 'No tickets match the search/filter criteria.'}
+                ? 'No tickets currently assigned to you. Click "All Visible Tickets" to see the store queue.'
+                : 'No tickets match the selected filters.'}
             </p>
           </div>
         ) : (
@@ -239,62 +231,115 @@ export default function Tickets() {
 
               {/* Problem Description */}
               {ticket.description && (
-                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 8, fontSize: '0.88rem', color: '#334155', lineHeight: 1.5, marginBottom: '14px', border: '1px solid #e2e8f0' }}>
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 8, fontSize: '0.88rem', color: '#334155', lineHeight: 1.5, marginBottom: '12px', border: '1px solid #e2e8f0' }}>
                   {ticket.description}
+                </div>
+              )}
+
+              {/* Attached Photo */}
+              {ticket.attachment?.url && (
+                <div style={{ marginBottom: 14, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <img
+                    src={ticket.attachment.url}
+                    alt="Ticket attachment"
+                    style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                    onClick={() => window.open(ticket.attachment.url, '_blank')}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
+                      📎 Customer Attachment: {ticket.attachment.filename || 'Photo'}
+                    </div>
+                    <a href={ticket.attachment.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.74rem', color: '#15803d', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      Open full size <ExternalLink size={11} />
+                    </a>
+                  </div>
                 </div>
               )}
 
               {/* Replies History */}
               {ticket.replies && ticket.replies.length > 0 && (
                 <div style={{ marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {ticket.replies.map((r, i) => (
-                    <div
-                      key={r.id || i}
-                      style={{
-                        background: r.senderRole === 'employee' ? 'rgba(34,197,94,0.08)' : '#f8fafc',
-                        border: '1px solid rgba(0,0,0,0.06)',
-                        borderRadius: 'var(--radius-md)',
-                        padding: '10px 14px',
-                        fontSize: '0.84rem'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, fontSize: '0.72rem', color: '#64748b' }}>
-                        <strong>{r.senderName || (typeof r === 'string' ? 'Note' : 'Message')}</strong>
-                        <span>{r.time || ''}</span>
+                  {ticket.replies.map((r, i) => {
+                    const isInternal = typeof r !== 'string' && r.isInternal
+                    return (
+                      <div
+                        key={r.id || i}
+                        style={{
+                          background: isInternal ? '#fffbeb' : r.senderRole === 'employee' ? 'rgba(34,197,94,0.08)' : '#f8fafc',
+                          border: isInternal ? '1px solid #fde68a' : '1px solid rgba(0,0,0,0.06)',
+                          borderLeft: isInternal ? '3px solid #f59e0b' : undefined,
+                          borderRadius: 'var(--radius-md)',
+                          padding: '10px 14px',
+                          fontSize: '0.84rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2, fontSize: '0.72rem', color: '#64748b' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <strong>{r.senderName || (typeof r === 'string' ? 'Note' : 'Message')}</strong>
+                            {isInternal && (
+                              <span style={{ background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: 4, fontWeight: 700, fontSize: '0.68rem' }}>
+                                🔒 Internal Note
+                              </span>
+                            )}
+                          </span>
+                          <span>{r.time || ''}</span>
+                        </div>
+                        <div style={{ color: isInternal ? '#92400e' : '#1e293b' }}>
+                          {typeof r === 'string' ? r : r.text}
+                          {r.attachment?.url && (
+                            <div style={{ marginTop: 6 }}>
+                              <img
+                                src={r.attachment.url}
+                                alt="Attachment"
+                                style={{ maxWidth: 180, maxHeight: 120, objectFit: 'cover', borderRadius: 4, border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                                onClick={() => window.open(r.attachment.url, '_blank')}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ color: '#1e293b' }}>
-                        {typeof r === 'string' ? r : r.text}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
 
               {/* Employee Actions: Status Updater & Reply */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Mark Status:</span>
-                  <button
-                    type="button"
-                    onClick={() => updateStatus(ticket.id, 'In Progress')}
-                    style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: 4, border: '1px solid #3b82f6', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    In Progress
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateStatus(ticket.id, 'Resolved')}
-                    style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: 4, border: '1px solid #22c55e', background: '#f0fdf4', color: '#15803d', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    Resolved
-                  </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Mark Status:</span>
+                    <button
+                      type="button"
+                      onClick={() => updateStatus(ticket.id, 'In Progress')}
+                      style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: 4, border: '1px solid #3b82f6', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      In Progress
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateStatus(ticket.id, 'Resolved')}
+                      style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: 4, border: '1px solid #22c55e', background: '#f0fdf4', color: '#15803d', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Resolved
+                    </button>
+                  </div>
+
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: isInternalReply[ticket.id] ? '#b45309' : '#64748b', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(isInternalReply[ticket.id])}
+                      onChange={e => setIsInternalReply({ ...isInternalReply, [ticket.id]: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span>🔒 Internal Staff Note (hidden from customer)</span>
+                  </label>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, flex: '1 1 340px', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: 8, width: '100%' }}>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="Type advisory reply or resolution note..."
+                    placeholder={isInternalReply[ticket.id] ? "Type private staff handover / internal note..." : "Type advisory reply or resolution message to customer..."}
                     value={replyText[ticket.id] || ''}
                     onChange={e => setReplyText({ ...replyText, [ticket.id]: e.target.value })}
                     style={{ flex: 1, padding: '7px 12px', fontSize: '0.85rem' }}
@@ -305,7 +350,7 @@ export default function Tickets() {
                     onClick={() => addReply(ticket.id)}
                     style={{ padding: '7px 16px', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
                   >
-                    <Send size={14} /> Reply
+                    <Send size={14} /> Send
                   </button>
                 </div>
               </div>
