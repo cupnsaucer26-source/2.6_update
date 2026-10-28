@@ -2359,12 +2359,23 @@ app.post('/api/delivery/verify-otp', requireAuth('delivery', 'admin'), async (re
 // name and phone come from the agent's account, never from the request.
 app.put('/api/orders/:id/assign', requireAuth('admin'), requireModule('orders'), async (req, res) => {
   try {
+    const existing = await db.getOrderById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (['Delivered', 'Cancelled'].includes(existing.deliveryStatus) || existing.status === 'Cancelled') {
+      return res.status(400).json({ success: false, message: 'Cannot assign delivery to a delivered or cancelled order.' });
+    }
     const agentId = String(req.body?.deliveryUserId || '');
     let updates = { assignedDeliveryBoy: 'Unassigned', deliveryBoyPhone: '', assignedDeliveryUserId: '' };
     if (agentId) {
       const agent = await db.getUserById(agentId);
       if (!agent || agent.role !== 'delivery' || (agent.status && agent.status !== 'active')) {
         return res.status(400).json({ success: false, message: 'Pick an active delivery staff member.' });
+      }
+      if (agent.storeId) {
+        const store = await db.getStoreById(agent.storeId);
+        if (store && (store.status || 'active') !== 'active') {
+          return res.status(400).json({ success: false, message: 'This store branch is currently inactive.' });
+        }
       }
       if (req.user.role === 'admin' && req.user.storeId && agent.storeId && agent.storeId !== req.user.storeId) {
         return res.status(400).json({ success: false, message: 'Pick a delivery staff member from your own store.' });
@@ -2373,7 +2384,6 @@ app.put('/api/orders/:id/assign', requireAuth('admin'), requireModule('orders'),
     }
     updates.updatedAt = new Date().toISOString();
     const order = await db.updateOrder(req.params.id, updates);
-    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     res.json({ success: true, data: withoutDeliveryOtp(order) });
   } catch (err) {
     sendError(res, err, 'Assign delivery');
@@ -2399,6 +2409,14 @@ app.put('/api/orders/:id/status', requireAuth('admin', 'delivery'), requireModul
     // agent's order Delivered; admins may still close orders directly.
     if (nextStatus === 'Delivered' && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Verify the customer OTP to complete this delivery.' });
+    }
+
+    if (existing.deliveryStatus === 'Delivered' && req.user.role !== 'admin') {
+      return res.status(400).json({ success: false, message: 'This order is already delivered.' });
+    }
+
+    if (existing.deliveryStatus === 'Delivered' && nextStatus === 'Cancelled') {
+      return res.status(400).json({ success: false, message: 'Delivered orders cannot be cancelled.' });
     }
 
     const updates = {};
@@ -3379,8 +3397,13 @@ app.post('/api/billing/invoice', requireAuth('billing', 'admin'), requireModule(
     if (!userStoreCode && userStoreId) {
       try {
         const storeRec = await db.getStoreById(userStoreId);
+        if (storeRec && (storeRec.status || 'active') !== 'active') {
+          throw new HttpError(400, 'This store branch is currently inactive. Invoices cannot be issued.');
+        }
         userStoreCode = storeRec?.code || '';
-      } catch (_) {}
+      } catch (err) {
+        if (err instanceof HttpError) throw err;
+      }
     }
 
     // Enforce SAM <STORE_CODE> <INTEGER> format

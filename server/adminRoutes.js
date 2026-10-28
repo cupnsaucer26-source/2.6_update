@@ -52,10 +52,19 @@ async function guardSuperadmin(req, picked, targetId) {
     if (picked.role === 'superadmin' || picked.permissions !== undefined) {
         throw new HttpError(403, 'Only the super admin can grant super admin access or permissions.');
     }
+    if (picked.role === 'admin' && (!targetId || targetId !== req.user.id)) {
+        throw new HttpError(403, 'Only the super admin can create or manage Store Admins.');
+    }
     if (targetId) {
         const target = await db.getUserById(targetId);
         if (target?.role === 'superadmin') {
             throw new HttpError(403, 'Only the super admin can change this account.');
+        }
+        if (target?.role === 'admin' && target.id !== req.user.id) {
+            throw new HttpError(403, 'Only the super admin can modify another Store Admin account.');
+        }
+        if (req.user.role === 'admin' && req.user.storeId && target?.storeId && target.storeId !== req.user.storeId) {
+            throw new HttpError(403, 'You cannot modify users from another store.');
         }
     }
 }
@@ -72,6 +81,11 @@ router.get('/users', requireModule(['users', 'orders', 'products']), async (req,
           const { role, sortBy, search } = req.query;
           // Super admin accounts are never listed: not their number, not that they exist.
           let users = (await db.getUsers()).filter(u => u.role !== 'superadmin');
+
+          // Store Admins see customers plus staff from their own store branch
+          if (req.user.role === 'admin' && req.user.storeId) {
+              users = users.filter(u => u.role === 'farmer' || u.storeId === req.user.storeId || u.id === req.user.id);
+          }
 
       if (role && role !== 'all') {
               users = users.filter((u) => u.role === role);
@@ -100,6 +114,13 @@ router.post('/users', requireModule('users'), async (req, res) => {
           }
           const picked = pickUserFields(req.body);
           await guardSuperadmin(req, picked);
+          if (req.user.role === 'admin' && req.user.storeId) {
+              picked.storeId = req.user.storeId;
+              picked.storeName = req.user.storeName;
+              picked.storeLocation = req.user.storeLocation;
+              picked.assignedAdminId = req.user.id;
+              picked.assignedAdminName = req.user.name;
+          }
           const user = await db.createUser({ ...picked, createdBy: req.user.role });
           res.json({ success: true, user });
     } catch (err) {
@@ -115,6 +136,10 @@ router.put('/users/:id', requireModule('users'), async (req, res) => {
           // Stop an admin locking themselves out of the admin panel.
           if (req.params.id === req.user.id && ((updates.role && updates.role !== req.user.role) || (updates.status && updates.status !== 'active'))) {
                 throw new HttpError(400, 'You cannot remove your own admin access.');
+          }
+
+          if (req.user.role === 'admin' && req.user.storeId && updates.storeId && updates.storeId !== req.user.storeId) {
+                throw new HttpError(403, 'You cannot reassign users to another store.');
           }
 
           const user = await db.updateUser(req.params.id, updates);

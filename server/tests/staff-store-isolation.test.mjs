@@ -204,6 +204,135 @@ test('Staff, Store & Multi-Store Isolation Test Suite', async (t) => {
     assert.ok(historyBody.data.every(inv => inv.storeId === storeA.id), 'Billing staff received invoices from another store!');
   });
 
+  await t.test('7. Store Admin A cannot create an admin account', async () => {
+    const res = await fetch(`${BASE}/api/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminA.token}`
+      },
+      body: JSON.stringify({
+        name: 'Rogue Admin',
+        phone: '9842099991',
+        role: 'admin',
+        password: 'SathyamStaff#2026!'
+      })
+    });
+    assert.equal(res.status, 403, 'Store Admin creating another admin should be 403 Forbidden');
+  });
+
+  await t.test('8. Store Admin A creating employee automatically scopes to Store A', async () => {
+    const res = await fetch(`${BASE}/api/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminA.token}`
+      },
+      body: JSON.stringify({
+        name: 'Auto-Scoped Worker',
+        phone: '9842099992',
+        role: 'employee',
+        password: 'SathyamStaff#2026!'
+      })
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.user.storeId, storeA.id, 'Created employee must be scoped to Store A');
+    assert.equal(body.user.assignedAdminId, adminA.id, 'Created employee must report to Store Admin A');
+    await db.deleteUser(body.user.id);
+  });
+
+  await t.test('9. Store Admin A cannot modify or delete Store Admin B', async () => {
+    const putRes = await fetch(`${BASE}/api/admin/users/${adminB.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminA.token}`
+      },
+      body: JSON.stringify({ name: 'Tampered Name' })
+    });
+    assert.equal(putRes.status, 403, 'Store Admin A modifying Admin B should be 403 Forbidden');
+
+    const delRes = await fetch(`${BASE}/api/admin/users/${adminB.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminA.token}` }
+    });
+    assert.equal(delRes.status, 403, 'Store Admin A deleting Admin B should be 403 Forbidden');
+  });
+
+  await t.test('10. Store Admin A cannot reassign an employee to Store B', async () => {
+    const putRes = await fetch(`${BASE}/api/admin/users/${employeeA.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminA.token}`
+      },
+      body: JSON.stringify({ storeId: storeB.id })
+    });
+    assert.equal(putRes.status, 403, 'Store Admin A reassigning employee to Store B should be 403 Forbidden');
+  });
+
+  await t.test('11. Inactive store cannot issue POS billing invoices', async () => {
+    // Create an inactive store
+    const inactiveStore = await db.createStore({
+      name: 'Closed Store Hub',
+      code: 'CLS01',
+      location: 'Closed',
+      status: 'inactive'
+    });
+    const inactiveBilling = await makeUser('billing', 'Closed Cashier', '9842099993', inactiveStore);
+
+    const invRes = await fetch(`${BASE}/api/billing/invoice`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${inactiveBilling.token}`
+      },
+      body: JSON.stringify({
+        customerName: 'Walk-in',
+        paymentMode: 'Cash',
+        items: [{ name: 'Item', qty: 1, price: 100, gstRate: 18 }]
+      })
+    });
+    assert.equal(invRes.status, 400, 'Inactive store invoice must be rejected 400');
+    const invBody = await invRes.json();
+    assert.match(invBody.message, /inactive/i);
+
+    await db.deleteStore(inactiveStore.id);
+    await db.deleteUser(inactiveBilling.id);
+  });
+
+  await t.test('12. Delivered orders cannot be re-assigned or cancelled', async () => {
+    const order = await db.createOrder({
+      customerName: 'Completed Customer',
+      customerPhone: '9876543210',
+      total: 300,
+      subtotal: 300,
+      deliveryStatus: 'Delivered',
+      status: 'Delivered'
+    });
+
+    const assignRes = await fetch(`${BASE}/api/orders/${order.id}/assign`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminA.token}`
+      },
+      body: JSON.stringify({ deliveryUserId: deliveryA.id })
+    });
+    assert.equal(assignRes.status, 400, 'Re-assigning delivered order should be 400');
+
+    const cancelRes = await fetch(`${BASE}/api/orders/${order.id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminA.token}`
+      },
+      body: JSON.stringify({ status: 'Cancelled' })
+    });
+    assert.equal(cancelRes.status, 400, 'Cancelling delivered order should be 400');
+  });
+
   // Cleanup test entities
   await db.deleteStore(storeA.id);
   await db.deleteStore(storeB.id);
