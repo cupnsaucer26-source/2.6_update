@@ -21,23 +21,6 @@ export const ROLE_HOME = {
   billing: '/billing',
 }
 
-// Mock employees for admin view
-export const MOCK_EMPLOYEES = [
-{ _id: 'u3', name: 'Muthuvel K (QC)', mobile: '9234567890', email: 'employee@demo.com', department: 'Quality Control', joinDate: '2023-01-15', lastLogin: '2024-09-02 14:30:00', status: 'active' },
-{ _id: 'u6', name: 'Priya Sharma', mobile: '9567890123', email: 'priya@demo.com', department: 'Operations', joinDate: '2023-06-20', lastLogin: '2024-09-02 13:45:00', status: 'active' },
-{ _id: 'u7', name: 'Arun Kumar', mobile: '9678901234', email: 'arun@demo.com', department: 'Warehouse', joinDate: '2023-04-10', lastLogin: '2024-09-01 10:15:00', status: 'active' },
-]
-
-// Get all employees (admin only)
-export const getEmployeeList = () => {
-return MOCK_EMPLOYEES
-}
-
-// Get employee details
-export const getEmployeeDetails = (employeeId) => {
-return MOCK_EMPLOYEES.find(e => e._id === employeeId)
-}
-
 const TOKEN_KEY = 'sathya_token'
 const USER_KEY = 'sathya_user'
 

@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
+import Modal from '../../components/common/Modal'
+import { formatCurrency } from '../../utils/formatters'
 import {
   Ticket, Plus, Edit2, Trash2, CheckCircle2, XCircle, Search,
   RefreshCw, FileSpreadsheet, Percent, IndianRupee, ShieldAlert,
@@ -191,7 +193,7 @@ export default function AdminCoupons() {
         <div className="card" style={{ padding: '16px 18px', borderLeft: '4px solid #f59e0b', background: 'rgba(245, 158, 11, 0.08)' }}>
           <div style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 600 }}>Total Credit Discounts Granted</div>
           <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>
-            ₹{totalDiscountGiven.toLocaleString()}
+            {formatCurrency(totalDiscountGiven)}
           </div>
         </div>
       </div>

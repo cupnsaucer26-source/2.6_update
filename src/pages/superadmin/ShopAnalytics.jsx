@@ -24,10 +24,11 @@ import {
   MapPin,
   FileText
 } from 'lucide-react'
+import { formatCurrency, formatNumber } from '../../utils/formatters.js'
 
 // Formatting helpers
-const fmtRs = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })
-const fmtNum = (n) => Number(n || 0).toLocaleString('en-IN')
+const fmtRs = formatCurrency
+const fmtNum = formatNumber
 
 export default function ShopAnalytics() {
   const [loading, setLoading] = useState(true)

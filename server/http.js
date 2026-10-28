@@ -191,3 +191,29 @@ export function requireModule(keys, { roles = ['admin'] } = {}) {
     next();
   };
 }
+
+// Activity logging utility for audit monitoring
+export async function recordActivity(req, { module, action, entityId, description, details = {} }) {
+  try {
+    const user = req.user || (await getAuthenticatedUser(req));
+    await db.logActivity({
+      userId: user?.id || 'anonymous',
+      userName: user?.name || user?.email || 'Anonymous',
+      userRole: user?.role || 'system',
+      storeId: user?.storeId || req.body?.storeId || '',
+      storeName: user?.storeName || req.body?.storeName || '',
+      module,
+      action,
+      entityId: entityId || '',
+      description,
+      details,
+      ip: clientIp(req)
+    });
+  } catch (e) {
+    console.error('Activity logging failed:', e.message);
+  }
+}
+
+export function cleanText(value, maxLength) {
+  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+}

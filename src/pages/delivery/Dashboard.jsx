@@ -3,6 +3,9 @@ import { toast } from 'sonner'
 import axios from 'axios'
 import { useAuth } from '../../context/AuthContext'
 import { gpsMapsUrl } from '../../shared/osmAddress'
+import StatusBadge from '../../components/common/StatusBadge'
+import EmptyState from '../../components/common/EmptyState'
+import { formatCurrency } from '../../utils/formatters'
 import { Truck } from 'lucide-react'
 
 // API orders use the store's field names; the cards below were written for these.
@@ -57,7 +60,7 @@ export default function DeliveryDashboard() {
   const KPI = [
     { label: 'Assigned', value: String(orders.length), change: `${orders.filter(o => o.assignedDeliveryBoy === 'Unassigned').length} not yet assigned to anyone`, color: 'blue', icon: '🚚' },
     { label: 'Delivered', value: String(delivered.length), change: orders.length ? `${Math.round(delivered.length / orders.length * 100)}% of your orders` : '—', color: 'green', icon: '✅' },
-    { label: 'Pending', value: String(pending.length), change: `₹${codDue.toLocaleString('en-IN')} cash to collect`, color: 'yellow', icon: '🧭' },
+    { label: 'Pending', value: String(pending.length), change: `${formatCurrency(codDue)} cash to collect`, color: 'yellow', icon: '🧭' },
   ]
 
   return (
@@ -84,13 +87,13 @@ export default function DeliveryDashboard() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                   <strong style={{ color: 'var(--brand-400)', fontSize: '1rem' }}>{order.id}</strong>
-                  <span className={`badge ${order.status === 'Delivered' ? 'badge-green' : order.status === 'Out for Delivery' ? 'badge-orange' : 'badge-blue'}`}>{order.status}</span>
+                  <StatusBadge status={order.status} />
                 </div>
                 <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>{order.farmer}</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '4px' }}>📍 {order.address}{gpsMapsUrl(order) && <span className="badge badge-green" style={{ marginLeft: 6, fontSize: '0.68rem' }}>GPS pin</span>}</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '4px' }}>📍 {order.address}{gpsMapsUrl(order) && <StatusBadge status="active" color="green" label="GPS pin" style={{ marginLeft: 6, fontSize: '0.68rem' }} />}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 800, color: 'var(--brand-400)', fontSize: '1.1rem' }}>₹{order.amount.toLocaleString()}</div>
+                <div style={{ fontWeight: 800, color: 'var(--brand-400)', fontSize: '1.1rem' }}>{formatCurrency(order.amount)}</div>
                 <div style={{ fontSize: '0.75rem', color: order.payMode === 'COD' ? 'var(--yellow)' : 'var(--brand-400)', fontWeight: 600, marginTop: '4px' }}>{order.payMode}</div>
               </div>
             </div>

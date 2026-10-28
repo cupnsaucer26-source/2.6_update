@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 import { gpsMapsUrl } from '../../shared/osmAddress'
+import StatusBadge from '../../components/common/StatusBadge'
+import { formatCurrency } from '../../utils/formatters'
 import { toast } from 'sonner'
 import {
   Search, RefreshCw, ShoppingBag, Receipt, Filter,
@@ -33,7 +35,7 @@ function WhatsAppStatus({ order, sending, onSend }) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span className={`badge badge-${color}`} title={detail}>{label}</span>
+      <StatusBadge status={notification?.status || 'Not sent'} color={color} label={label} title={detail} />
       <button className="btn btn-outline" style={{ padding: '3px 8px', fontSize: '0.72rem' }} disabled={sending} onClick={() => onSend(order)}>
         {sending ? 'Sending…' : notification?.status === 'sent' ? 'Resend' : 'Send'}
       </button>
@@ -200,20 +202,20 @@ export default function AdminOrders() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '16px', background: 'var(--dark-800)', border: '1px solid var(--dark-700)', borderRadius: '12px' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Omnichannel Revenue</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#34d399' }}>₹{totalRevenue.toLocaleString('en-IN')}</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#34d399' }}>{formatCurrency(totalRevenue)}</div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>{orders.length} web + {invoices.length} counter bills</div>
         </div>
 
         <div className="card" style={{ padding: '16px', background: 'var(--dark-800)', border: '1px solid var(--dark-700)', borderRadius: '12px' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>🌐 Online Store Orders</div>
           <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#60a5fa' }}>{orders.length}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>₹{onlineRevenue.toLocaleString('en-IN')} revenue</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>{formatCurrency(onlineRevenue)} revenue</div>
         </div>
 
         <div className="card" style={{ padding: '16px', background: 'var(--dark-800)', border: '1px solid var(--dark-700)', borderRadius: '12px' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>🏬 POS Counter Bills</div>
           <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fbbf24' }}>{invoices.length}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>₹{offlineRevenue.toLocaleString('en-IN')} counter collection</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>{formatCurrency(offlineRevenue)} counter collection</div>
         </div>
       </div>
 
@@ -289,9 +291,9 @@ export default function AdminOrders() {
                     {/* Channel */}
                     <td style={{ padding: '14px 16px' }}>
                       {tx.channel === 'online' ? (
-                        <span className="badge badge-blue" style={{ fontSize: '0.72rem' }}>🌐 Online</span>
+                        <StatusBadge status="online" color="blue" label="🌐 Online" style={{ fontSize: '0.72rem' }} />
                       ) : (
-                        <span className="badge badge-yellow" style={{ fontSize: '0.72rem' }}>🏬 POS Counter</span>
+                        <StatusBadge status="counter" color="yellow" label="🏬 POS Counter" style={{ fontSize: '0.72rem' }} />
                       )}
                     </td>
 

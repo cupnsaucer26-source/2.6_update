@@ -4,6 +4,7 @@ import axios from 'axios'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import ServicesBottomNav from '../components/common/ServicesBottomNav'
+import { formatCurrency, formatDate } from '../utils/formatters'
 
 // Order status for the signed-in customer; the server only ever returns their
 // own orders. Replaces public/order-status.html, which now redirects here.
@@ -50,7 +51,7 @@ function OrderCard({ order }) {
       </div>
       <div className="order-card-meta">
         <div className="muted"><i className="fa-solid fa-box" aria-hidden="true"></i> {items}</div>
-        {total > 0 && <div className="muted"><i className="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i> ₹{total.toLocaleString('en-IN')}</div>}
+        {total > 0 && <div className="muted"><i className="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i> {formatCurrency(total)}</div>}
         <div className="muted"><i className="fa-regular fa-calendar" aria-hidden="true"></i> Expected: {expected}</div>
         {order.address && <div className="muted"><i className="fa-solid fa-location-dot" aria-hidden="true"></i> Delivering to: {order.address}</div>}
       </div>

@@ -1,6 +1,8 @@
 import express from 'express';
 import { db, USER_ROLES } from './db.js';
-import { HttpError, sendError, userInputError, clientIp, requireModule } from './http.js';
+import { HttpError, sendError, userInputError, clientIp, requireModule, recordActivity, cleanText } from './http.js';
+import { cleanReferralSettings, pointsExpiry } from './referrals.js';
+import { loadReferralSettings, reverseReferral } from './referralService.js';
 import { orderWhatsAppEnabled, sendOrderConfirmation } from './orderNotifications.js';
 import { getWhatsAppSenderStatus } from './whatsapp.js';
 
@@ -479,5 +481,164 @@ router.get('/analytics', requireModule('analytics'), async (req, res) => {
     }
 });
 
+
+// ============================================================
+// COUPONS & DISCOUNT CREDIT MONITORING
+// ============================================================
+
+router.get('/coupons', requireModule('coupons'), async (req, res) => {
+  try {
+    const data = await db.getCoupons();
+    res.json({ success: true, data });
+  } catch (err) {
+    sendError(res, err, 'Get coupons');
+  }
+});
+
+router.post('/coupons', requireModule('coupons'), async (req, res) => {
+  try {
+    const { code, type, value, minOrder, maxDiscount, usageType, active } = req.body;
+    if (!code || value === undefined) {
+      return res.status(400).json({ success: false, message: 'Coupon code and value are required.' });
+    }
+    const created = await db.addCoupon({ code, type, value, minOrder, maxDiscount, usageType, active });
+    res.json({ success: true, message: `Coupon "${created.code}" created successfully!`, data: created });
+  } catch (err) {
+    sendError(res, err, 'Create coupon');
+  }
+});
+
+router.put('/coupons/:id', requireModule('coupons'), async (req, res) => {
+  try {
+    const updated = await db.updateCoupon(req.params.id, req.body);
+    res.json({ success: true, message: 'Coupon updated successfully', data: updated });
+  } catch (err) {
+    sendError(res, err, 'Update coupon');
+  }
+});
+
+router.delete('/coupons/:id', requireModule('coupons'), async (req, res) => {
+  try {
+    await db.deleteCoupon(req.params.id);
+    res.json({ success: true, message: 'Coupon deleted successfully' });
+  } catch (err) {
+    sendError(res, err, 'Delete coupon');
+  }
+});
+
+router.get('/coupon-usages', requireModule('coupons'), async (req, res) => {
+  try {
+    const data = await db.getCouponUsages();
+    res.json({ success: true, data });
+  } catch (err) {
+    sendError(res, err, 'Get coupon usages');
+  }
+});
+
+// ============================================================
+// REFERRALS & REWARD POINTS MANAGEMENT
+// ============================================================
+
+router.get('/referrals', requireModule('referrals'), async (req, res) => {
+  try {
+    const referrals = await db.getReferrals();
+    const ledgers = await db.getPointsLedgers();
+    const users = (await db.getUsers()).filter(u => u.role === 'farmer');
+    res.json({ success: true, data: { referrals, ledgers, users } });
+  } catch (err) {
+    sendError(res, err, 'Get referrals');
+  }
+});
+
+router.post('/referrals/assign-points', requireModule('referrals'), async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || '');
+    const points = Number(req.body?.points);
+    const description = cleanText(req.body?.description, 200) || 'Points adjusted by admin';
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'Pick a customer.' });
+    }
+    if (!Number.isInteger(points) || points === 0 || Math.abs(points) > 10000) {
+      return res.status(400).json({ success: false, message: 'Points must be a whole number from -10000 to 10000, not 0.' });
+    }
+    const settings = await loadReferralSettings();
+    const result = await db.addPoints(userId, points, description, {
+      type: points > 0 ? 'admin' : 'admin-deduct',
+      expiresAt: points > 0 ? pointsExpiry(settings) : undefined,
+    });
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Customer account not found.' });
+    }
+    if (result.error) {
+      return res.status(400).json({ success: false, message: 'The customer does not have that many points to deduct.' });
+    }
+    await recordActivity(req, { module: 'referrals', action: 'assign-points', entityId: userId, description: `${points > 0 ? '+' : ''}${points} points: ${description}` }).catch(() => {});
+    res.json({ success: true, message: `Updated points balance to ${result.newPoints} points!`, data: result });
+  } catch (err) {
+    sendError(res, err, 'Assign points');
+  }
+});
+
+router.get('/referrals/settings', requireModule('referrals'), async (req, res) => {
+  try {
+    res.json({ success: true, data: await loadReferralSettings() });
+  } catch (err) {
+    sendError(res, err, 'Referral settings');
+  }
+});
+
+router.put('/referrals/settings', requireModule('referrals'), async (req, res) => {
+  try {
+    const { settings, error } = cleanReferralSettings(req.body, await loadReferralSettings());
+    if (error) return res.status(400).json({ success: false, message: error });
+    await db.saveReferralSettings(settings);
+    await recordActivity(req, { module: 'referrals', action: 'settings', entityId: 'referral-settings', description: 'Changed Refer & Earn settings', details: settings }).catch(() => {});
+    res.json({ success: true, data: settings, message: 'Refer & Earn settings saved.' });
+  } catch (err) {
+    sendError(res, err, 'Save referral settings');
+  }
+});
+
+router.post('/referrals/:id/reverse', requireModule('referrals'), async (req, res) => {
+  try {
+    const reason = cleanText(req.body?.reason, 200);
+    const result = await reverseReferral(req.params.id, reason);
+    if (result.status !== 200) return res.status(result.status).json({ success: false, message: result.message });
+    await recordActivity(req, { module: 'referrals', action: 'reverse', entityId: req.params.id, description: `Reversed referral (${result.pointsRemoved} points removed)` }).catch(() => {});
+    res.json({ success: true, data: result.referral, message: `Referral reversed. ${result.pointsRemoved} points removed from the referrer.` });
+  } catch (err) {
+    sendError(res, err, 'Reverse referral');
+  }
+});
+
+// ============================================================
+// STAFF PROFILES (ADMIN / SUPERADMIN)
+// ============================================================
+
+router.get('/staff-profiles', requireModule('employees'), async (req, res) => {
+  try {
+    const storeId = req.user.role === 'admin' ? req.user.storeId : (req.query.storeId || undefined);
+    const profiles = await db.listStaffProfiles(storeId ? { storeId } : {});
+    res.json({ success: true, data: profiles });
+  } catch (err) {
+    sendError(res, err, 'List staff profiles');
+  }
+});
+
+router.get('/staff-profiles/:userId', requireModule('employees'), async (req, res) => {
+  try {
+    const staff = await db.getUserById(req.params.userId);
+    if (!staff) return res.json({ success: true, data: {} });
+    if (req.user.role === 'admin' && req.user.storeId && staff.storeId && staff.storeId !== req.user.storeId) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to view staff from another store.' });
+    }
+    const profile = await db.getStaffProfile(req.params.userId);
+    res.json({ success: true, data: { ...staff, profile: profile || {} } });
+  } catch (err) {
+    sendError(res, err, 'Get staff profile by id');
+  }
+});
+
 export default router;
+
 

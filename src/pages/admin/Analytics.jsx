@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import axios from 'axios'
 import { downloadCsv } from '../../shared/csv'
+import { formatCurrency, formatNumber, formatShortDate } from '../../utils/formatters.js'
 
 // ─── Colour palette ────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
@@ -13,10 +14,10 @@ const STATUS_COLORS = {
   Cancelled:         '#ef6d6d',
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-function fmt(n) { return Number(n || 0).toLocaleString('en-IN') }
-function fmtRs(n) { return '₹' + fmt(n) }
-function dateLabel(iso) { return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) }
+// ─── Standardized Formatters ─────────────────────────────────────────────────────
+const fmt = formatNumber
+const fmtRs = formatCurrency
+const dateLabel = formatShortDate
 
 /** Export data as an Excel-compatible CSV file */
 function exportCSV(orders, period, channelMode) {

@@ -23,6 +23,8 @@ import {
 } from 'lucide-react'
 import ExactGstInvoice from '../../components/billing/ExactGstInvoice'
 import { numberToIndianWords } from '../../utils/numberToWords'
+import AddItemCard from './components/AddItemCard'
+import PaymentModeCard from './components/PaymentModeCard'
 
 export default function BillingDashboard() {
   // Catalog & Inventory
@@ -905,156 +907,26 @@ export default function BillingDashboard() {
           </div>
 
           {/* SECTION 4: Add Item to Bill */}
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>
-                <Package size={18} color="#ec4899" /> Add Goods &amp; Services
-              </div>
-            </div>
-
-            {/* Row 1: Product Search + Select */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr', gap: 10, marginBottom: 10 }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 5 }}><SearchIcon size={13} /> Search Product</label>
-                <input
-                  className="form-input"
-                  value={productSearch}
-                  onChange={e => {
-                    setProductSearch(e.target.value)
-                    setSelectedProduct('')
-                  }}
-                  placeholder="Type product name, HSN, category..."
-                  style={{ fontSize: '0.85rem' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Select Product / Search</label>
-                <select
-                  className="form-select"
-                  value={selectedProduct}
-                  onChange={e => {
-                    setProductSearch('')
-                    handleProductDropdownChange(e)
-                  }}
-                >
-                  <option value="">-- Select a product --</option>
-                  {filteredCatalog.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — ₹{p.price} [HSN: {p.hsnCode}]
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Selected product info banner */}
-            {selectedProduct && (() => {
-              const sp = catalog.find(p => p.id === selectedProduct)
-              return sp ? (
-                <div style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  background: 'rgba(52,211,153,0.08)',
-                  border: '1px solid rgba(52,211,153,0.3)',
-                  fontSize: '0.8rem',
-                  color: '#34d399',
-                  marginBottom: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10
-                }}>
-                  <span style={{ fontWeight: 700 }}>✓ {sp.name}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>|</span>
-                  <span>₹{sp.price} / {sp.unit || 'Nos'}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>|</span>
-                  <span>HSN: {sp.hsnCode}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>|</span>
-                  <span>GST: {sp.gstRate}%</span>
-                </div>
-              ) : null
-            })()}
-
-            {/* Custom product name (shown when no product selected from catalog) */}
-            {!selectedProduct && (
-              <div className="form-group" style={{ marginBottom: 10 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 5 }}><AlertTriangle size={13} /> No product selected — Enter custom product name</label>
-                <input
-                  className="form-input"
-                  value={productSearch}
-                  onChange={e => setProductSearch(e.target.value)}
-                  placeholder="Custom product / service name"
-                  style={{ borderColor: 'rgba(245,158,11,0.4)', fontSize: '0.88rem' }}
-                />
-              </div>
-            )}
-
-            {/* Row 2: Batch, HSN, Qty, Rate, Unit, Add button */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 90px 90px 80px auto', gap: 10, alignItems: 'flex-end' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Batch Name</label>
-                <input
-                  className="form-input"
-                  value={itemBatch}
-                  onChange={e => setItemBatch(e.target.value)}
-                  placeholder="Primary Batch"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>HSN/SAC</label>
-                <input
-                  className="form-input"
-                  value={itemHsn}
-                  onChange={e => setItemHsn(e.target.value)}
-                  placeholder="31010099"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Qty</label>
-                <input
-                  type="number"
-                  min="1"
-                  className="form-input"
-                  value={itemQty}
-                  onChange={e => setItemQty(Math.max(1, Number(e.target.value)))}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Rate (₹)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="form-input"
-                  value={itemRate}
-                  onChange={e => setItemRate(e.target.value)}
-                  style={!itemRate ? { borderColor: 'rgba(248,113,113,0.5)' } : {}}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Unit</label>
-                <select className="form-select" value={itemUnit} onChange={e => setItemUnit(e.target.value)}>
-                  <option>Nos</option>
-                  <option>Kg</option>
-                  <option>Ltr</option>
-                  <option>Box</option>
-                  <option>Bags</option>
-                </select>
-              </div>
-
-              <button
-                className="btn btn-primary"
-                onClick={addItem}
-                disabled={!itemRate && itemRate !== 0}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, height: 40 }}
-              >
-                <Plus size={16} /> Add
-              </button>
-            </div>
-          </div>
+          <AddItemCard
+            productSearch={productSearch}
+            setProductSearch={setProductSearch}
+            selectedProduct={selectedProduct}
+            setSelectedProduct={setSelectedProduct}
+            handleProductDropdownChange={handleProductDropdownChange}
+            filteredCatalog={filteredCatalog}
+            catalog={catalog}
+            itemBatch={itemBatch}
+            setItemBatch={setItemBatch}
+            itemHsn={itemHsn}
+            setItemHsn={setItemHsn}
+            itemQty={itemQty}
+            setItemQty={setItemQty}
+            itemRate={itemRate}
+            setItemRate={setItemRate}
+            itemUnit={itemUnit}
+            setItemUnit={setItemUnit}
+            addItem={addItem}
+          />
 
           {/* SECTION 5: Current Bill Items Table */}
           <div className="card">
@@ -1225,98 +1097,17 @@ export default function BillingDashboard() {
         <div style={{ position: 'sticky', top: 80, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Payment Mode Selector */}
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}>
-                <CreditCard size={16} color="#34d399" /> Mode / Terms of Payment
-              </div>
-            </div>
-
-            {/* Payment Mode Grid Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
-              {paymentOptions.map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    setPaymentMode(opt.id)
-                    if (opt.id === 'Credit Purchase' && !paymentTerms) {
-                      setPaymentTerms('30 Days Credit')
-                    }
-                  }}
-                  style={{
-                    padding: '10px 8px',
-                    borderRadius: 8,
-                    border: paymentMode === opt.id ? '2px solid var(--brand-500)' : '1px solid var(--surface-border)',
-                    background: paymentMode === opt.id ? 'var(--brand-900)' : 'var(--surface-card)',
-                    color: paymentMode === opt.id ? '#fff' : 'var(--text-secondary)',
-                    fontWeight: paymentMode === opt.id ? 700 : 500,
-                    fontSize: '0.8rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 4,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span style={{ fontSize: '1.2rem' }}>{opt.icon}</span>
-                  <span>{opt.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* If Credit Purchase is selected, show credit terms */}
-            {paymentMode === 'Credit Purchase' && (
-              <div style={{
-                padding: 10,
-                borderRadius: 8,
-                background: 'rgba(167, 139, 250, 0.1)',
-                border: '1px solid #a78bfa',
-                marginBottom: 12
-              }}>
-                <label className="form-label" style={{ fontSize: '0.78rem', color: '#c4b5fd' }}>
-                  Credit Terms / Due Duration
-                </label>
-                <select
-                  className="form-select"
-                  value={paymentTerms}
-                  onChange={e => setPaymentTerms(e.target.value)}
-                  style={{ fontSize: '0.82rem' }}
-                >
-                  <option>15 Days Net Credit</option>
-                  <option>30 Days Credit</option>
-                  <option>45 Days Credit</option>
-                  <option>60 Days Credit</option>
-                  <option>Custom Credit Agreement</option>
-                </select>
-              </div>
-            )}
-
-            {/* Buyer Reference & Other References */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Buyer&apos;s Ref</label>
-                <input
-                  className="form-input"
-                  value={buyerRef}
-                  onChange={e => setBuyerRef(e.target.value)}
-                  placeholder="Ref No."
-                  style={{ fontSize: '0.8rem' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Other Ref(s)</label>
-                <input
-                  className="form-input"
-                  value={otherReferences}
-                  onChange={e => setOtherReferences(e.target.value)}
-                  placeholder="Other notes"
-                  style={{ fontSize: '0.8rem' }}
-                />
-              </div>
-            </div>
-          </div>
+          <PaymentModeCard
+            paymentOptions={paymentOptions}
+            paymentMode={paymentMode}
+            setPaymentMode={setPaymentMode}
+            paymentTerms={paymentTerms}
+            setPaymentTerms={setPaymentTerms}
+            buyerRef={buyerRef}
+            setBuyerRef={setBuyerRef}
+            otherReferences={otherReferences}
+            setOtherReferences={setOtherReferences}
+          />
 
           {/* Checkout & Bill Summary */}
           <div className="card">

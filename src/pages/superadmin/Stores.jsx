@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
+import Modal from '../../components/common/Modal'
+import EmptyState from '../../components/common/EmptyState'
 import { Store, Plus, Search, MapPin, Phone, Mail, UserCheck, Users, Edit2, Trash2, CheckCircle, XCircle, X } from 'lucide-react'
 
 export default function StoresManagement() {
