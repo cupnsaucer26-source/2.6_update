@@ -4250,7 +4250,8 @@ app.post('/api/chat/assistant', async (req, res) => {
       message,
       sessionId = 'SES-' + Date.now().toString(36).toUpperCase(),
       selectedOption,
-      history = []
+      history = [],
+      lang = 'en'
     } = req.body || {};
 
     const wait = await rateLimit(`chat-ip:${clientIp(req)}`, 30, MINUTE_MS);
@@ -4268,6 +4269,8 @@ app.post('/api/chat/assistant', async (req, res) => {
       'gemini-3.8-flash'
     ].filter(Boolean);
 
+    const cleanLang = typeof lang === 'string' ? lang.slice(0, 5).toLowerCase() : 'en';
+
     const result = await processAssistantTurn({
       message,
       sessionId,
@@ -4277,7 +4280,8 @@ app.post('/api/chat/assistant', async (req, res) => {
       clientIp: clientIp(req),
       db,
       apiKey,
-      modelCandidates
+      modelCandidates,
+      lang: cleanLang
     });
 
     if (!result.success) {

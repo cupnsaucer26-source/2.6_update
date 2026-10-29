@@ -17,22 +17,48 @@ function extractAiTags(text) {
   return tags;
 }
 
-// Builds initial conversation starter given a user or guest
-function buildInitialState(user) {
+// Builds initial conversation starter given a user or guest and language
+function buildInitialState(user, lang = 'en') {
+  if (lang === 'ta') {
+    if (user?.crop) {
+      return {
+        greeting: `வணக்கம் ${user.name ? `${user.name} அவர்களே!` : 'விவசாயி!'}`,
+        crop: user.crop,
+        initialSuggestions: [
+          { id: 'start_paddy', label: '🌾 நெல் இலை கருகல் & மஞ்சள் இலை', category: 'crop' },
+          { id: 'start_cotton', label: '🐛 பருத்தி வெள்ளை ஈ & பூச்சி கட்டுப்பாடு', category: 'crop' },
+          { id: 'start_soil', label: '🌱 மண் பரிசோதனை & உர பரிந்துரை', category: 'soil' },
+          { id: 'start_expert', label: '👨‍⚕️ வேளாண் மருத்துவரிடம் ஆலோசனை பெற', category: 'expert' }
+        ]
+      };
+    }
+    return {
+      greeting: 'வணக்கம்! சத்யம் அக்ரோ மார்ட் AI பயிர் மருத்துவருக்கு வரவேற்கிறோம்.',
+      crop: null,
+      initialSuggestions: [
+        { id: 'start_paddy', label: '🌾 நெல் இலை கருகல் & மஞ்சள் இலை', category: 'crop' },
+        { id: 'start_cotton', label: '🐛 பருத்தி வெள்ளை ஈ & பூச்சி கட்டுப்பாடு', category: 'crop' },
+        { id: 'start_soil', label: '🌱 மண் பரிசோதனை & உர பரிந்துரை', category: 'soil' },
+        { id: 'start_expert', label: '👨‍⚕️ வேளாண் மருத்துவரிடம் ஆலோசனை பெற', category: 'expert' }
+      ]
+    };
+  }
+
+  // English (default)
   if (user?.crop) {
     return {
-      greeting: `வணக்கம் ${user.name ? `${user.name} ji` : 'விவசாயி'}!`,
+      greeting: `Hello ${user.name ? `${user.name}!` : 'Farmer!'}`,
       crop: user.crop,
       initialSuggestions: [
-        { id: 'crop_pest', label: `🌾 ${user.crop} Pest & Disease remedies`, category: 'crop' },
-        { id: 'crop_fert', label: `🌱 ${user.crop} Fertilizer & Growth Schedule`, category: 'crop' },
-        { id: 'crop_soil', label: '🧪 Check Soil Health Card', category: 'action' },
-        { id: 'crop_expert', label: '👨‍⚕️ Book Agronomy Doctor Consultation', category: 'action' }
+        { id: 'start_paddy', label: '🌾 Paddy Blast & Yellow Leaf Diagnosis', category: 'crop' },
+        { id: 'start_cotton', label: '🐛 Cotton Whitefly & Pest Control', category: 'crop' },
+        { id: 'start_soil', label: '🌱 Soil Test Guidance & Fertilizer Dosage', category: 'soil' },
+        { id: 'start_expert', label: '👨‍⚕️ Consult an Agronomy Specialist', category: 'expert' }
       ]
     };
   }
   return {
-    greeting: 'வணக்கம்! Welcome to Sathyam Agro Mart AI Assistant.',
+    greeting: 'Hello! Welcome to Sathyam Agro Mart AI Crop Doctor.',
     crop: null,
     initialSuggestions: [
       { id: 'start_paddy', label: '🌾 Paddy Blast & Yellow Leaf Diagnosis', category: 'crop' },
@@ -74,22 +100,28 @@ test('1. Tag Parser: Correctly extracts PRODUCT, PAGE, and WHATSAPP tags', () =>
 
 test('2. Initial State: Personalized welcome and suggestions for registered Sugarcane farmer', () => {
   const user = { name: 'Murugan', crop: 'Sugarcane', acreage: 5 };
-  const state = buildInitialState(user);
+  const stateEn = buildInitialState(user, 'en');
+  assert.ok(stateEn.greeting.includes('Murugan!'));
+  assert.equal(stateEn.crop, 'Sugarcane');
+  assert.equal(stateEn.initialSuggestions.length, 4);
 
-  assert.ok(state.greeting.includes('Murugan ji'));
-  assert.equal(state.crop, 'Sugarcane');
-  assert.equal(state.initialSuggestions.length, 4);
-  assert.ok(state.initialSuggestions.some(s => s.label.includes('Sugarcane Pest')));
-  assert.ok(state.initialSuggestions.some(s => s.label.includes('Sugarcane Fertilizer')));
+  const stateTa = buildInitialState(user, 'ta');
+  assert.ok(stateTa.greeting.includes('Murugan அவர்களே!'));
+  assert.equal(stateTa.crop, 'Sugarcane');
+  assert.ok(stateTa.initialSuggestions.some(s => s.label.includes('நெல்')));
 });
 
 test('3. Initial State: Default broad agricultural categories for guest visitor', () => {
-  const state = buildInitialState(null);
+  const stateEn = buildInitialState(null, 'en');
+  assert.ok(stateEn.greeting.includes('Welcome'));
+  assert.ok(stateEn.greeting.includes('Hello'));
+  assert.equal(stateEn.crop, null);
+  assert.ok(stateEn.initialSuggestions.some(s => s.id === 'start_paddy'));
 
-  assert.ok(state.greeting.includes('Welcome'));
-  assert.equal(state.crop, null);
-  assert.ok(state.initialSuggestions.some(s => s.id === 'start_paddy'));
-  assert.ok(state.initialSuggestions.some(s => s.id === 'start_cotton'));
+  const stateTa = buildInitialState(null, 'ta');
+  assert.ok(stateTa.greeting.includes('வணக்கம்'));
+  assert.equal(stateTa.crop, null);
+  assert.ok(stateTa.initialSuggestions.some(s => s.label.includes('நெல்')));
 });
 
 test('4. Expert Booking Referral: Generates safe navigation payload without auto-booking', () => {

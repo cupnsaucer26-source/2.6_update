@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useStore } from '../StoreContext'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { WHATSAPP_EXPERT_URL } from '../data'
 
 export const CHAT_OPEN_EVENT = 'sb:open-chat'
@@ -10,17 +11,128 @@ export const CHAT_OPEN_EVENT = 'sb:open-chat'
 const SESSION_STORAGE_KEY = 'sathyam_chat_session_id'
 const MESSAGE_STORAGE_PREFIX = 'sathyam_chat_history_v2_'
 
-// Default starter quick questions for guests
-const GUEST_QUICK_CHATS = [
-  ['What is the best pesticide for Paddy Blast?', '🌾 Paddy Blast Remedy'],
-  ['How to control Cotton Whitefly?', '🐛 Cotton Whitefly Control'],
-  ['How to test soil health & get fertilizer advice?', '🌱 Soil Test Guide'],
-  ['I want to speak with an agronomy doctor', '👨‍⚕️ Consult Agronomist'],
-]
+export const I18N_CHAT = {
+  en: {
+    title: 'AI Crop Doctor',
+    online: '● Online 24/7 (Sathyam Agri-AI)',
+    new: 'New',
+    newChatAria: 'Start a new conversation',
+    closeAria: 'Close chat',
+    welcomeGuest: 'Hello! Welcome to Sathyam Agro Mart AI Crop Doctor. How can I assist your crop today? Ask any pest, disease, or fertilizer question below.',
+    welcomeFarmer: (name, crop) => `Hello ${name ? name + '!' : 'Farmer!'} Welcome to Sathyam Agro Mart AI Crop Doctor. How is your ${crop ? crop + ' ' : ''}crop progressing? Ask any pest, disease, or fertilizer question below.`,
+    followUp: 'Select a common topic below or type your crop question:',
+    chips: [
+      { id: 'start_paddy', label: '🌾 Paddy Blast & Yellow Leaf Diagnosis', category: 'crop' },
+      { id: 'start_cotton', label: '🐛 Cotton Whitefly & Pest Control', category: 'crop' },
+      { id: 'start_soil', label: '🌱 Soil Test Guidance & Fertilizer Dosage', category: 'soil' },
+      { id: 'start_expert', label: '👨‍⚕️ Consult an Agronomy Specialist', category: 'expert' }
+    ],
+    placeholder: 'Ask any crop question or symptom...',
+    thinking: 'Crop Doctor is thinking...',
+    scheduleCall: 'Schedule Consultation Call',
+    needExpert: 'Need Expert Field Diagnosis?',
+    expertDesc: 'Our qualified agronomists provide personalized 1-on-1 guidance for severe or complex field issues.',
+    fallbackError: 'We are experiencing a temporary network delay with our AI service. For crop pests and disease remedies, you can explore our catalog or book an agronomist callback directly: [[PAGE:/agronomy-experts:Schedule Agronomist Consultation]]',
+    addToCart: (name) => `Add ${name} to Cart`
+  },
+  ta: {
+    title: 'AI பயிர் மருத்துவர்',
+    online: '● 24/7 நேரலை (சத்யம் அக்ரோ-AI)',
+    new: 'புதியது',
+    newChatAria: 'புதிய உரையாடலைத் தொடங்கவும்',
+    closeAria: 'அரட்டையை மூடவும்',
+    welcomeGuest: 'வணக்கம்! சத்யம் அக்ரோ மார்ட் AI பயிர் மருத்துவருக்கு வரவேற்கிறோம். உங்கள் பயிரில் ஏதேனும் நோய், பூச்சி அல்லது உரத் தேவையா? கீழே கேளுங்கள்.',
+    welcomeFarmer: (name, crop) => `வணக்கம் ${name ? name + ' அவர்களே!' : 'விவசாயி!'} சத்யம் அக்ரோ மார்ட் AI பயிர் மருத்துவருக்கு வரவேற்கிறோம். உங்கள் ${crop ? crop + ' ' : ''}பயிர் வளர்ச்சி எப்படி உள்ளது? ஏதேனும் பூச்சி, நோய் அல்லது உரத் தேவையா?`,
+    followUp: 'கீழே உள்ள தலைப்பைத் தேர்ந்தெடுக்கவும் அல்லது உங்கள் கேள்வியைத் தட்டச்சு செய்யவும்:',
+    chips: [
+      { id: 'start_paddy', label: '🌾 நெல் இலை கருகல் & மஞ்சள் இலை', category: 'crop' },
+      { id: 'start_cotton', label: '🐛 பருத்தி வெள்ளை ஈ & பூச்சி கட்டுப்பாடு', category: 'crop' },
+      { id: 'start_soil', label: '🌱 மண் பரிசோதனை & உர பரிந்துரை', category: 'soil' },
+      { id: 'start_expert', label: '👨‍⚕️ வேளாண் மருத்துவரிடம் ஆலோசனை பெற', category: 'expert' }
+    ],
+    placeholder: 'பயிர் நோய்கள் அல்லது கேள்விகளைக் கேட்கவும்...',
+    thinking: 'பயிர் மருத்துவர் ஆலோசிக்கிறார்...',
+    scheduleCall: 'ஆலோசனை முன்பதிவு செய்க',
+    needExpert: 'துல்லியமான களப் பரிசோதனை தேவையா?',
+    expertDesc: 'தீவிர பூச்சி மற்றும் நோய் பாதிப்புகளுக்கு எங்கள் வேளாண் நிபுணர்கள் நேரடி ஆலோசனை வழங்குகின்றனர்.',
+    fallbackError: 'தற்காலிக இணைய தாமதம் ஏற்பட்டுள்ளது. பூச்சி, நோய் தீர்வுகளுக்கு எங்கள் மருந்துகளைப் பார்க்கவும் அல்லது வேளாண் மருத்துவரிடம் ஆலோசனை பெறவும்: [[PAGE:/agronomy-experts:Schedule Agronomist Consultation]]',
+    addToCart: (name) => `${name} - கூடையில் சேர்`
+  },
+  te: {
+    title: 'AI పంట వైద్యుడు',
+    online: '● 24/7 అందుబాటులో ఉంది',
+    new: 'కొత్తది',
+    newChatAria: 'కొత్త సంభాషణ ప్రారంభించండి',
+    closeAria: 'మూసివేయి',
+    welcomeGuest: 'నమస్కారం! సత్యం ఆగ్రో మార్ట్ AI పంట వైద్యునికి స్వాగతం. మీ పంటలో పురుగులు, తెగుళ్లు లేదా ఎరువుల సమస్య ఉందా? ఇక్కడ అడగండి.',
+    welcomeFarmer: (name, crop) => `నమస్కారం ${name ? name + ' గారు!' : 'రైతు సోదరా!'} సత్యం ఆగ్రో మార్ట్ AI పంట వైద్యునికి స్వాగతం. మీ ${crop ? crop + ' ' : ''}పంట ఎలా ఉంది? ఏదైనా పురుగు, తెగులు లేదా ఎరువుల సందేహం ఉందా?`,
+    followUp: 'క్రింది అంశాలలో ఒకదాన్ని ఎంచుకోండి లేదా మీ ప్రశ్నను టైప్ చేయండి:',
+    chips: [
+      { id: 'start_paddy', label: '🌾 వరి ఆకు తెగులు & పసుపు ఆకుల నివారణ', category: 'crop' },
+      { id: 'start_cotton', label: '🐛 ప్రత్తి తెల్లదోమ & పురుగుల నివారణ', category: 'crop' },
+      { id: 'start_soil', label: '🌱 నేల పరీక్ష & ఎరువుల మోతాదు', category: 'soil' },
+      { id: 'start_expert', label: '👨‍⚕️ వ్యవసాయ నిపుణుడిని సంప్రదించండి', category: 'expert' }
+    ],
+    placeholder: 'పంట ప్రశ్న లేదా లక్షణాన్ని టైప్ చేయండి...',
+    thinking: 'వైద్యుడు సమాధానం సిద్ధం చేస్తున్నారు...',
+    scheduleCall: 'కాల్ షెడ్యూల్ చేయండి',
+    needExpert: 'నిపుణుల క్షేత్ర నిర్ధారణ అవసరమా?',
+    expertDesc: 'తీవ్రమైన పంట సమస్యల కోసం మా అర్హత కలిగిన వ్యవసాయ నిపుణులు ప్రత్యక్ష సలహాలు అందిస్తారు.',
+    fallbackError: 'నెట్‌వర్క్ జాప్యం ఏర్పడింది. నిపుణుడి సలహా కోసం సంప్రదించండి: [[PAGE:/agronomy-experts:Schedule Agronomist Consultation]]',
+    addToCart: (name) => `${name} - కార్ట్‌కు జోడించు`
+  },
+  kn: {
+    title: 'AI ಬೆಳೆ ವೈದ್ಯ',
+    online: '● 24/7 ಲಭ್ಯವಿದೆ',
+    new: 'ಹೊಸದು',
+    newChatAria: 'ಹೊಸ ಸಂಭಾಷಣೆ ಪ್ರಾರಂಭಿಸಿ',
+    closeAria: 'ಮುಚ್ಚಿ',
+    welcomeGuest: 'ನಮಸ್ಕಾರ! ಸತ್ಯಂ ಅಗ್ರೋ ಮಾರ್ಟ್ AI ಬೆಳೆ ವೈದ್ಯರಿಗೆ ಸ್ವಾಗತ. ನಿಮ್ಮ ಬೆಳೆಯಲ್ಲಿ ರೋಗ, ಕೀಟ ಅಥವಾ ರಸಗೊಬ್ಬರದ ಸಮಸ್ಯೆ ಇದೆಯೇ? ಕೆಳಗೆ ಕೇಳಿ.',
+    welcomeFarmer: (name, crop) => `ನಮಸ್ಕಾರ ${name ? name + ' ಅವರೇ!' : 'ರೈತ ಬಾಂಧವರೇ!'} ಸತ್ಯಂ ಅಗ್ರೋ ಮಾರ್ಟ್ AI ಬೆಳೆ ವೈದ್ಯರಿಗೆ ಸ್ವಾಗತ. ನಿಮ್ಮ ${crop ? crop + ' ' : ''}ಬೆಳೆ ಹೇಗಿದೆ? ರೋಗ ಅಥವಾ ಕೀಟ ನಿಯಂತ್ರಣದ ಬಗ್ಗೆ ಕೇಳಿ.`,
+    followUp: 'ಕೆಳಗಿನ ವಿಷಯವನ್ನು ಆಯ್ಕೆಮಾಡಿ ಅಥವಾ ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ:',
+    chips: [
+      { id: 'start_paddy', label: '🌾 ಭತ್ತದ ಬೆಂಕಿ ರೋಗ & ಹಳದಿ ಎಲೆ ಸಮಸ್ಯೆ', category: 'crop' },
+      { id: 'start_cotton', label: '🐛 ಹತ್ತಿ ಬಿಳಿ ನೊಣ & ಕೀಟ ನಿಯಂತ್ರಣ', category: 'crop' },
+      { id: 'start_soil', label: '🌱 ಮಣ್ಣು ಪರೀಕ್ಷೆ & ರಸಗೊಬ್ಬರ ಮಾಹಿತಿ', category: 'soil' },
+      { id: 'start_expert', label: '👨‍⚕️ ಕೃಷಿ ತಜ್ಞರ ಸಲಹೆ ಪಡೆಯಿರಿ', category: 'expert' }
+    ],
+    placeholder: 'ಬೆಳೆ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ...',
+    thinking: 'ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...',
+    scheduleCall: 'ಸಲಹಾ ಕರೆ ನಿಗದಿಪಡಿಸಿ',
+    needExpert: 'ತಜ್ಞರ ಸಲಹೆ ಅಗತ್ಯವಿದೆಯೇ?',
+    expertDesc: 'ಗಂಭೀರ ಬೆಳೆ ಸಮಸ್ಯೆಗಳಿಗೆ ನಮ್ಮ ಕೃಷಿ ತಜ್ಞರು ವೈಯಕ್ತಿಕ ಮಾರ್ಗದರ್ಶನ ನೀಡುತ್ತಾರೆ.',
+    fallbackError: 'ನೆಟ್‌ವರ್ಕ್ ತೊಂದರೆ ಉಂಟಾಗಿದೆ. ಕೃಷಿ ತಜ್ಞರ ಸಂಪರ್ಕ ಪಡೆಯಿರಿ: [[PAGE:/agronomy-experts:Schedule Agronomist Consultation]]',
+    addToCart: (name) => `${name} - ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಿ`
+  },
+  hi: {
+    title: 'AI फसल डॉक्टर',
+    online: '● 24/7 ऑनलाइन',
+    new: 'नया',
+    newChatAria: 'नई बातचीत शुरू करें',
+    closeAria: 'बंद करें',
+    welcomeGuest: 'नमस्ते! सत्यम एग्रो मार्ट AI फसल डॉक्टर में आपका स्वागत है। आपकी फसल में कीट, रोग या खाद से जुड़ा कोई भी सवाल नीचे पूछें।',
+    welcomeFarmer: (name, crop) => `नमस्ते ${name ? name + ' जी!' : 'किसान भाई!'} सत्यम एग्रो मार्ट AI फसल डॉक्टर में आपका स्वागत है। आपकी ${crop ? crop + ' ' : ''}फसल कैसी चल रही है? कोई भी समस्या नीचे पूछें।`,
+    followUp: 'नीचे दिए गए विषय को चुनें या अपना सवाल लिखें:',
+    chips: [
+      { id: 'start_paddy', label: '🌾 धान का झुलसा रोग व पीली पत्तियां', category: 'crop' },
+      { id: 'start_cotton', label: '🐛 कपास में सफेद मक्खी व कीट नियंत्रण', category: 'crop' },
+      { id: 'start_soil', label: '🌱 मिट्टी परीक्षण व खाद की सही मात्रा', category: 'soil' },
+      { id: 'start_expert', label: '👨‍⚕️ कृषि विशेषज्ञ से सलाह लें', category: 'expert' }
+    ],
+    placeholder: 'फसल की बीमारी या सवाल लिखें...',
+    thinking: 'फसल डॉक्टर जांच कर रहे हैं...',
+    scheduleCall: 'कॉल परामर्श बुक करें',
+    needExpert: 'क्या विशेषज्ञ परामर्श की आवश्यकता है?',
+    expertDesc: 'गंभीर या जटिल फसल समस्याओं के लिए हमारे योग्य कृषि विशेषज्ञ 1-ऑन-1 मार्गदर्शन प्रदान करते हैं।',
+    fallbackError: 'नेटवर्क में अस्थायी रुकावट है। विशेषज्ञ डॉक्टर से परामर्श लें: [[PAGE:/agronomy-experts:Schedule Agronomist Consultation]]',
+    addToCart: (name) => `${name} - कार्ट में जोड़ें`
+  }
+}
 
 // Parses AI formatted text and tags into interactive React components
-function formatAiText(text, addToCart) {
+function formatAiText(text, addToCart, activeLang = 'en') {
   if (!text) return null
+  const loc = I18N_CHAT[activeLang] || I18N_CHAT.en
   // Match tags like [[PRODUCT:id:Name]], [[PAGE:path:Label]], [[WHATSAPP:Label]]
   const tagRegex = /\[\[(PRODUCT|PAGE|WHATSAPP):([^:]+)(?::([^\]]+))?\]\]/g
   const parts = []
@@ -53,7 +165,7 @@ function formatAiText(text, addToCart) {
               className="chat-action"
               onClick={() => addToCart(part.target)}
             >
-              <i className="fa-solid fa-cart-plus"></i> Add {part.label} to Cart
+              <i className="fa-solid fa-cart-plus"></i> {loc.addToCart ? loc.addToCart(part.label) : `Add ${part.label} to Cart`}
             </button>
           )
         }
@@ -90,7 +202,11 @@ function formatAiText(text, addToCart) {
 export default memo(function Chatbot({ t }) {
   const { addToCart } = useStore()
   const { user } = useAuth()
+  const { lang: currentLang = 'en' } = useLanguage()
   const navigate = useNavigate()
+
+  const activeLang = String(currentLang || 'en').trim().toLowerCase().slice(0, 5)
+  const loc = I18N_CHAT[activeLang] || I18N_CHAT.en
 
   const [open, setOpen] = useState(false)
   const [sessionId, setSessionId] = useState(() => {
@@ -101,43 +217,36 @@ export default memo(function Chatbot({ t }) {
     }
   })
 
-  // Generates initial welcome payload tailored to user's registered crop
-  const getInitialMessage = useCallback(() => {
+  // Generates initial welcome payload tailored to active language and user profile
+  const getInitialMessage = useCallback((langCode = activeLang) => {
+    const l = I18N_CHAT[langCode] || I18N_CHAT.en
     const cropName = user?.crop
-    const farmerName = user?.name ? `${user.name} ji` : 'விவசாயி'
+    const farmerName = user?.name || ''
 
     if (cropName) {
+      const text = l.welcomeFarmer(farmerName, cropName)
       return {
         id: 'welcome',
         sender: 'bot',
-        rawText: `வணக்கம் ${farmerName}! Welcome to Sathyam Agro Mart AI Crop Assistant. How is your ${cropName} crop progressing? Ask any pest, disease, or fertilizer question below.`,
-        content: `வணக்கம் ${farmerName}! Welcome to Sathyam Agro Mart AI Crop Assistant. How is your **${cropName}** crop progressing? Ask any pest, disease, or fertilizer question below.`,
-        followUp: `What would you like help with for your ${cropName} farm?`,
-        suggestions: [
-          { id: 'crop_pest', label: `🌾 ${cropName} Pest & Disease remedies`, category: 'crop' },
-          { id: 'crop_fert', label: `🌱 ${cropName} Fertilizer & Growth Schedule`, category: 'crop' },
-          { id: 'crop_soil', label: '🧪 Check Soil Health Card', category: 'action' },
-          { id: 'crop_expert', label: '👨‍⚕️ Book Agronomy Doctor Consultation', category: 'action' }
-        ],
+        rawText: text,
+        content: text,
+        followUp: l.followUp,
+        suggestions: l.chips,
         offerExpert: false
       }
     }
 
+    const text = l.welcomeGuest
     return {
       id: 'welcome',
       sender: 'bot',
-      rawText: t('chat_welcome') || 'வணக்கம்! Welcome to Sathyam Agro Mart AI Assistant. How can we help your farm today?',
-      content: t('chat_welcome') || 'வணக்கம்! Welcome to Sathyam Agro Mart AI Assistant. How can we help your farm today?',
-      followUp: 'Select a common topic below or type your crop question:',
-      suggestions: [
-        { id: 'start_paddy', label: '🌾 Paddy Blast & Yellow Leaf Diagnosis', category: 'crop' },
-        { id: 'start_cotton', label: '🐛 Cotton Whitefly & Pest Control', category: 'crop' },
-        { id: 'start_soil', label: '🌱 Soil Test Guidance & Fertilizer Dosage', category: 'soil' },
-        { id: 'start_expert', label: '👨‍⚕️ Consult an Agronomy Specialist', category: 'expert' }
-      ],
+      rawText: text,
+      content: text,
+      followUp: l.followUp,
+      suggestions: l.chips,
       offerExpert: false
     }
-  }, [user, t])
+  }, [user, activeLang])
 
   // Initialize messages from persistent storage or default welcome
   const [messages, setMessages] = useState(() => {
@@ -150,8 +259,19 @@ export default memo(function Chatbot({ t }) {
         }
       }
     } catch {}
-    return [getInitialMessage()]
+    return [getInitialMessage(activeLang)]
   })
+
+  // When language changes at top of site, automatically adapt initial welcome if not in an active conversation
+  useEffect(() => {
+    setMessages(prev => {
+      if (prev.length === 1 && prev[0].id === 'welcome') {
+        const updated = getInitialMessage(activeLang)
+        return [updated]
+      }
+      return prev
+    })
+  }, [activeLang, getInitialMessage])
 
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -207,14 +327,14 @@ export default memo(function Chatbot({ t }) {
   const startNewConversation = useCallback(() => {
     const newSession = 'SES-' + Date.now().toString(36).toUpperCase()
     setSessionId(newSession)
-    const initial = getInitialMessage()
+    const initial = getInitialMessage(activeLang)
     setMessages([initial])
     setDraft('')
     try {
       localStorage.setItem(SESSION_STORAGE_KEY, newSession)
       localStorage.setItem(MESSAGE_STORAGE_PREFIX + newSession, JSON.stringify([initial]))
     } catch {}
-  }, [getInitialMessage])
+  }, [getInitialMessage, activeLang])
 
   // Core send function
   const send = async (text, selectedOption = null) => {
@@ -250,7 +370,8 @@ export default memo(function Chatbot({ t }) {
         message: trimmed,
         sessionId,
         selectedOption,
-        history: historyPayload
+        history: historyPayload,
+        lang: activeLang
       })
 
       if (res.data?.success && res.data?.reply) {
@@ -263,7 +384,7 @@ export default memo(function Chatbot({ t }) {
                   ...m,
                   loading: false,
                   rawText: reply,
-                  content: formatAiText(reply, addToCart),
+                  content: formatAiText(reply, addToCart, activeLang),
                   followUp: followUp || '',
                   suggestions: Array.isArray(suggestions) ? suggestions : [],
                   offerExpert: Boolean(offerExpert),
@@ -282,8 +403,7 @@ export default memo(function Chatbot({ t }) {
     }
 
     // Local rule-based fallback when server assistant fails
-    const fallbackReply = `🌿 **Sathyam Agro Mart AI Assistant:**
-We are experiencing a temporary network delay with our AI service. For crop pests and disease remedies, you can explore our catalog or book an agronomist callback directly: [[PAGE:/agronomy-experts:Schedule Agronomist Consultation]]`
+    const fallbackReply = loc.fallbackError
 
     setMessages(current =>
       current.map(m =>
@@ -292,14 +412,11 @@ We are experiencing a temporary network delay with our AI service. For crop pest
               ...m,
               loading: false,
               rawText: fallbackReply,
-              content: formatAiText(fallbackReply, addToCart),
-              followUp: 'Would you like to schedule an Agronomy Expert consultation?',
-              suggestions: [
-                { id: 'fb_expert', label: '👨‍⚕️ Schedule Agronomist Consultation', category: 'action' },
-                { id: 'fb_soil', label: '🌱 Check Soil Test Calculator', category: 'action' }
-              ],
+              content: formatAiText(fallbackReply, addToCart, activeLang),
+              followUp: loc.followUp,
+              suggestions: loc.chips.slice(0, 2),
               offerExpert: true,
-              expertReason: 'Direct callback ensures timely assistance during network downtime.'
+              expertReason: loc.expertDesc
             }
           : m
       )
@@ -357,10 +474,10 @@ We are experiencing a temporary network delay with our AI service. For crop pest
             </span>
             <div>
               <span className="chatbot-title" data-i18n="chatbot_title">
-                {t('chatbot_title') || 'AI Crop Doctor'}
+                {loc.title}
               </span>
               <span className="chatbot-status">
-                ● Online 24/7 (Sathyam Agri-AI)
+                {loc.online}
               </span>
             </div>
           </div>
@@ -368,17 +485,17 @@ We are experiencing a temporary network delay with our AI service. For crop pest
             <button
               className="chatbot-header-btn"
               onClick={startNewConversation}
-              title="Start a new conversation"
-              aria-label="New chat"
+              title={loc.newChatAria}
+              aria-label={loc.newChatAria}
               type="button"
             >
-              <i className="fa-solid fa-rotate-right"></i> New
+              <i className="fa-solid fa-rotate-right"></i> {loc.new}
             </button>
             <button
               id="chatbotCloseBtn"
               className="chatbot-close"
               onClick={() => setOpen(false)}
-              aria-label="Close chat"
+              aria-label={loc.closeAria}
               type="button"
             >
               &times;
@@ -393,12 +510,12 @@ We are experiencing a temporary network delay with our AI service. For crop pest
               <div className={`chat-msg ${message.sender === 'user' ? 'user-msg' : 'bot-msg'}`}>
                 {message.loading ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', opacity: 0.8 }}>
-                    <i className="fa-solid fa-spinner fa-spin"></i> Consulting Crop Doctor...
+                    <i className="fa-solid fa-spinner fa-spin"></i> {loc.thinking}
                   </span>
                 ) : (
                   <div>
                     {typeof message.content === 'string'
-                      ? formatAiText(message.content, addToCart)
+                      ? formatAiText(message.content, addToCart, activeLang)
                       : message.content}
 
                     {/* Follow-up question callout */}
@@ -437,17 +554,17 @@ We are experiencing a temporary network delay with our AI service. For crop pest
                     <div className="chat-expert-card" style={{ margin: '6px 4px 12px 4px' }}>
                       <div className="chat-expert-header">
                         <i className="fa-solid fa-user-doctor"></i>
-                        <span>Need Expert Field Diagnosis?</span>
+                        <span>{loc.needExpert}</span>
                       </div>
                       <p className="chat-expert-desc">
-                        {message.expertReason || 'Our qualified agronomists provide personalized 1-on-1 guidance for severe or complex field issues.'}
+                        {message.expertReason || loc.expertDesc}
                       </p>
                       <button
                         type="button"
                         className="chat-expert-btn"
                         onClick={() => handleBookExpert(message)}
                       >
-                        <i className="fa-solid fa-calendar-days"></i> Schedule Consultation Call
+                        <i className="fa-solid fa-calendar-days"></i> {loc.scheduleCall}
                       </button>
                     </div>
                   )}
@@ -464,7 +581,7 @@ We are experiencing a temporary network delay with our AI service. For crop pest
             type="text"
             id="chatbotInput"
             data-i18n-placeholder="chat_placeholder"
-            placeholder={isSending ? 'Crop Doctor is thinking...' : (t('chat_placeholder') || 'Ask any crop question or symptom...')}
+            placeholder={isSending ? loc.thinking : loc.placeholder}
             value={draft}
             disabled={isSending}
             onChange={event => setDraft(event.target.value)}

@@ -280,6 +280,69 @@ test('12. Validation: Empty message is refused with 400', async () => {
   assert.equal(res.body.success, false);
 });
 
+test('13. Language Directives: buildSystemPrompt strictly enforces English when lang is en', () => {
+  const promptEn = buildSystemPrompt({
+    profile: { name: 'John Doe', crop: 'Paddy/Rice' },
+    recentPurchases: [],
+    relevantProducts: products,
+    lang: 'en'
+  });
+  assert.ok(promptEn.includes('The website is currently set to ENGLISH'));
+  assert.ok(promptEn.includes('You MUST respond ONLY in clear, natural, professional ENGLISH'));
+  assert.ok(promptEn.includes('NEVER use Tamil'));
+
+  const promptTa = buildSystemPrompt({
+    profile: { name: 'Muthuvel K', crop: 'Paddy/Rice' },
+    recentPurchases: [],
+    relevantProducts: products,
+    lang: 'ta'
+  });
+  assert.ok(promptTa.includes('The website is currently set to TAMIL (தமிழ்)'));
+  assert.ok(promptTa.includes('வணக்கம் விவசாயி!'));
+});
+
+test('14. Language Fallback: generateDeterministicFallback returns English for en and Tamil for ta', () => {
+  const fbEn = generateDeterministicFallback({
+    message: 'paddy yellow leaves',
+    profile: null,
+    recentPurchases: [],
+    relevantProducts: products,
+    lang: 'en'
+  });
+  assert.ok(fbEn.reply.includes('Paddy Leaf Yellowing & Health Diagnosis'));
+  assert.ok(!fbEn.reply.includes('வணக்கம்'));
+
+  const fbTa = generateDeterministicFallback({
+    message: 'நெல் மஞ்சள் இலை',
+    profile: null,
+    recentPurchases: [],
+    relevantProducts: products,
+    lang: 'ta'
+  });
+  assert.ok(fbTa.reply.includes('நெல் இலை மஞ்சள் & கருகல் நோய்'));
+  assert.ok(fbTa.suggestions.some(s => s.label.includes('மஞ்சள்')));
+});
+
+test('15. POST /api/chat/assistant: Accepts lang parameter and passes cleanly', async () => {
+  const resTa = await call(null, 'POST', '/api/chat/assistant', {
+    message: 'நெல் இலை கருகல்',
+    sessionId: 'SES-LANG-TA',
+    lang: 'ta'
+  });
+  assert.equal(resTa.status, 200);
+  assert.equal(resTa.body.success, true);
+  assert.ok(resTa.body.reply.includes('நெல்'));
+
+  const resEn = await call(null, 'POST', '/api/chat/assistant', {
+    message: 'paddy blast disease',
+    sessionId: 'SES-LANG-EN',
+    lang: 'en'
+  });
+  assert.equal(resEn.status, 200);
+  assert.equal(resEn.body.success, true);
+  assert.ok(resEn.body.reply.includes('Paddy'));
+});
+
 test('teardown test server', async () => {
   await new Promise(r => server.close(r));
 });

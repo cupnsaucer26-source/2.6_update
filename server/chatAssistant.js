@@ -117,7 +117,7 @@ export async function assembleFarmerContext({ user, message, history = [], db })
 /**
  * Builds the comprehensive prompt for Gemini AI model.
  */
-export function buildSystemPrompt({ profile, recentPurchases, relevantProducts }) {
+export function buildSystemPrompt({ profile, recentPurchases, relevantProducts, lang = 'en' }) {
   const catalogList = relevantProducts.map(p => {
     const crops = Array.isArray(p.crops) ? p.crops.join(', ') : (p.crops || 'All Crops');
     const pests = Array.isArray(p.diseases) ? p.diseases.join(', ') : (p.diseases || p.targetPests || 'General');
@@ -142,6 +142,47 @@ export function buildSystemPrompt({ profile, recentPurchases, relevantProducts }
 ` + recentPurchases.map(p => `- Purchased "${p.productName}" (ID: ${p.productId}, Pack: ${p.packSize}) on ${p.orderDate} [Status: ${p.deliveryStatus}]`).join('\n');
   }
 
+  const cleanLang = String(lang || 'en').trim().toLowerCase().slice(0, 5);
+
+  const langDirectives = {
+    en: `STRICT LANGUAGE DIRECTIVE:
+- The website is currently set to ENGLISH.
+- You MUST respond ONLY in clear, natural, professional ENGLISH.
+- NEVER use Tamil, Tanglish, Hindi, Telugu, or Kannada words, phrases, or greetings (e.g. do NOT say "வணக்கம்", "விவசாயி", "thala", "makkacholam", or mix regional grammar).
+- Use respectful English farmer greetings such as "Hello Farmer!" or "Welcome Farmer!".
+- All explanations, diagnoses, symptoms, dosages, follow-up questions, and selectable suggestion labels MUST be 100% in English.`,
+
+    ta: `STRICT LANGUAGE DIRECTIVE:
+- The website is currently set to TAMIL (தமிழ்).
+- You MUST respond in clear, fluent, natural TAMIL (தமிழ்).
+- Use respectful farmer greeting "வணக்கம் விவசாயி!".
+- Explain diagnoses, symptoms, remedies, and dosages in proper Tamil script (தமிழ்).
+- All follow-up questions and selectable suggestion labels MUST be in Tamil.`,
+
+    te: `STRICT LANGUAGE DIRECTIVE:
+- The website is currently set to TELUGU (తెలుగు).
+- You MUST respond in clear, fluent, natural TELUGU (తెలుగు).
+- Use respectful farmer greeting "నమస్కారం రైతు సోదరా!".
+- Explain diagnoses, symptoms, remedies, and dosages in Telugu script.
+- All follow-up questions and selectable suggestion labels MUST be in Telugu.`,
+
+    kn: `STRICT LANGUAGE DIRECTIVE:
+- The website is currently set to KANNADA (ಕನ್ನಡ).
+- You MUST respond in clear, fluent, natural KANNADA (ಕನ್ನಡ).
+- Use respectful farmer greeting "ನಮಸ್ಕಾರ ರೈತ ಬಾಂಧವರೇ!".
+- Explain diagnoses, symptoms, remedies, and dosages in Kannada script.
+- All follow-up questions and selectable suggestion labels MUST be in Kannada.`,
+
+    hi: `STRICT LANGUAGE DIRECTIVE:
+- The website is currently set to HINDI (हिन्दी).
+- You MUST respond in clear, fluent, natural HINDI (हिन्दी).
+- Use respectful farmer greeting "नमस्ते किसान भाई!".
+- Explain diagnoses, symptoms, remedies, and dosages in Hindi (Devanagari script).
+- All follow-up questions and selectable suggestion labels MUST be in Hindi.`
+  };
+
+  const activeDirective = langDirectives[cleanLang] || langDirectives.en;
+
   return `You are the official Senior Agronomy AI Doctor for Sathyam Agro Mart ("சத்யம் அக்ரோ மார்ட்"), South India's trusted agri-inputs and farmer advisory platform.
 
 MISSION & BEHAVIOR:
@@ -151,7 +192,7 @@ MISSION & BEHAVIOR:
 4. If a symptom is ambiguous (e.g. "paddy leaves turning yellow"), DO NOT guess a single diagnosis with false confidence. State plausible possibilities, ask ONE clear clarifying question, and provide 3-4 selectable suggestion options.
 5. If the problem is severe, widespread, or uncertain, recommend booking an expert consultation with our human agronomy specialists: [[PAGE:/agronomy-experts:Schedule Agronomist Consultation]].
 6. Farmers read answers on mobile phones, often in sunlight. Keep answers under 130 words.
-7. Language rule: Respond in the exact language used by the farmer (Tamil, Tanglish, Hindi, Telugu, Kannada, or English). If Tamil or Tanglish, use respectful farmer phrasing ("வணக்கம் விவசாயி").
+7. ${activeDirective}
 
 MANDATORY AGRONOMIC SAFETY & EVIDENCE PROTOCOL:
 a. Soil Alkalinity & Gypsum: NEVER invent a flat kg/acre dosage for gypsum or lime. Gypsum requirement depends strictly on laboratory Exchangeable Sodium Percentage (ESP) and soil texture. State that soil with pH > 8.0 needs gypsum calculated from a soil test, and invite the farmer to upload their test at [[PAGE:/soil-test-report:Check Soil Health Report]] or [[PAGE:/agronomy-experts:Schedule Agronomist Consultation]].
@@ -193,9 +234,10 @@ You MUST respond with valid JSON matching this schema:
 /**
  * Deterministic fallback engine for when Gemini is offline, rate-limited, or API key is unset.
  */
-export function generateDeterministicFallback({ message, profile, recentPurchases, relevantProducts }) {
+export function generateDeterministicFallback({ message, profile, recentPurchases, relevantProducts, lang = 'en' }) {
   const text = normalizeText(message);
   const crop = profile?.crop || 'Paddy/Rice';
+  const cleanLang = String(lang || 'en').trim().toLowerCase().slice(0, 5);
 
   // Helper to find catalog product by keyword
   const findProd = (kw) => {
@@ -209,9 +251,30 @@ export function generateDeterministicFallback({ message, profile, recentPurchase
   };
 
   // 1. Paddy Leaf Yellowing / Blast
-  if (text.includes('yellow') || text.includes('blast') || text.includes('paddy') || text.includes('நெல்')) {
+  if (text.includes('yellow') || text.includes('blast') || text.includes('paddy') || text.includes('நெல்') || text.includes('மஞ்சள்')) {
     const blastProd = findProd('blast');
     const rootProd = findProd('root') || findProd('vigor');
+    if (cleanLang === 'ta') {
+      return {
+        reply: `🌾 **நெல் இலை மஞ்சள் & கருகல் நோய் கண்டறிதல்:**
+நெல்லில் இலை மஞ்சள் நிறமாக மாறுவதற்கு இரு முக்கிய காரணங்கள் உண்டு:
+1. **நைட்ரஜன் அல்லது நுண்ணூட்டச்சத்து குறைபாடு:** அடி இலைகளில் தொடங்கி வெளிர் மஞ்சள் நிறமாக மாறும். இதற்கு [[PRODUCT:${rootProd.id}:${rootProd.name}]] பரிந்துரைக்கப்படுகிறது.
+2. **நெல் இலை கருகல் (பிளாஸ்ட் - Pyricularia oryzae):** இலைகளில் கண் வடிவ பழுப்பு நிற புள்ளிகள் தோன்றும். இதற்கு [[PRODUCT:${blastProd.id}:${blastProd.name}]] @ 150 கிராம்/ஏக்கர் தெளிக்கவும்.
+
+பயிர் பாதுகாப்பு குறிப்பு: மேகமூட்டமான காலங்களில் அதிக நைட்ரஜன் உரமிடுவதைத் தவிர்க்கவும்.`,
+        followUp: 'உங்கள் வயலில் காணப்படும் அறிகுறிகள் என்ன?',
+        suggestions: [
+          { id: 'paddy_bottom_yellow', label: 'அடி இலைகள் மஞ்சள் நிறமாக மாறுதல் (ஊட்டச்சத்து)', category: 'symptom' },
+          { id: 'paddy_brown_spots', label: 'கண் வடிவ பழுப்பு புள்ளிகள் (பிளாஸ்ட்)', category: 'symptom' },
+          { id: 'paddy_stunted_wilting', label: 'குருத்து காய்ந்து போதல் (தண்டு துளைப்பான்)', category: 'symptom' },
+          { id: 'paddy_custom', label: 'வேறு அறிகுறி — விவரிக்கிறேன்', category: 'custom' }
+        ],
+        offerExpert: true,
+        expertReason: 'பாதிப்பு 20% மேல் இருந்தால் வேளாண் மருத்துவரிடம் ஆலோசனை பெறவும்.',
+        detectedCrop: 'Paddy/Rice',
+        detectedTopic: 'Disease'
+      };
+    }
     return {
       reply: `🌾 **Paddy Leaf Yellowing & Health Diagnosis:**
 In paddy, leaf yellowing typically has two main causes:
@@ -236,6 +299,25 @@ Field tip: Avoid excessive nitrogen fertilizer during cloudy weather to prevent 
   // 2. Cotton Whitefly / Bollworm
   if (text.includes('whitefly') || text.includes('cotton') || text.includes('பருத்தி') || text.includes('bollworm')) {
     const pestProd = findProd('whitefly') || findProd('flykill') || findProd('pest');
+    if (cleanLang === 'ta') {
+      return {
+        reply: `🐛 **பருத்தி பூச்சி மேலாண்மை:**
+பருத்தியில் வெள்ளை ஈ மற்றும் சாறு உறிஞ்சும் பூச்சிகள் இலைகளின் அடிப்பகுதியில் இருந்து சாற்றை உறிஞ்சி, தேன் போன்ற திரவத்தைச் சுரப்பதால் கரும்பூஞ்சை படரும்.
+- **பரிந்துரைக்கப்படும் மருந்து:** [[PRODUCT:${pestProd.id}:${pestProd.name}]] @ 200–250 கிராம்/ஏக்கர் தெளிக்கவும்.
+- **தெளிக்கும் முறை:** அதிகாலை அல்லது மாலையில் இலைகளின் அடிப்பகுதியில் நன்கு படும்படி தெளிக்கவும்.`,
+        followUp: 'உங்கள் பருத்தி பயிரில் பூச்சி தாக்குதலின் தீவிரம் எவ்வாறு உள்ளது?',
+        suggestions: [
+          { id: 'cotton_early_nymphs', label: 'ஆரம்ப நிலை / சில வெள்ளை ஈக்கள் மட்டும்', category: 'symptom' },
+          { id: 'cotton_black_mold', label: 'கரும்பூஞ்சை படிந்த தீவிர பாதிப்பு', category: 'symptom' },
+          { id: 'cotton_leaf_curl', label: 'இலைகள் மேல்நோக்கி சுருண்டு வளர்ச்சி குன்றுதல்', category: 'symptom' },
+          { id: 'cotton_custom', label: 'வேறு பூச்சி பிரச்சனை', category: 'custom' }
+        ],
+        offerExpert: true,
+        expertReason: 'வெள்ளை ஈக்கள் இலைசுருள் வைரஸை வேகமாகப் பரப்பும்; சரியான பூச்சிக்கொல்லி சுழற்சிக்கு ஆலோசனை பெறவும்.',
+        detectedCrop: 'Cotton',
+        detectedTopic: 'Pest'
+      };
+    }
     return {
       reply: `🐛 **Cotton Pest Management:**
 For whitefly and sucking pests in cotton, nymphs suck sap from leaf undersides, secreting honeydew that leads to black sooty mold and leaf curl virus.
@@ -257,6 +339,26 @@ For whitefly and sucking pests in cotton, nymphs suck sap from leaf undersides, 
 
   // 3. Soil Health & Testing
   if (text.includes('soil') || text.includes('மண்') || text.includes('ph') || text.includes('salinity') || text.includes('fertility')) {
+    if (cleanLang === 'ta') {
+      return {
+        reply: `🌱 **மண் வளம் & ஊட்டச்சத்து மேலாண்மை:**
+ஆரோக்கியமான மண்ணே அதிக மகசூலுக்கு அடித்தளம்:
+- **சரியான pH அளவு:** 6.5 முதல் 7.5 வரை. அமில மண்ணிற்கு (<6.0) விவசாய சுண்ணாம்பு; கார மண்ணிற்கு (>8.0) ஜிப்சம் மற்றும் மக்கிய உரம் பரிந்துரைக்கப்படுகிறது.
+- **கரிமக் கார்பன் (Organic Carbon):** வேர் வளர்ச்சிக்கு >0.75% இருப்பது சிறந்தது.
+- உங்கள் ஆய்வக மண் பரிசோதனை முடிவுகளை எங்கள் கால்குலேட்டரில் உள்ளீடு செய்து உர பரிந்துரை பெறலாம்: [[PAGE:/soil-test-report:மண் பரிசோதனை அறிக்கை]].`,
+        followUp: 'உங்கள் மண்ணில் தற்போது உள்ள சிக்கல் என்ன?',
+        suggestions: [
+          { id: 'soil_check_report', label: 'மண் பரிசோதனை அட்டை என்னிடம் உள்ளது', category: 'action' },
+          { id: 'soil_alkaline_hard', label: 'இறுகிய மண் / உவர் நீர் பிரச்சனை', category: 'symptom' },
+          { id: 'soil_organic_matter', label: 'மண் கரிம வளம் & நுண்ணுயிரிகளை அதிகரிக்க', category: 'symptom' },
+          { id: 'soil_sampling_guide', label: 'மண் மாதிரி எடுக்கும் முறை', category: 'action' }
+        ],
+        offerExpert: false,
+        expertReason: '',
+        detectedCrop: profile?.crop || 'General Crops',
+        detectedTopic: 'Soil'
+      };
+    }
     return {
       reply: `🌱 **Soil Health & Nutrient Management:**
 Healthy soil is the foundation for high yields:
@@ -346,7 +448,37 @@ Our certified agronomy specialists provide 1-on-1 consultations for field diagno
 
   // 6. Default Warm Greeting & Topic Starter
   const defaultProd = relevantProducts[0] || { id: 'sb-01', name: 'RootVigor Gold' };
-  const userGreeting = profile?.name ? `வணக்கம் ${profile.name} ji!` : 'வணக்கம் விவசாயி! Welcome to Sathyam Agro Mart AI Farming Assistant.';
+  
+  if (cleanLang === 'ta') {
+    const userGreeting = profile?.name ? `வணக்கம் ${profile.name} அவர்களே!` : 'வணக்கம் விவசாயி! சத்யம் அக்ரோ மார்ட் AI பயிர் மருத்துவருக்கு வரவேற்கிறோம்.';
+    let initialSuggestions = [
+      { id: 'start_crop_pest', label: '🐛 பயிர் பூச்சி அல்லது நோய் கண்டறிதல்', category: 'action' },
+      { id: 'start_fertilizer', label: '🌱 உரப் பரிந்துரை & ஊட்டச்சத்து மேலாண்மை', category: 'action' },
+      { id: 'start_soil_test', label: '🧪 மண் பரிசோதனை வழிகாட்டி', category: 'action' },
+      { id: 'start_expert', label: '👨‍⚕️ வேளாண் மருத்துவரிடம் ஆலோசனை பெற', category: 'action' }
+    ];
+    if (profile?.crop) {
+      initialSuggestions = [
+        { id: 'start_my_crop_pests', label: `🌾 ${profile.crop} பூச்சி & நோய் மருந்துகள்`, category: 'action' },
+        { id: 'start_my_crop_fert', label: `🌱 ${profile.crop} உர அட்டவணை`, category: 'action' },
+        { id: 'start_soil_test', label: '🧪 மண் பரிசோதனை அட்டை சரிபார்க்க', category: 'action' },
+        { id: 'start_expert', label: '👨‍⚕️ வேளாண் மருத்துவரிடம் ஆலோசனை பெற', category: 'action' }
+      ];
+    }
+    return {
+      reply: `${userGreeting}
+நான் உங்கள் 24/7 AI பயிர் மருத்துவர். பயிர் நோய்களைக் கண்டறிந்து, [[PRODUCT:${defaultProd.id}:${defaultProd.name}]] போன்ற மருந்துகளைப் பரிந்துரைக்கவும், உர அட்டவணை மற்றும் வேளாண் நிபுணர் ஆலோசனை பெறவும் உதவ முடியும்.`,
+      followUp: 'இன்று உங்களுக்கு என்ன உதவி தேவை?',
+      suggestions: initialSuggestions,
+      offerExpert: false,
+      expertReason: '',
+      detectedCrop: profile?.crop || 'General Crops',
+      detectedTopic: 'General'
+    };
+  }
+
+  // Default English Greeting
+  const userGreeting = profile?.name ? `Hello ${profile.name}!` : 'Hello Farmer! Welcome to Sathyam Agro Mart AI Farming Assistant.';
 
   let initialSuggestions = [
     { id: 'start_crop_pest', label: '🐛 Diagnose Crop Pest or Disease', category: 'action' },
@@ -455,7 +587,8 @@ export async function processAssistantTurn({
   clientIp,
   db,
   apiKey,
-  modelCandidates = []
+  modelCandidates = [],
+  lang = 'en'
 }) {
   const query = String(message || '').trim();
   if (!query && !selectedOption) {
@@ -463,6 +596,7 @@ export async function processAssistantTurn({
   }
 
   const effectiveQuery = query || selectedOption?.label || '';
+  const cleanLang = String(lang || 'en').trim().toLowerCase().slice(0, 5);
 
   // 1. Assemble context
   const context = await assembleFarmerContext({
@@ -477,7 +611,7 @@ export async function processAssistantTurn({
 
   // 2. Try Gemini API if key is present
   if (apiKey) {
-    const systemPrompt = buildSystemPrompt(context);
+    const systemPrompt = buildSystemPrompt({ ...context, lang: cleanLang });
     const apiResult = await callGeminiAssistant({
       apiKey,
       modelCandidates,
@@ -498,7 +632,8 @@ export async function processAssistantTurn({
       message: effectiveQuery,
       profile: context.profile,
       recentPurchases: context.recentPurchases,
-      relevantProducts: context.relevantProducts
+      relevantProducts: context.relevantProducts,
+      lang: cleanLang
     });
   }
 
