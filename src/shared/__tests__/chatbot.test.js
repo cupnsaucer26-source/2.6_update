@@ -140,6 +140,27 @@ test('4. Expert Booking Referral: Generates safe navigation payload without auto
   assert.ok(referral.state.notes.includes('SES-TEST-999'));
 });
 
+// Parser extracting markdown segments for test verification
+function parseMarkdownSegments(text) {
+  if (!text) return [];
+  const boldRegex = /\*\*([^*]+)\*\*/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = boldRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'plain', value: text.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: 'bold', value: match[1] });
+    lastIndex = boldRegex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push({ type: 'plain', value: text.slice(lastIndex) });
+  }
+  return parts;
+}
+
 test('5. Multi-turn payload: Formats previous turns bounded to latest 6 turns', () => {
   const history = [
     { id: 1, sender: 'user', rawText: 'Turn 1' },
@@ -156,4 +177,22 @@ test('5. Multi-turn payload: Formats previous turns bounded to latest 6 turns', 
   assert.equal(payload.length, 6);
   assert.equal(payload[0].text, 'Turn 2');
   assert.equal(payload[5].text, 'Reply 4');
+});
+
+test('6. Markdown Bold Parser: Converts **some words** into bold segments without literal asterisks', () => {
+  const raw = 'Symptoms of **White Bud** and **Blast** in paddy.';
+  const segments = parseMarkdownSegments(raw);
+
+  assert.equal(segments.length, 5);
+  assert.equal(segments[0].value, 'Symptoms of ');
+  assert.equal(segments[1].type, 'bold');
+  assert.equal(segments[1].value, 'White Bud');
+  assert.equal(segments[2].value, ' and ');
+  assert.equal(segments[3].type, 'bold');
+  assert.equal(segments[3].value, 'Blast');
+  assert.equal(segments[4].value, ' in paddy.');
+
+  // Confirm no raw ** asterisks remain in extracted bold content
+  assert.ok(!segments[1].value.includes('*'));
+  assert.ok(!segments[3].value.includes('*'));
 });

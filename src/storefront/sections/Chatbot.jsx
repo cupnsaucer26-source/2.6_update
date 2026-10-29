@@ -129,6 +129,70 @@ export const I18N_CHAT = {
   }
 }
 
+// Parses markdown bold (**text**) and italics (*text*) into styled elements
+export function renderFormattedMarkdown(text) {
+  if (!text) return null
+  const boldRegex = /\*\*([^*]+)\*\*/g
+  const parts = []
+  let lastIndex = 0
+  let match
+
+  while ((match = boldRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'plain', value: text.slice(lastIndex, match.index) })
+    }
+    parts.push({ type: 'bold', value: match[1] })
+    lastIndex = boldRegex.lastIndex
+  }
+  if (lastIndex < text.length) {
+    parts.push({ type: 'plain', value: text.slice(lastIndex) })
+  }
+
+  return parts.map((part, idx) => {
+    if (part.type === 'bold') {
+      return (
+        <strong key={`b-${idx}`} style={{ fontWeight: 600 }}>
+          {part.value}
+        </strong>
+      )
+    }
+
+    // Check for *emphasis* in plain segments
+    const italicRegex = /(^|[^\*])\*([^\*\s][^\*]*[^\*\s]|[^\*\s])\*(?!\*)/g
+    const subParts = []
+    let subLast = 0
+    let imatch
+
+    while ((imatch = italicRegex.exec(part.value)) !== null) {
+      const prefix = imatch[1] || ''
+      const italicText = imatch[2]
+
+      if (imatch.index > subLast) {
+        subParts.push({ type: 'plain', value: part.value.slice(subLast, imatch.index) })
+      }
+      if (prefix) {
+        subParts.push({ type: 'plain', value: prefix })
+      }
+      subParts.push({ type: 'italic', value: italicText })
+      subLast = italicRegex.lastIndex
+    }
+    if (subLast < part.value.length) {
+      subParts.push({ type: 'plain', value: part.value.slice(subLast) })
+    }
+
+    if (subParts.length === 0) {
+      return part.value
+    }
+
+    return subParts.map((sp, sIdx) => {
+      if (sp.type === 'italic') {
+        return <em key={`em-${idx}-${sIdx}`}>{sp.value}</em>
+      }
+      return sp.value
+    })
+  })
+}
+
 // Parses AI formatted text and tags into interactive React components
 function formatAiText(text, addToCart, activeLang = 'en') {
   if (!text) return null
@@ -191,7 +255,7 @@ function formatAiText(text, addToCart, activeLang = 'en') {
         }
         return (
           <span key={`text-${index}`} style={{ whiteSpace: 'pre-line' }}>
-            {part.value}
+            {renderFormattedMarkdown(part.value)}
           </span>
         )
       })}
@@ -522,7 +586,7 @@ export default memo(function Chatbot({ t }) {
                     {message.followUp && !message.loading && (
                       <div className="chat-followup-box">
                         <i className="fa-solid fa-circle-info" style={{ marginRight: '6px' }}></i>
-                        {message.followUp}
+                        {renderFormattedMarkdown(message.followUp)}
                       </div>
                     )}
                   </div>
