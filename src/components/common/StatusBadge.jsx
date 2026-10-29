@@ -3,7 +3,7 @@ import React from 'react';
 /**
  * Status colors mapping across all Sathyam Agro Mart modules.
  * Standard badge classes: badge badge-green, badge badge-yellow, badge badge-red,
- * badge badge-blue, badge badge-teal, badge badge-purple, badge badge-gray.
+ * badge badge-blue, badge badge-teal, badge badge-purple, badge badge-orange, badge badge-gray.
  */
 const STATUS_COLOR_MAP = {
   // Orders & Delivery
@@ -11,7 +11,7 @@ const STATUS_COLOR_MAP = {
   assigned: 'teal',
   confirmed: 'blue',
   dispatched: 'purple',
-  'out for delivery': 'blue',
+  'out for delivery': 'orange',
   delivered: 'green',
   completed: 'green',
   cancelled: 'red',
@@ -35,10 +35,13 @@ const STATUS_COLOR_MAP = {
   inactive: 'gray',
   disabled: 'red',
 
-  // Reports
+  // Reports & Referrals
   'in review': 'blue',
   analyzing: 'yellow',
   submitted: 'yellow',
+  expired: 'gray',
+  rejected: 'red',
+  reversed: 'red',
 };
 
 /**

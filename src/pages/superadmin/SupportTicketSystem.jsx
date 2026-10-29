@@ -21,12 +21,14 @@ import {
   Layers,
   ChevronDown,
   Paperclip,
-  Lock,
-  ExternalLink
+  Lock
 } from 'lucide-react'
 import { ticketService } from '../../services/ticketService'
 import { useAuth } from '../../context/AuthContext'
 import TicketAssignControls from '../../components/tickets/TicketAssignControls'
+import TicketStatusBadge, { getTicketStatusChipClass, getTicketPriorityChipClass } from '../../components/tickets/TicketStatusBadge'
+import TicketAttachmentPreview from '../../components/tickets/TicketAttachmentPreview'
+import TicketMessageThread from '../../components/tickets/TicketMessageThread'
 
 export default function SupportTicketSystem() {
   const { user } = useAuth()
@@ -185,8 +187,8 @@ export default function SupportTicketSystem() {
     ['Resolved & Closed', resolvedCount, `${totalCount ? Math.round((resolvedCount / totalCount) * 100) : 0}% resolution rate`, 'is-green', <CheckCircle2 size={18} key="i" />, () => setStatusFilter('resolved'), statusFilter === 'resolved'],
     ['High & Urgent Priority', urgentCount, 'Requires rapid escalation', 'is-red', <ShieldAlert size={18} key="i" />, () => setPriorityFilter(priorityFilter === 'urgent' ? 'all' : 'urgent'), priorityFilter === 'urgent']
   ]
-  const statusChip = s => (s === 'Resolved' || s === 'Closed' ? 'p2-chip--green' : s === 'In Progress' ? 'p2-chip--blue' : 'p2-chip--amber')
-  const priorityChip = p => (p === 'Urgent' || p === 'High' ? 'p2-chip--red' : p === 'Medium' ? 'p2-chip--amber' : '')
+  const statusChip = getTicketStatusChipClass
+  const priorityChip = getTicketPriorityChipClass
   const assignedOf = t => t?.assignedToName && t.assignedToName !== 'Unassigned'
 
   return (
@@ -280,8 +282,8 @@ export default function SupportTicketSystem() {
                     <span className="p2-list-top">
                       <span className="p2-list-id">{t.id}</span>
                       <span className="p2-list-chips">
-                        <span className={`p2-chip ${priorityChip(t.priority)}`}>{t.priority?.toUpperCase()}</span>
-                        <span className={`p2-chip ${statusChip(t.status)}`}>{t.status?.toUpperCase()}</span>
+                        <TicketStatusBadge priority={t.priority} />
+                        <TicketStatusBadge status={t.status} />
                       </span>
                     </span>
                     <span className="p2-list-title">{t.subject}</span>
@@ -318,7 +320,7 @@ export default function SupportTicketSystem() {
               <div className="p2-thread-ids">
                 <span className="p2-thread-id">{selectedTicket.id}</span>
                 <span className="p2-chip p2-chip--line">Order: {selectedTicket.orderId || 'Direct'}</span>
-                <span className={`p2-chip ${statusChip(selectedTicket.status)}`}>{selectedTicket.status?.toUpperCase()}</span>
+                <TicketStatusBadge status={selectedTicket.status} />
               </div>
               <h2>{selectedTicket.subject}</h2>
               <div className="p2-hint" style={{ marginTop: 4 }}>
@@ -333,24 +335,7 @@ export default function SupportTicketSystem() {
               )}
 
               {/* Attachment if present */}
-              {selectedTicket.attachment?.url && (
-                <div style={{ margin: '8px 0', padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <img
-                    src={selectedTicket.attachment.url}
-                    alt="Ticket evidence"
-                    style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                    onClick={() => window.open(selectedTicket.attachment.url, '_blank')}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155' }}>
-                      📎 Customer Attachment: {selectedTicket.attachment.filename || 'Photo'}
-                    </div>
-                    <a href={selectedTicket.attachment.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.74rem', color: '#15803d', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      Open Full Image <ExternalLink size={11} />
-                    </a>
-                  </div>
-                </div>
-              )}
+              <TicketAttachmentPreview attachment={selectedTicket.attachment} />
             </div>
 
             <div className="p2-detail-pad p2-stack">
@@ -431,42 +416,7 @@ export default function SupportTicketSystem() {
                 <div className="p2-label" style={{ textTransform: 'uppercase', fontSize: '0.72rem', marginBottom: 8 }}>
                   Live Message Stream ({selectedTicket.replies?.length || 0})
                 </div>
-                <div className="p2-messages p2-messages--compact">
-                  {selectedTicket.replies?.map((rep, idx) => (
-                    rep.senderRole === 'system' ? (
-                      <div key={rep.id || idx} className="p2-sys">{rep.text} · {rep.time}</div>
-                    ) : (
-                      <div
-                        key={rep.id || idx}
-                        className={`p2-msg${rep.senderRole === 'farmer' ? '' : ' p2-msg--me'}`}
-                        style={rep.isInternal ? { borderLeft: '3px solid #f59e0b', background: '#fffbeb' } : {}}
-                      >
-                        <div className="p2-msg-who">
-                          <strong>{rep.senderName} ({rep.senderRole?.toUpperCase()})</strong>
-                          {rep.isInternal && (
-                            <span className="p2-chip p2-chip--amber" style={{ fontSize: '0.68rem', padding: '2px 6px', marginLeft: 6 }}>
-                              🔒 Internal Staff Note
-                            </span>
-                          )}
-                          <span>· {rep.time}</span>
-                        </div>
-                        <div className="p2-bubble" style={rep.isInternal ? { background: '#fef3c7', color: '#92400e' } : {}}>
-                          {rep.text}
-                          {rep.attachment?.url && (
-                            <div style={{ marginTop: 6 }}>
-                              <img
-                                src={rep.attachment.url}
-                                alt="Attachment"
-                                style={{ maxWidth: 200, maxHeight: 150, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                                onClick={() => window.open(rep.attachment.url, '_blank')}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  ))}
-                </div>
+                <TicketMessageThread replies={selectedTicket.replies} mode="staff" showRole={true} />
 
                 {/* Super Admin Direct Message / Reply with Internal Note toggle */}
                 <form onSubmit={handleSendReply} className="p2-reply p2-reply--flat" style={{ flexDirection: 'column', gap: 8 }}>

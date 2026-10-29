@@ -81,7 +81,16 @@ export default function DeliveryDashboard() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px' }}>
-        {orders.map(order => (
+        {orders.length === 0 ? (
+          <div className="card" style={{ padding: '36px 16px' }}>
+            <EmptyState
+              icon={<Truck size={36} style={{ color: '#15803d' }} />}
+              title="No Delivery Orders Assigned"
+              description="You have no delivery assignments waiting in your queue at this moment."
+            />
+          </div>
+        ) : (
+          orders.map(order => (
           <div key={order.id} className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
@@ -135,7 +144,8 @@ export default function DeliveryDashboard() {
               </div>
             )}
           </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   )

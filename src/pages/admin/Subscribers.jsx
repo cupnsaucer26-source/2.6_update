@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
+import { Search, Mail } from 'lucide-react'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
+import { formatDate, formatDateTime } from '../../utils/formatters'
 import {
   ADVISORY_GREETING, CROP_GROUPS, MESSAGE_MAX_LENGTH, OTHER_GROUP, SEASONS,
   cropGroupKey, cropGroupLabel, isActiveSubscriber, renderAdvisory, selectRecipients,
@@ -17,8 +21,6 @@ const PLACEHOLDERS = ['{name}', '{crop}', '{season}', '{acres}']
 const STATUS_LABEL = { sending: 'Sending', completed: 'Completed', cancelled: 'Cancelled' }
 const errorMessage = (err, fallback) => err.response?.data?.message || fallback
 
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString('en-IN') : '')
-
 function progressOf(broadcast) {
   const c = broadcast?.counts || {}
   const done = (c.sent || 0) + (c.failed || 0) + (c.skipped || 0) + (c.cancelled || 0)
@@ -27,6 +29,7 @@ function progressOf(broadcast) {
 
 export default function AdminSubscribers() {
   const [subscribers, setSubscribers] = useState(SUBS)
+  const [loading, setLoading] = useState(true)
   const [cropFilter, setCropFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [broadcasts, setBroadcasts] = useState([])
@@ -35,9 +38,13 @@ export default function AdminSubscribers() {
   const [pausedNote, setPausedNote] = useState('')
   const driving = useRef(null)
 
-  const loadSubscribers = useCallback(() => axios.get('/api/advisory/subscribers')
-    .then(({ data }) => setSubscribers(data.data || []))
-    .catch(() => setSubscribers(SUBS)), [])
+  const loadSubscribers = useCallback(() => {
+    setLoading(true)
+    return axios.get('/api/advisory/subscribers')
+      .then(({ data }) => setSubscribers(data.data || []))
+      .catch(() => setSubscribers(SUBS))
+      .finally(() => setLoading(false))
+  }, [])
 
   const loadBroadcasts = useCallback(() => axios.get('/api/advisory/broadcasts')
     .then(({ data }) => setBroadcasts(data.data || []))
@@ -145,26 +152,39 @@ export default function AdminSubscribers() {
           <table>
             <thead><tr><th>#</th><th>Farmer</th><th>Phone</th><th>Crop</th><th>Season</th><th>Acres</th><th>Last advisory</th><th>Date</th><th>Status</th></tr></thead>
             <tbody>
-              {visible.map((s, i) => (
-                <tr key={s.id || i} className={isActiveSubscriber(s) ? '' : 'adv-row-off'}>
-                  <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
-                  <td style={{ fontWeight: 600 }}>{s.name}</td>
-                  <td><span className="badge badge-green">📱 {s.phone}</span></td>
-                  <td>{s.crop}<div className="adv-sub">{cropGroupLabel(cropGroupKey(s.crop))}</div></td>
-                  <td><span className="badge badge-blue">{s.season}</span></td>
-                  <td>{s.acres || s.acreage || 0} ac</td>
-                  <td>{s.lastAdvisorySent ? <>{s.lastAdvisorySent}<div className="adv-sub">{formatDate(s.lastAdvisoryAt)}</div></> : <span className="adv-sub">None yet</span>}</td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{s.date || formatDate(s.subscribedAt)}</td>
-                  <td>
-                    {s.id
-                      ? <button className={`adv-status${isActiveSubscriber(s) ? ' on' : ''}`} onClick={() => toggleStatus(s)} title={isActiveSubscriber(s) ? 'Click to stop advisories' : 'Click to resume advisories'}>
-                          {isActiveSubscriber(s) ? 'Active' : 'Unsubscribed'}
-                        </button>
-                      : <span className="adv-sub">—</span>}
+              {loading ? (
+                <TableLoader colSpan={9} message="Loading advisory subscribers..." />
+              ) : !visible.length ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '24px' }}>
+                    <EmptyState
+                      icon={<Mail size={32} />}
+                      title="No subscribers found"
+                      description="No advisory subscribers match the selected filter."
+                    />
                   </td>
                 </tr>
-              ))}
-              {!visible.length && <tr><td colSpan={9} className="adv-empty">No subscribers match.</td></tr>}
+              ) : (
+                visible.map((s, i) => (
+                  <tr key={s.id || i} className={isActiveSubscriber(s) ? '' : 'adv-row-off'}>
+                    <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
+                    <td style={{ fontWeight: 600 }}>{s.name}</td>
+                    <td><span className="badge badge-green">📱 {s.phone}</span></td>
+                    <td>{s.crop}<div className="adv-sub">{cropGroupLabel(cropGroupKey(s.crop))}</div></td>
+                    <td><span className="badge badge-blue">{s.season}</span></td>
+                    <td>{s.acres || s.acreage || 0} ac</td>
+                    <td>{s.lastAdvisorySent ? <>{s.lastAdvisorySent}<div className="adv-sub">{formatDate(s.lastAdvisoryAt)}</div></> : <span className="adv-sub">None yet</span>}</td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{s.date || formatDate(s.subscribedAt)}</td>
+                    <td>
+                      {s.id
+                        ? <button className={`adv-status${isActiveSubscriber(s) ? ' on' : ''}`} onClick={() => toggleStatus(s)} title={isActiveSubscriber(s) ? 'Click to stop advisories' : 'Click to resume advisories'}>
+                            {isActiveSubscriber(s) ? 'Active' : 'Unsubscribed'}
+                          </button>
+                        : <span className="adv-sub">—</span>}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -180,7 +200,7 @@ export default function AdminSubscribers() {
               <div className="adv-history-main">
                 <strong>{b.title}</strong>
                 <div className="adv-sub">
-                  {(b.crops || []).map(cropGroupLabel).join(', ')}{b.seasons?.length ? ` · ${b.seasons.join(', ')}` : ''} · {new Date(b.createdAt).toLocaleString('en-IN')}
+                  {(b.crops || []).map(cropGroupLabel).join(', ')}{b.seasons?.length ? ` · ${b.seasons.join(', ')}` : ''} · {formatDateTime(b.createdAt)}
                 </div>
               </div>
               <div className="adv-history-counts">
@@ -258,6 +278,16 @@ function BroadcastComposer({ subscribers, onClose, onStarted }) {
   const [confirming, setConfirming] = useState(false)
   const [sending, setSending] = useState(false)
   const textRef = useRef(null)
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !sending) {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [sending, onClose])
 
   const recipients = useMemo(() => selectRecipients(subscribers, { crops, seasons }), [subscribers, crops, seasons])
   const activeByGroup = useMemo(() => {

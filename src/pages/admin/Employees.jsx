@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
-import { Search, Clock, Mail, Phone, Building2, Calendar, ChevronRight, User, Loader, Shield, Banknote, MapPin, BookOpen, HeartPulse, Sprout, Sparkles, CheckCircle2 } from 'lucide-react'
+import { Search, Clock, Mail, Phone, Building2, Calendar, ChevronRight, User, Shield, Banknote, MapPin, BookOpen, HeartPulse, Sprout, Sparkles, CheckCircle2 } from 'lucide-react'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
+import StatusBadge from '../../components/common/StatusBadge'
+import { formatDateTime } from '../../utils/formatters'
 import { agronomyService } from '../../services/agronomyService'
 
 function ProfileDetail({ label, value }) {
@@ -112,20 +116,17 @@ export default function Employees() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-          <Loader size={28} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
-          <div>Loading staff profiles...</div>
-        </div>
+        <TableLoader message="Loading staff profiles..." size={28} />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: sel ? '1fr 400px' : '1fr', gap: '20px', alignItems: 'start' }}>
           {/* List */}
           <div>
             {filtered.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">🔍</div>
-                <h3>No employees found</h3>
-                <p>Try adjusting your search criteria</p>
-              </div>
+              <EmptyState
+                icon={<Search size={32} />}
+                title="No employees found"
+                description="Try adjusting your search criteria"
+              />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {filtered.map(emp => (
@@ -159,7 +160,7 @@ export default function Employees() {
                           <div>🏢 {emp.profile?.department || emp.role || '—'}</div>
                           <div>✉️ {emp.email || '—'}</div>
                           <div>
-                            <span className={`badge ${emp.status === 'active' ? 'badge-green' : 'badge-gray'}`}>{emp.status || 'active'}</span>
+                            <StatusBadge status={emp.status || 'active'} />
                             <span className="badge badge-blue" style={{ marginLeft: 4, textTransform: 'capitalize' }}>{emp.role}</span>
                             {isExpert(emp.id) && (
                               <span style={{ marginLeft: 4, background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: 12, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -373,7 +374,7 @@ export default function Employees() {
 
               {p.updatedAt && (
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 16, textAlign: 'right' }}>
-                  Profile last updated: {new Date(p.updatedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                  Profile last updated: {formatDateTime(p.updatedAt)}
                 </div>
               )}
             </div>

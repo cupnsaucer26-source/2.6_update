@@ -16,12 +16,14 @@ export function formatCurrency(amount, { showSymbol = true, maximumFractionDigit
   const num = Number(amount || 0);
   if (isNaN(num)) return showSymbol ? '₹0' : '0';
 
-  const formatted = num.toLocaleString('en-IN', {
+  const isNegative = num < 0;
+  const absFormatted = Math.abs(num).toLocaleString('en-IN', {
     maximumFractionDigits,
     minimumFractionDigits: num % 1 !== 0 ? 2 : 0,
   });
 
-  return showSymbol ? `₹${formatted}` : formatted;
+  if (!showSymbol) return isNegative ? `-${absFormatted}` : absFormatted;
+  return isNegative ? `-₹${absFormatted}` : `₹${absFormatted}`;
 }
 
 /**
@@ -55,37 +57,46 @@ export function formatDate(
   try {
     const d = new Date(dateInput);
     if (isNaN(d.getTime())) return fallback;
-    return d.toLocaleDateString('en-IN', options);
+    const opts = { timeZone: 'Asia/Kolkata', ...options };
+    return d.toLocaleDateString('en-IN', opts);
   } catch {
     return fallback;
   }
 }
 
 /**
- * Format as a short date (e.g., '28 Oct 2026').
+ * Format as a short date (e.g., '28 Oct' without year for compact charts).
  */
 export function formatShortDate(dateInput, fallback = '—') {
-  return formatDate(dateInput, { day: 'numeric', month: 'short', year: 'numeric' }, fallback);
+  return formatDate(dateInput, { day: 'numeric', month: 'short' }, fallback);
 }
 
 /**
  * Format as date and time (e.g., '28 Oct 2026, 03:45 PM').
+ * @param {string|number|Date|null|undefined} dateInput - The date to format
+ * @param {Intl.DateTimeFormatOptions|string} [options={}] - Custom Intl format options or fallback string
+ * @param {string} [fallback='—'] - Fallback text if date is missing or invalid
+ * @returns {string} Formatted date and time string
  */
-export function formatDateTime(dateInput, fallback = '—') {
-  if (!dateInput) return fallback;
+export function formatDateTime(dateInput, options = {}, fallback = '—') {
+  if (!dateInput) return typeof options === 'string' ? options : fallback;
+  const opts = typeof options === 'object' && options !== null ? options : {};
+  const fb = typeof options === 'string' ? options : fallback;
   try {
     const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return fallback;
+    if (isNaN(d.getTime())) return fb;
     return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
+      ...opts,
     });
   } catch {
-    return fallback;
+    return fb;
   }
 }
 

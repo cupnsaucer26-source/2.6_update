@@ -259,13 +259,17 @@ export default function AdminVideos() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>Loading videos...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '64px 24px', background: '#f9fafb', borderRadius: '18px', border: '1px dashed #d1d5db' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎬</div>
-          <h3 style={{ fontWeight: 700, color: '#1f2937', marginBottom: '8px' }}>No Videos Found</h3>
-          <p style={{ color: '#6b7280', marginBottom: '20px' }}>Upload direct video files or add YouTube links to attach them below products and blogs.</p>
-          <button className="btn btn-primary" onClick={openCreate} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={16} /> Add First Video
-          </button>
+        <div style={{ padding: '32px 24px', background: 'var(--surface-card, #ffffff)', borderRadius: '18px', border: '1px dashed var(--surface-border-subtle, #cbd5e1)' }}>
+          <EmptyState
+            icon={<Video size={36} style={{ color: '#16a34a' }} />}
+            title="No Videos Found"
+            description="Upload direct video files or add YouTube links to attach them below products and blogs."
+            action={
+              <button className="btn btn-primary" onClick={openCreate} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={16} /> Add First Video
+              </button>
+            }
+          />
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '22px' }}>
@@ -343,22 +347,20 @@ export default function AdminVideos() {
       )}
 
       {/* Add / Edit Video Modal */}
-      {modalOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(3px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '620px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.25)' }}>
-            {/* Header */}
-            <div style={{ padding: '22px 28px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontWeight: 800, fontSize: '1.25rem', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Video size={22} style={{ color: '#16a34a' }} />
-                {isEditing ? 'Edit Video' : 'Add or Upload Video'}
-              </h2>
-              <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X size={22} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div style={{ padding: '24px 28px', display: 'grid', gap: '18px' }}>
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={
+          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Video size={22} style={{ color: '#16a34a' }} />
+            {isEditing ? 'Edit Video' : 'Add or Upload Video'}
+          </span>
+        }
+        maxWidth="620px"
+      >
+        <div>
+          {/* Modal Body */}
+          <div style={{ display: 'grid', gap: '18px' }}>
               {/* Method Switcher: Upload File vs Paste URL */}
               <div>
                 <label className="form-label" style={{ marginBottom: '8px' }}>Video Source Method</label>
@@ -504,17 +506,16 @@ export default function AdminVideos() {
               </div>
             </div>
 
-            {/* Footer */}
-            <div style={{ padding: '18px 28px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '12px', justifyContent: 'flex-end', background: '#f8fafc', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px' }}>
-              <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={uploading} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Video size={16} />
-                {isEditing ? 'Update Video' : 'Save Video'}
-              </button>
-            </div>
+          {/* Footer */}
+          <div style={{ padding: '18px 0 0 0', marginTop: '18px', borderTop: '1px solid var(--surface-border-subtle, #e2e8f0)', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={uploading} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Video size={16} />
+              {isEditing ? 'Update Video' : 'Save Video'}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

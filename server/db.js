@@ -2551,16 +2551,52 @@ class DatabaseManager {
         return updated ? serialize(updated) : null;
   }
 
-  async getChatRecords() {
+  async getChatRecords(filter = {}) {
         await connectDB();
-        const records = await ChatRecord.find({}).lean();
-        return records.map(stripMongoFields);
+        const query = {};
+        if (filter?.storeId) query.storeId = filter.storeId;
+        if (filter?.userId) query.userId = filter.userId;
+        const records = await ChatRecord.find(query).sort({ updatedAt: -1, createdAt: -1 }).lean();
+        return records.map(r => ({
+          ...stripMongoFields(r),
+          id: r.sessionId || r.id || r._id,
+          sessionId: r.sessionId || r.id || r._id
+        }));
+  }
+
+  async getChatRecordBySessionId(sessionId) {
+        if (!sessionId) return null;
+        await connectDB();
+        const doc = await ChatRecord.findById(sessionId).lean() || await ChatRecord.findOne({ sessionId }).lean();
+        return doc ? { ...stripMongoFields(doc), id: doc.sessionId || doc.id || doc._id } : null;
   }
 
   async addChatRecord(record) {
         await connectDB();
         const id = record.sessionId || record.id || ('CHAT-' + Date.now());
-        const doc = await ChatRecord.create({ ...record, _id: id, sessionId: id });
+        const existing = await ChatRecord.findById(id).lean();
+        if (existing) {
+          const updated = await ChatRecord.findByIdAndUpdate(
+            id,
+            {
+              $set: {
+                ...record,
+                _id: id,
+                sessionId: id,
+                updatedAt: new Date().toISOString()
+              }
+            },
+            { new: true, lean: true }
+          );
+          return serialize(updated);
+        }
+        const doc = await ChatRecord.create({
+          ...record,
+          _id: id,
+          sessionId: id,
+          createdAt: record.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
         return serialize(doc);
   }
 

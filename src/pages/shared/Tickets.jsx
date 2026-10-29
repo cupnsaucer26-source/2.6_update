@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Ticket, User, CheckCircle2, Clock, AlertTriangle, RefreshCw, Send, Filter, Search, ExternalLink } from 'lucide-react'
+import { Ticket, User, CheckCircle2, Clock, AlertTriangle, RefreshCw, Send, Filter, Search } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { ticketService } from '../../services/ticketService'
+import TicketAttachmentPreview from '../../components/tickets/TicketAttachmentPreview'
 
 export default function Tickets() {
   const { user } = useAuth()
@@ -237,24 +238,10 @@ export default function Tickets() {
               )}
 
               {/* Attached Photo */}
-              {ticket.attachment?.url && (
-                <div style={{ marginBottom: 14, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <img
-                    src={ticket.attachment.url}
-                    alt="Ticket attachment"
-                    style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                    onClick={() => window.open(ticket.attachment.url, '_blank')}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
-                      📎 Customer Attachment: {ticket.attachment.filename || 'Photo'}
-                    </div>
-                    <a href={ticket.attachment.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.74rem', color: '#15803d', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      Open full size <ExternalLink size={11} />
-                    </a>
-                  </div>
-                </div>
-              )}
+              <TicketAttachmentPreview
+                attachment={ticket.attachment}
+                style={{ marginBottom: 14 }}
+              />
 
               {/* Replies History */}
               {ticket.replies && ticket.replies.length > 0 && (

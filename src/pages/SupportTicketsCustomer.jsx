@@ -22,12 +22,14 @@ import {
   Paperclip,
   Check,
   RotateCcw,
-  X,
-  ExternalLink
+  X
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { ticketService } from '../services/ticketService'
 import ServicesBottomNav from '../components/common/ServicesBottomNav'
+import TicketStatusBadge from '../components/tickets/TicketStatusBadge'
+import TicketAttachmentPreview from '../components/tickets/TicketAttachmentPreview'
+import TicketMessageThread from '../components/tickets/TicketMessageThread'
 
 const CATEGORIES = [
   'Product Quality',
@@ -259,32 +261,8 @@ export default function SupportTicketsCustomer() {
     return matchesFilter && matchesSearch
   })
 
-  const getStatusBadge = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'closed':
-        return <span className="p2-chip p2-chip--green"><CheckCircle2 size={12} /> Closed</span>
-      case 'resolved':
-        return <span className="p2-chip p2-chip--green"><CheckCircle2 size={12} /> Resolved</span>
-      case 'in progress':
-        return <span className="p2-chip p2-chip--blue"><RefreshCw size={12} /> In Progress</span>
-      case 'pending':
-      case 'open':
-      default:
-        return <span className="p2-chip p2-chip--amber"><Clock size={12} /> Open</span>
-    }
-  }
-
-  const getPriorityBadge = (priority) => {
-    switch (priority?.toLowerCase()) {
-      case 'urgent':
-      case 'high':
-        return <span className="p2-chip p2-chip--red">HIGH</span>
-      case 'medium':
-        return <span className="p2-chip p2-chip--amber">MEDIUM</span>
-      default:
-        return <span className="p2-chip">LOW</span>
-    }
-  }
+  const getStatusBadge = (status) => <TicketStatusBadge status={status} showIcon />
+  const getPriorityBadge = (priority) => <TicketStatusBadge priority={priority} />
 
   const assigned = selectedTicket?.assignedToName && selectedTicket.assignedToName !== 'Unassigned'
 
@@ -450,24 +428,13 @@ export default function SupportTicketsCustomer() {
                 )}
 
                 {/* Attachment if present */}
-                {selectedTicket.attachment?.url && (
-                  <div style={{ marginTop: 10, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <img
-                      src={selectedTicket.attachment.url}
-                      alt="Attached issue evidence"
-                      style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                      onClick={() => window.open(selectedTicket.attachment.url, '_blank')}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
-                        📎 Attached Photo ({selectedTicket.attachment.filename || 'Evidence'})
-                      </div>
-                      <a href={selectedTicket.attachment.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#15803d', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        View full size <ExternalLink size={12} />
-                      </a>
-                    </div>
-                  </div>
-                )}
+                <TicketAttachmentPreview
+                  attachment={selectedTicket.attachment}
+                  label="Attached Photo"
+                  thumbnailSize={60}
+                  linkText="View full size"
+                  style={{ marginTop: 10, padding: '10px 14px', gap: 12 }}
+                />
 
                 {/* Meta details strip */}
                 <dl className="p2-meta-grid" style={{ marginTop: 12 }}>
@@ -525,43 +492,12 @@ export default function SupportTicketsCustomer() {
               )}
 
               {/* Conversation Messages Thread */}
-              <div className="p2-messages">
-                <div className="p2-messages-label">
-                  — Conversation History &amp; Support Updates —
-                </div>
-
-                {selectedTicket.replies?.map((reply, i) => {
-                  const isFarmer = reply.senderRole === 'farmer'
-                  if (reply.senderRole === 'system') {
-                    return (
-                      <div key={reply.id || i} className="p2-sys">
-                        🔔 {reply.text} · {reply.time}
-                      </div>
-                    )
-                  }
-                  return (
-                    <div key={reply.id || i} className={`p2-msg${isFarmer ? ' p2-msg--me' : ''}`}>
-                      <div className="p2-msg-who">
-                        <strong>{isFarmer ? 'You (Customer)' : `👨‍🌾 ${reply.senderName}`}</strong>
-                        <span>· {reply.time}</span>
-                      </div>
-                      <div className="p2-bubble">
-                        {reply.text}
-                        {reply.attachment?.url && (
-                          <div style={{ marginTop: 8 }}>
-                            <img
-                              src={reply.attachment.url}
-                              alt="Attachment in reply"
-                              style={{ maxWidth: 200, maxHeight: 150, objectFit: 'cover', borderRadius: 6, border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                              onClick={() => window.open(reply.attachment.url, '_blank')}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              <TicketMessageThread
+                replies={selectedTicket.replies}
+                mode="customer"
+                compact={false}
+                headerLabel="— Conversation History & Support Updates —"
+              />
 
               {/* Reply Box */}
               {selectedTicket.status === 'Closed' ? (

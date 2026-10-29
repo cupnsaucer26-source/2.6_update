@@ -1,6 +1,11 @@
 import { useEffect, useState, useMemo } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
+import Modal from '../../components/common/Modal'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
+import StatusBadge from '../../components/common/StatusBadge'
+import { formatDate, formatDateTime } from '../../utils/formatters'
 import {
   Gift, Users, Award, Plus, Edit2, Search, RefreshCw,
   FileSpreadsheet, ArrowRightLeft, ShieldCheck, UserCheck, PlusCircle
@@ -304,45 +309,51 @@ export default function AdminReferrals() {
                 </tr>
               </thead>
               <tbody>
-                {filteredReferrals.map((r, idx) => (
-                  <tr key={r.id || idx}>
-                    <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>👤 {r.referrerName}</td>
-                    <td>
-                      <span className="badge badge-green">📱 {r.referrerPhone}</span>
-                    </td>
-                    <td style={{ fontWeight: 600, color: '#60a5fa' }}>🌾 {r.referredName}</td>
-                    <td>
-                      <span className="badge badge-blue">📱 {r.referredPhone}</span>
-                    </td>
-                    <td style={{ fontWeight: 800, color: '#f59e0b' }}>+ {Number(r.pointsAwarded) || 0} Pts</td>
-                    <td>
-                      <span className={`badge ${(STATUS_BADGE[r.status] || STATUS_BADGE.Pending).cls}`} title={r.note || undefined}>
-                        {(STATUS_BADGE[r.status] || { label: r.status }).label}
-                      </span>
-                      {r.note && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>{r.note}</div>}
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      {new Date(r.createdAt || Date.now()).toLocaleDateString('en-IN', {
-                        day: '2-digit', month: 'short', year: 'numeric'
-                      })}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {['Pending', 'Completed'].includes(r.status) && (
-                        <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={() => reverse(r)}>
-                          Reverse
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-
-                {filteredReferrals.length === 0 && (
+                {loading ? (
+                  <TableLoader colSpan={9} message="Loading referral records..." />
+                ) : filteredReferrals.length === 0 ? (
                   <tr>
-                    <td colSpan="9" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                      {loading ? 'Loading referral records...' : 'No referral network records match search.'}
+                    <td colSpan={9} style={{ textAlign: 'center', padding: '24px' }}>
+                      <EmptyState
+                        icon={<Gift size={32} />}
+                        title="No referral records found"
+                        description="No referral network records match search."
+                      />
                     </td>
                   </tr>
+                ) : (
+                  filteredReferrals.map((r, idx) => (
+                    <tr key={r.id || idx}>
+                      <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>👤 {r.referrerName}</td>
+                      <td>
+                        <span className="badge badge-green">📱 {r.referrerPhone}</span>
+                      </td>
+                      <td style={{ fontWeight: 600, color: '#60a5fa' }}>🌾 {r.referredName}</td>
+                      <td>
+                        <span className="badge badge-blue">📱 {r.referredPhone}</span>
+                      </td>
+                      <td style={{ fontWeight: 800, color: '#f59e0b' }}>+ {Number(r.pointsAwarded) || 0} Pts</td>
+                      <td>
+                        <StatusBadge
+                          status={r.status}
+                          label={(STATUS_BADGE[r.status] || { label: r.status }).label}
+                          title={r.note || undefined}
+                        />
+                        {r.note && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>{r.note}</div>}
+                      </td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        {formatDate(r.createdAt)}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        {['Pending', 'Completed'].includes(r.status) && (
+                          <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={() => reverse(r)}>
+                            Reverse
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -366,31 +377,37 @@ export default function AdminReferrals() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((u, idx) => (
-                  <tr key={u.id || idx}>
-                    <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>👤 {u.name || 'Farmer'}</td>
-                    <td><span className="badge badge-green">📱 {u.phone}</span></td>
-                    <td><span className="badge badge-blue">🌾 {u.crop || 'Paddy'}</span></td>
-                    <td>
-                      <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(245,158,11,0.3)' }}>
-                        🌟 {Number(u.points || 0).toLocaleString()} Pts
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={() => openAssignModal(u)}>
-                        <PlusCircle size={14} /> Adjust Points
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-
-                {filteredUsers.length === 0 && (
+                {loading ? (
+                  <TableLoader colSpan={6} message="Loading customer points..." />
+                ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                      {loading ? 'Loading customer points...' : 'No customer accounts match search.'}
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px' }}>
+                      <EmptyState
+                        icon={<Users size={32} />}
+                        title="No customer accounts found"
+                        description="No customer accounts match search."
+                      />
                     </td>
                   </tr>
+                ) : (
+                  filteredUsers.map((u, idx) => (
+                    <tr key={u.id || idx}>
+                      <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>👤 {u.name || 'Farmer'}</td>
+                      <td><span className="badge badge-green">📱 {u.phone}</span></td>
+                      <td><span className="badge badge-blue">🌾 {u.crop || 'Paddy'}</span></td>
+                      <td>
+                        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(245,158,11,0.3)' }}>
+                          🌟 {Number(u.points || 0).toLocaleString()} Pts
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={() => openAssignModal(u)}>
+                          <PlusCircle size={14} /> Adjust Points
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -413,28 +430,32 @@ export default function AdminReferrals() {
                 </tr>
               </thead>
               <tbody>
-                {filteredLedgers.map((l, idx) => (
-                  <tr key={l.id || idx}>
-                    <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>👤 {l.userName}</td>
-                    <td style={{ fontWeight: 800, color: l.points >= 0 ? '#34d399' : '#f87171' }}>
-                      {l.points >= 0 ? `+${l.points}` : l.points} Pts
-                    </td>
-                    <td>{l.description}</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      {new Date(l.createdAt || Date.now()).toLocaleDateString('en-IN', {
-                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                      })}
-                    </td>
-                  </tr>
-                ))}
-
-                {filteredLedgers.length === 0 && (
+                {loading ? (
+                  <TableLoader colSpan={5} message="Loading points audit log..." />
+                ) : filteredLedgers.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                      {loading ? 'Loading points audit log...' : 'No points audit transactions available.'}
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '24px' }}>
+                      <EmptyState
+                        icon={<FileSpreadsheet size={32} />}
+                        title="No audit transactions found"
+                        description="No points audit transactions available."
+                      />
                     </td>
                   </tr>
+                ) : (
+                  filteredLedgers.map((l, idx) => (
+                    <tr key={l.id || idx}>
+                      <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>👤 {l.userName}</td>
+                      <td style={{ fontWeight: 800, color: l.points >= 0 ? '#34d399' : '#f87171' }}>
+                        {l.points >= 0 ? `+${l.points}` : l.points} Pts
+                      </td>
+                      <td>{l.description}</td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        {formatDateTime(l.createdAt)}
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -445,62 +466,56 @@ export default function AdminReferrals() {
       {activeTab === 'settings' && <ReferralSettings />}
 
       {/* ASSIGN / ADJUST POINTS MODAL */}
-      {assignModalOpen && (
-        <div className="modal-overlay active" onClick={() => setAssignModalOpen(false)} style={{ background: 'rgba(0,0,0,0.7)', zIndex: 999 }}>
-          <div className="modal-card animate-fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
-              <h2 style={{ fontSize: '1.2rem', margin: 0 }}>
-                🌟 Assign / Adjust Reward Points
-              </h2>
-              <button className="btn btn-ghost" onClick={() => setAssignModalOpen(false)} style={{ fontSize: '1.2rem' }}>&times;</button>
-            </div>
-
-            <form onSubmit={handleAssignPoints} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div className="pform-field">
-                <label>Select Customer Account *</label>
-                <select
-                  value={assignForm.userId}
-                  onChange={e => setAssignForm({ ...assignForm, userId: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px' }}
-                >
-                  <option value="">Select customer...</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>
-                      👤 {u.name || 'Farmer'} ({u.phone}) — Current: {u.points || 0} Pts
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pform-field">
-                <label>Points to Add (+) or Deduct (-) *</label>
-                <input
-                  type="number"
-                  required
-                  placeholder="e.g. 100 or -50"
-                  value={assignForm.points}
-                  onChange={e => setAssignForm({ ...assignForm, points: Number(e.target.value) })}
-                />
-              </div>
-
-              <div className="pform-field">
-                <label>Reason / Note for Ledger</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Referral bonus for recommending new farmer"
-                  value={assignForm.description}
-                  onChange={e => setAssignForm({ ...assignForm, description: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                <button type="button" className="btn btn-outline" onClick={() => setAssignModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Update Reward Points</button>
-              </div>
-            </form>
+      <Modal
+        isOpen={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        title="🌟 Assign / Adjust Reward Points"
+        maxWidth="480px"
+      >
+        <form onSubmit={handleAssignPoints} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="pform-field">
+            <label>Select Customer Account *</label>
+            <select
+              value={assignForm.userId}
+              onChange={e => setAssignForm({ ...assignForm, userId: e.target.value })}
+              style={{ width: '100%', padding: '8px 12px' }}
+            >
+              <option value="">Select customer...</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>
+                  👤 {u.name || 'Farmer'} ({u.phone}) — Current: {u.points || 0} Pts
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-      )}
+
+          <div className="pform-field">
+            <label>Points to Add (+) or Deduct (-) *</label>
+            <input
+              type="number"
+              required
+              placeholder="e.g. 100 or -50"
+              value={assignForm.points}
+              onChange={e => setAssignForm({ ...assignForm, points: Number(e.target.value) })}
+            />
+          </div>
+
+          <div className="pform-field">
+            <label>Reason / Note for Ledger</label>
+            <input
+              type="text"
+              placeholder="e.g. Referral bonus for recommending new farmer"
+              value={assignForm.description}
+              onChange={e => setAssignForm({ ...assignForm, description: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <button type="button" className="btn btn-outline" onClick={() => setAssignModalOpen(false)}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Update Reward Points</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

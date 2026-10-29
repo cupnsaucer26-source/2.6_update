@@ -6,6 +6,9 @@ import {
   BookOpen, Upload, Tag, Video, Sprout, Bold, Italic,
   Heading2, List, Quote, Minus, Plus as PlusIcon
 } from 'lucide-react'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
+import { formatDate } from '../../utils/formatters'
 
 const BLOG_CATEGORIES = ['Crop Advisory', 'Pest Management', 'Organic Farming', 'Bio-Fungicides', 'Soil Health', 'Farmer Guides', 'General']
 
@@ -40,6 +43,25 @@ export default function AdminBlogs() {
   useEffect(() => {
     fetchAll()
   }, [])
+
+  const closeModal = () => {
+    const isDirty = form.title.trim() || form.content.trim()
+    if (isDirty && !window.confirm('You have unsaved changes. Discard draft?')) return
+    setModalOpen(false)
+  }
+
+  useEffect(() => {
+    if (!modalOpen) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        const isDirty = form.title.trim() || form.content.trim()
+        if (isDirty && !window.confirm('You have unsaved changes. Discard draft?')) return
+        setModalOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [modalOpen, form.title, form.content])
 
   const fetchAll = async () => {
     setLoading(true)
@@ -246,16 +268,18 @@ export default function AdminBlogs() {
 
       {/* Blog Table */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>Loading blogs...</div>
+        <TableLoader message="Loading blogs..." size={28} />
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '64px', background: '#f9fafb', borderRadius: '18px', border: '1px dashed #d1d5db' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📖</div>
-          <h3 style={{ fontWeight: 700, color: '#1f2937', marginBottom: '8px' }}>No Blog Articles Yet</h3>
-          <p style={{ color: '#6b7280', marginBottom: '20px' }}>Start writing agronomy guides and seasonal advisories for your farmers.</p>
-          <button className="btn btn-primary" onClick={openCreate} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={16} /> Write First Blog
-          </button>
-        </div>
+        <EmptyState
+          icon={<BookOpen size={36} />}
+          title={search ? 'No articles found' : 'No Blog Articles Yet'}
+          description={search ? `No articles match "${search}". Try adjusting your search query.` : 'Start writing agronomy guides and seasonal advisories for your farmers.'}
+          action={!search ? (
+            <button className="btn btn-primary" onClick={openCreate} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={16} /> Write First Blog
+            </button>
+          ) : undefined}
+        />
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -268,7 +292,7 @@ export default function AdminBlogs() {
             </thead>
             <tbody>
               {filtered.map(blog => {
-                const dateStr = blog.createdAt ? new Date(blog.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
+                const dateStr = formatDate(blog.createdAt)
                 return (
                   <tr key={blog._id || blog.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '14px 16px' }}>
@@ -290,7 +314,10 @@ export default function AdminBlogs() {
                     <td style={{ padding: '14px 16px', color: '#374151', fontSize: '0.875rem' }}>{blog.author || 'Agronomy Team'}</td>
                     <td style={{ padding: '14px 16px' }}>
                       <button
+                        type="button"
                         onClick={() => handleTogglePublish(blog)}
+                        title={blog.published ? 'Click to unpublish' : 'Click to publish'}
+                        aria-label={blog.published ? 'Published article. Click to unpublish.' : 'Draft article. Click to publish.'}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.78rem', background: blog.published ? '#dcfce7' : '#fef3c7', color: blog.published ? '#15803d' : '#92400e' }}
                       >
                         {blog.published ? <><Eye size={13} /> Published</> : <><EyeOff size={13} /> Draft</>}
@@ -299,10 +326,10 @@ export default function AdminBlogs() {
                     <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '0.85rem' }}>{dateStr}</td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => openEdit(blog)}>
+                        <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => openEdit(blog)} title="Edit article" aria-label={`Edit ${blog.title}`}>
                           <Edit2 size={14} />
                         </button>
-                        <button onClick={() => handleDelete(blog._id || blog.id)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer' }}>
+                        <button type="button" onClick={() => handleDelete(blog._id || blog.id)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer' }} title="Delete article" aria-label={`Delete ${blog.title}`}>
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -317,14 +344,25 @@ export default function AdminBlogs() {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="blog-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px', overflowY: 'auto' }}>
+        <div
+          className="blog-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="blog-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closeModal()
+            }
+          }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px', overflowY: 'auto' }}
+        >
           <div className="blog-modal" style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '820px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', marginTop: '20px' }}>
             {/* Modal Header */}
             <div className="blog-modal-header" style={{ padding: '24px 28px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontWeight: 800, fontSize: '1.3rem', color: '#0f172a', margin: 0 }}>
+              <h2 id="blog-modal-title" style={{ fontWeight: 800, fontSize: '1.3rem', color: '#0f172a', margin: 0 }}>
                 {isEditing ? 'Edit Blog Article' : 'Write New Blog Article'}
               </h2>
-              <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}><X size={22} /></button>
+              <button type="button" onClick={closeModal} aria-label="Close dialog" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}><X size={22} /></button>
             </div>
 
             {/* Modal Body */}
@@ -479,8 +517,8 @@ export default function AdminBlogs() {
 
             {/* Modal Footer */}
             <div className="blog-modal-footer" style={{ padding: '20px 28px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <BookOpen size={16} />
                 {isEditing ? 'Update Article' : 'Save & Publish'}
               </button>

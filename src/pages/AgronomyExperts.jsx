@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   Sprout,
@@ -39,6 +39,7 @@ export default function AgronomyExperts() {
   const { user } = useAuth()
   const { showAccount } = useCheckoutActions()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [experts, setExperts] = useState([])
   const [userBookings, setUserBookings] = useState([])
@@ -121,12 +122,12 @@ export default function AgronomyExperts() {
     const slots = expert.availableSlots?.length ? expert.availableSlots : ['10:00 AM - 12:00 PM', '02:00 PM - 04:00 PM', '04:00 PM - 06:00 PM']
     setBookingData({
       farmerName: user?.name || '',
-      crop: user?.crop || 'Paddy/Rice',
+      crop: location.state?.crop || user?.crop || 'Paddy/Rice',
       acreage: user?.acreage || 2,
       preferredDate: dateStr,
       preferredSlot: slots[0],
-      topic: 'Pest & Disease Outbreak',
-      notes: '',
+      topic: location.state?.topic || 'Pest & Disease Outbreak',
+      notes: location.state?.notes || '',
       phone: user?.phone || user?.mobile || ''
     })
     setShowBookingModal(true)
@@ -258,6 +259,31 @@ export default function AgronomyExperts() {
 
       {activeTab === 'experts' ? (
         <div>
+          {location.state?.fromChat && (
+            <div
+              className="chat-referral-banner"
+              style={{
+                background: '#f0fdf4',
+                border: '1px solid #86efac',
+                borderRadius: '12px',
+                padding: '14px 18px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}
+            >
+              <i className="fa-solid fa-seedling" style={{ color: '#16a34a', fontSize: '1.25rem', marginTop: '2px' }}></i>
+              <div style={{ flex: 1 }}>
+                <strong style={{ color: '#166534', fontSize: '0.95rem', display: 'block' }}>
+                  Direct Referral from AI Crop Assistant
+                </strong>
+                <p style={{ color: '#15803d', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                  Referral context for <strong>{location.state.crop || 'Crop'}</strong> ({location.state.topic || 'Advisory'}). Choose an agronomist below to book your free diagnostic callback.
+                </p>
+              </div>
+            </div>
+          )}
           {/* Filters & Search */}
           <div className="p2-card p2-toolbar">
             <div className="p2-search">

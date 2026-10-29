@@ -231,30 +231,29 @@ export default function StoresManagement() {
 
       {filteredStores.length === 0 && !loading && (
         <div className="sa-card">
-          <div className="sa-empty">
-            <div className="sa-empty-icon"><Store size={28} /></div>
-            <div className="sa-empty-title">No stores match your search</div>
-            <div className="sa-empty-text">Try clearing your search query or add a new store location.</div>
-            <button onClick={handleOpenAdd} className="sa-btn sa-btn--primary sa-btn--sm"><Plus size={16} /> Add Store Location</button>
-          </div>
+          <EmptyState
+            icon={<Store size={32} />}
+            title="No stores match your search"
+            description="Try clearing your search query or add a new store location."
+            action={
+              <button onClick={handleOpenAdd} className="sa-btn sa-btn--primary sa-btn--sm">
+                <Plus size={16} /> Add Store Location
+              </button>
+            }
+          />
         </div>
       )}
 
       {/* Add / Edit Store Modal */}
-      {isModalOpen && (
-        <div className="sa-modal-overlay">
-          <div className="sa-modal" role="dialog" aria-modal="true">
-            <div className="sa-modal-head">
-              <div>
-                <div className="sa-eyebrow">{editingStore ? 'Update branch' : 'New branch'}</div>
-                <h2 className="sa-card-title">{editingStore ? 'Edit Store Location' : 'Add New Store Location'}</h2>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="sa-icon-btn" aria-label="Close">
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="sa-modal-form">
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        variant="superadmin"
+        title={editingStore ? 'Edit Store Location' : 'Add New Store Location'}
+        eyebrow={editingStore ? 'Update branch' : 'New branch'}
+        maxWidth="640px"
+      >
+        <form onSubmit={handleSave} className="sa-modal-form">
               <div className="sa-modal-body">
                 <div className="sa-form-grid">
                   <div className="sa-field">
@@ -362,10 +361,8 @@ export default function StoresManagement() {
                   {saving ? 'Saving...' : (editingStore ? 'Update Store' : 'Create Store')}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </div>
   )
 }

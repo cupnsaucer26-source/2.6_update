@@ -2,29 +2,28 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import axios from 'axios'
 import {
-  Tag,
   Check,
   Percent,
-  FileText,
-  Truck,
   CreditCard,
-  User,
   Package,
   Printer,
   Eye,
-  RefreshCw,
   Plus,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  Clock,
   Building
   , Banknote, Smartphone, Landmark, Search as SearchIcon, AlertTriangle, ReceiptText, WalletCards
 } from 'lucide-react'
 import ExactGstInvoice from '../../components/billing/ExactGstInvoice'
-import { numberToIndianWords } from '../../utils/numberToWords'
+import { calculateBillingSummary } from '../../shared/billingSummary'
 import AddItemCard from './components/AddItemCard'
 import PaymentModeCard from './components/PaymentModeCard'
+import DocumentMetaCard from './components/DocumentMetaCard'
+import BuyerConsigneeCard from './components/BuyerConsigneeCard'
+import TransportDetailsCard from './components/TransportDetailsCard'
+import BillItemsCard from './components/BillItemsCard'
+import RecentInvoicesCard from './components/RecentInvoicesCard'
+import BillingStatsCard from './components/BillingStatsCard'
+import BillSummaryCard from './components/BillSummaryCard'
+import { computeTodayStats } from '../../shared/billingInvoices'
 
 export default function BillingDashboard() {
   // Catalog & Inventory
@@ -115,7 +114,8 @@ export default function BillingDashboard() {
       .then(({ data }) => {
         if (data.success) {
           const products = (data.data || []).map(product => {
-            const gstRate = Number(product.gstRate ?? product.gst) || 18
+            const rawGst = Number(product.gstRate ?? product.gst)
+            const gstRate = Number.isFinite(rawGst) ? rawGst : 18
             const cgstRate = Number(product.cgstRate) || +(gstRate / 2).toFixed(2)
             const sgstRate = Number(product.sgstRate) || +(gstRate / 2).toFixed(2)
             const igstRate = Number(product.igstRate) || gstRate
@@ -170,7 +170,7 @@ export default function BillingDashboard() {
     setSelectedProduct(p.id)
     setItemRate(p.price)
     setItemHsn(p.hsnCode || '31010099')
-    setItemGstRate(p.gstRate || 18)
+    setItemGstRate(Number.isFinite(Number(p.gstRate)) ? Number(p.gstRate) : 18)
     setItemUnit(p.unit || 'Nos')
   }
 
@@ -178,13 +178,7 @@ export default function BillingDashboard() {
     try {
       const { data } = await axios.get('/api/billing/invoices')
       if (data.success) {
-        const today = new Date().toDateString()
-        const todayInvoices = (data.data || []).filter(inv =>
-          new Date(inv.date).toDateString() === today
-        )
-        const sales = todayInvoices.reduce((s, inv) => s + (Number(inv.grandTotal) || 0), 0)
-        const gst = todayInvoices.reduce((s, inv) => s + (Number(inv.totalGst) || 0), 0)
-        setTodayStats({ sales, transactions: todayInvoices.length, gst })
+        setTodayStats(computeTodayStats(data.data))
       }
     } catch {
       // ignore
@@ -232,7 +226,8 @@ export default function BillingDashboard() {
     const qty = Math.max(1, Number(itemQty) || 1)
     const discPercent = Math.max(0, Number(itemDiscPercent) || 0)
     const lineAmount = (qty * rate) * (1 - discPercent / 100)
-    const gstRate = Number(itemGstRate) || 18
+    const rawItemGst = Number(itemGstRate)
+    const gstRate = Number.isFinite(rawItemGst) ? rawItemGst : 18
     const cgstRate = +(gstRate / 2).toFixed(2)
     const sgstRate = +(gstRate / 2).toFixed(2)
 
@@ -289,32 +284,25 @@ export default function BillingDashboard() {
     }))
   }
 
-  // Calculations
-  const itemsSubtotal = items.reduce((s, i) => s + i.amount, 0)
-  const manualDiscAmt = Math.round(itemsSubtotal * (globalDiscountPercent / 100))
-  const totalDiscount = manualDiscAmt + couponDiscountAmount
-  const taxableSubtotal = Math.max(0, itemsSubtotal - totalDiscount)
-
-  // Calculate taxes
-  let totalCgst = 0
-  let totalSgst = 0
-  items.forEach(i => {
-    const ratio = itemsSubtotal > 0 ? i.amount / itemsSubtotal : 0
-    const lineTaxable = Math.max(0, i.amount - totalDiscount * ratio)
-    totalCgst += lineTaxable * (i.cgstRate / 100)
-    totalSgst += lineTaxable * (i.sgstRate / 100)
+  // Financial calculations via shared pure billingSummary module
+  const {
+    itemsSubtotal,
+    manualDiscAmt,
+    totalDiscount,
+    taxableSubtotal,
+    totalCgst,
+    totalSgst,
+    totalGst,
+    rawGrandTotal,
+    roundedGrandTotal,
+    roundOff,
+    grandTotalWords,
+    taxWords
+  } = calculateBillingSummary({
+    items,
+    globalDiscountPercent,
+    couponDiscountAmount
   })
-
-  totalCgst = +(totalCgst.toFixed(2))
-  totalSgst = +(totalSgst.toFixed(2))
-  const totalGst = +(totalCgst + totalSgst).toFixed(2)
-
-  const rawGrandTotal = taxableSubtotal + totalGst
-  const roundedGrandTotal = Math.round(rawGrandTotal)
-  const roundOff = +(roundedGrandTotal - rawGrandTotal).toFixed(2)
-
-  const grandTotalWords = numberToIndianWords(roundedGrandTotal)
-  const taxWords = numberToIndianWords(totalGst)
 
   // Coupon Handlers
   const applyCoupon = async () => {
@@ -520,26 +508,7 @@ export default function BillingDashboard() {
       </div>
 
       {/* KPI Stats */}
-      <div className="stat-grid" style={{ marginBottom: 24 }}>
-        <div className="stat-card green">
-          <div className="stat-value" style={{ fontSize: '1.4rem', color: '#34d399' }}>
-            ₹{todayStats.sales.toLocaleString('en-IN')}
-          </div>
-          <div className="stat-label">Today&apos;s Sales</div>
-        </div>
-        <div className="stat-card blue">
-          <div className="stat-value" style={{ fontSize: '1.4rem', color: '#60a5fa' }}>
-            {todayStats.transactions}
-          </div>
-          <div className="stat-label">Invoices Today</div>
-        </div>
-        <div className="stat-card purple">
-          <div className="stat-value" style={{ fontSize: '1.4rem', color: '#a78bfa' }}>
-            ₹{todayStats.gst.toLocaleString('en-IN')}
-          </div>
-          <div className="stat-label">GST Tax Collected</div>
-        </div>
-      </div>
+      <BillingStatsCard todayStats={todayStats} />
 
       {/* Main Grid: Left Inputs & Bill Table / Right Checkout */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: 24, alignItems: 'start' }}>
@@ -547,364 +516,76 @@ export default function BillingDashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* SECTION 1: Document Meta & Invoice Type */}
-          <div className="card">
-            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>
-                <FileText size={18} color="#60a5fa" /> Document &amp; e-Invoice Details
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {['TAX INVOICE', 'CREDIT NOTE', 'BILL OF SUPPLY'].map(type => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={`btn btn-sm ${documentType === type ? 'btn-primary' : 'btn-outline'}`}
-                    style={{ fontSize: '0.72rem', padding: '3px 10px' }}
-                    onClick={() => handleDocTypeChange(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>
-                  {documentType === 'CREDIT NOTE' ? 'Credit Note No.' : 'Invoice No.'}
-                </label>
-                <input
-                  className="form-input"
-                  value={invoiceNo}
-                  onChange={e => setInvoiceNo(e.target.value)}
-                  style={{ fontWeight: 700, fontFamily: 'monospace' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Dated</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={invoiceDate}
-                  onChange={e => setInvoiceDate(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Ack No.</label>
-                <input
-                  className="form-input"
-                  value={ackNo}
-                  onChange={e => setAckNo(e.target.value)}
-                  placeholder="Only for e-invoices"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Ack Date</label>
-                <input
-                  className="form-input"
-                  value={ackDate}
-                  onChange={e => setAckDate(e.target.value)}
-                  placeholder="07 Aug 26"
-                />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginTop: 12, marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                e-Invoice IRN (Invoice Reference Number)
-              </label>
-              <input
-                className="form-input"
-                value={irn}
-                onChange={e => setIrn(e.target.value)}
-                style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}
-              />
-            </div>
-          </div>
+          <DocumentMetaCard
+            documentType={documentType}
+            handleDocTypeChange={handleDocTypeChange}
+            invoiceNo={invoiceNo}
+            setInvoiceNo={setInvoiceNo}
+            invoiceDate={invoiceDate}
+            setInvoiceDate={setInvoiceDate}
+            ackNo={ackNo}
+            setAckNo={setAckNo}
+            ackDate={ackDate}
+            setAckDate={setAckDate}
+            irn={irn}
+            setIrn={setIrn}
+          />
 
           {/* SECTION 2: Buyer & Consignee Details */}
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>
-                <User size={18} color="#34d399" /> Buyer (Bill To) &amp; Consignee (Ship To)
-              </div>
-            </div>
-
-            {/* Buyer Details Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Buyer / Business Name *</label>
-                <input
-                  className="form-input"
-                  value={buyerName}
-                  onChange={e => setBuyerName(e.target.value)}
-                  placeholder="Walk-in Customer"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Phone Number</label>
-                <input
-                  className="form-input"
-                  value={buyerPhone}
-                  onChange={e => setBuyerPhone(e.target.value)}
-                  placeholder="9876543210"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Buyer GSTIN / UIN</label>
-                <input
-                  className="form-input"
-                  value={buyerGstin}
-                  onChange={e => setBuyerGstin(e.target.value.toUpperCase())}
-                  placeholder="e.g. 33ABCDE1234F1Z5"
-                  style={{ textTransform: 'uppercase' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Billing Address</label>
-                <input
-                  className="form-input"
-                  value={buyerAddress}
-                  onChange={e => setBuyerAddress(e.target.value)}
-                  placeholder="No12, Ghouse Enclave, 70ft Road, Ellis Nagar"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>City / District &amp; State</label>
-                <input
-                  className="form-input"
-                  value={buyerCityState}
-                  onChange={e => setBuyerCityState(e.target.value)}
-                  placeholder="Madurai-625016, Tamil Nadu"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Pincode &amp; State Code</label>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input
-                    className="form-input"
-                    value={buyerPincode}
-                    onChange={e => setBuyerPincode(e.target.value)}
-                    placeholder="625016"
-                    style={{ width: '60%' }}
-                  />
-                  <input
-                    className="form-input"
-                    value={buyerStateCode}
-                    onChange={e => setBuyerStateCode(e.target.value)}
-                    placeholder="33"
-                    style={{ width: '40%' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Consignee Toggle */}
-            <div style={{
-              marginTop: 16,
-              paddingTop: 12,
-              borderTop: '1px solid var(--surface-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem' }}>
-                <input
-                  type="checkbox"
-                  checked={sameAsBuyer}
-                  onChange={e => setSameAsBuyer(e.target.checked)}
-                  style={{ accentColor: 'var(--brand-500)', width: 16, height: 16 }}
-                />
-                <span style={{ fontWeight: 600 }}>Consignee (Ship To) is same as Buyer</span>
-              </label>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {sameAsBuyer ? 'Shipping address matched with billing' : 'Custom shipping address enabled'}
-              </span>
-            </div>
-
-            {/* Consignee Fields (shown if not same as buyer) */}
-            {!sameAsBuyer && (
-              <div style={{
-                marginTop: 12,
-                padding: 12,
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid var(--surface-border)',
-                borderRadius: 8,
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 12
-              }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Consignee Name</label>
-                  <input
-                    className="form-input"
-                    value={consigneeName}
-                    onChange={e => setConsigneeName(e.target.value)}
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Branch / Unit</label>
-                  <input
-                    className="form-input"
-                    value={consigneeSubName}
-                    onChange={e => setConsigneeSubName(e.target.value)}
-                    placeholder="Mettupalayam_Retail"
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Consignee GSTIN</label>
-                  <input
-                    className="form-input"
-                    value={consigneeGstin}
-                    onChange={e => setConsigneeGstin(e.target.value.toUpperCase())}
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Ship To Address</label>
-                  <input
-                    className="form-input"
-                    value={consigneeAddress}
-                    onChange={e => setConsigneeAddress(e.target.value)}
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>City &amp; State</label>
-                  <input
-                    className="form-input"
-                    value={consigneeCityState}
-                    onChange={e => setConsigneeCityState(e.target.value)}
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Pincode &amp; Phone</label>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input
-                      className="form-input"
-                      value={consigneePincode}
-                      onChange={e => setConsigneePincode(e.target.value)}
-                      placeholder="641104"
-                      style={{ width: '45%' }}
-                    />
-                    <input
-                      className="form-input"
-                      value={consigneePhone}
-                      onChange={e => setConsigneePhone(e.target.value)}
-                      placeholder="e.g. 98765 43210"
-                      style={{ width: '55%' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <BuyerConsigneeCard
+            buyerName={buyerName}
+            setBuyerName={setBuyerName}
+            buyerPhone={buyerPhone}
+            setBuyerPhone={setBuyerPhone}
+            buyerGstin={buyerGstin}
+            setBuyerGstin={setBuyerGstin}
+            buyerAddress={buyerAddress}
+            setBuyerAddress={setBuyerAddress}
+            buyerCityState={buyerCityState}
+            setBuyerCityState={setBuyerCityState}
+            buyerPincode={buyerPincode}
+            setBuyerPincode={setBuyerPincode}
+            buyerStateCode={buyerStateCode}
+            setBuyerStateCode={setBuyerStateCode}
+            sameAsBuyer={sameAsBuyer}
+            setSameAsBuyer={setSameAsBuyer}
+            consigneeName={consigneeName}
+            setConsigneeName={setConsigneeName}
+            consigneeSubName={consigneeSubName}
+            setConsigneeSubName={setConsigneeSubName}
+            consigneeGstin={consigneeGstin}
+            setConsigneeGstin={setConsigneeGstin}
+            consigneeAddress={consigneeAddress}
+            setConsigneeAddress={setConsigneeAddress}
+            consigneeCityState={consigneeCityState}
+            setConsigneeCityState={setConsigneeCityState}
+            consigneePincode={consigneePincode}
+            setConsigneePincode={setConsigneePincode}
+            consigneePhone={consigneePhone}
+            setConsigneePhone={setConsigneePhone}
+          />
 
           {/* SECTION 3: Despatch & Transport Details (Collapsible) */}
-          <div className="card">
-            <div
-              className="card-header"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-              onClick={() => setShowTransportSection(!showTransportSection)}
-            >
-              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>
-                <Truck size={18} color="#f59e0b" /> Despatch &amp; Transport Details
-              </div>
-              <button className="btn btn-ghost btn-sm" type="button">
-                {showTransportSection ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-            </div>
-
-            {showTransportSection && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Motor Vehicle No.</label>
-                  <input
-                    className="form-input"
-                    value={motorVehicleNo}
-                    onChange={e => setMotorVehicleNo(e.target.value.toUpperCase())}
-                    placeholder="TN58DW0090"
-                    style={{ textTransform: 'uppercase' }}
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Despatched Through</label>
-                  <input
-                    className="form-input"
-                    value={despatchedThrough}
-                    onChange={e => setDespatchedThrough(e.target.value)}
-                    placeholder="Eicher / VRL Logistics"
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Destination</label>
-                  <input
-                    className="form-input"
-                    value={destination}
-                    onChange={e => setDestination(e.target.value)}
-                    placeholder="Mettupalayam"
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Bill of Lading / LR No.</label>
-                  <input
-                    className="form-input"
-                    value={billOfLading}
-                    onChange={e => setBillOfLading(e.target.value)}
-                    placeholder="LR-77889"
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Buyers Order No.</label>
-                  <input
-                    className="form-input"
-                    value={buyersOrderNo}
-                    onChange={e => setBuyersOrderNo(e.target.value)}
-                    placeholder="PO-2026/09"
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Order Date</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={orderDate}
-                    onChange={e => setOrderDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Despatch Doc No.</label>
-                  <input
-                    className="form-input"
-                    value={despatchDocNo}
-                    onChange={e => setDespatchDocNo(e.target.value)}
-                    placeholder="DSP-4412"
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Terms of Delivery</label>
-                  <input
-                    className="form-input"
-                    value={termsOfDelivery}
-                    onChange={e => setTermsOfDelivery(e.target.value)}
-                    placeholder="Door Delivery"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+          <TransportDetailsCard
+            showTransportSection={showTransportSection}
+            setShowTransportSection={setShowTransportSection}
+            motorVehicleNo={motorVehicleNo}
+            setMotorVehicleNo={setMotorVehicleNo}
+            despatchedThrough={despatchedThrough}
+            setDespatchedThrough={setDespatchedThrough}
+            destination={destination}
+            setDestination={setDestination}
+            billOfLading={billOfLading}
+            setBillOfLading={setBillOfLading}
+            buyersOrderNo={buyersOrderNo}
+            setBuyersOrderNo={setBuyersOrderNo}
+            orderDate={orderDate}
+            setOrderDate={setOrderDate}
+            despatchDocNo={despatchDocNo}
+            setDespatchDocNo={setDespatchDocNo}
+            termsOfDelivery={termsOfDelivery}
+            setTermsOfDelivery={setTermsOfDelivery}
+          />
 
           {/* SECTION 4: Add Item to Bill */}
           <AddItemCard
@@ -929,168 +610,23 @@ export default function BillingDashboard() {
           />
 
           {/* SECTION 5: Current Bill Items Table */}
-          <div className="card">
-            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="card-title" style={{ fontSize: '0.95rem' }}>
-                Bill Items ({items.length})
-              </div>
-              {items.length > 0 && (
-                <button className="btn btn-outline btn-sm" onClick={clearCurrentBill} style={{ color: '#f87171' }}>
-                  Clear Bill
-                </button>
-              )}
-            </div>
-
-            {items.length === 0 ? (
-              <div className="empty-state" style={{ padding: '36px' }}>
-                <ReceiptText size={32} />
-                <p>No products added yet. Use the selector above to add items to this bill.</p>
-              </div>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '4%' }}>#</th>
-                      <th>Description of Goods</th>
-                      <th>HSN/SAC</th>
-                      <th>Rate</th>
-                      <th>Qty</th>
-                      <th>GST</th>
-                      <th>Amount</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((i, idx) => (
-                      <tr key={i.id}>
-                        <td>{idx + 1}</td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{i.name}</div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                            Batch: {i.batch} · per {i.unit}
-                          </div>
-                        </td>
-                        <td>
-                          <span className="badge badge-gray" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                            {i.hsnCode}
-                          </span>
-                        </td>
-                        <td>₹{Number(i.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <button
-                              className="btn btn-outline btn-sm"
-                              style={{ padding: '2px 7px', minWidth: 24 }}
-                              onClick={() => updateItemQty(i.id, i.qty - 1)}
-                            >−</button>
-                            <span style={{ fontWeight: 600, minWidth: 24, textAlign: 'center' }}>{i.qty}</span>
-                            <button
-                              className="btn btn-outline btn-sm"
-                              style={{ padding: '2px 7px', minWidth: 24 }}
-                              onClick={() => updateItemQty(i.id, i.qty + 1)}
-                            >+</button>
-                          </div>
-                        </td>
-                        <td style={{ fontSize: '0.75rem' }}>
-                          <span className="badge badge-blue">{i.gstRate}%</span>
-                        </td>
-                        <td style={{ fontWeight: 700, color: 'var(--brand-400)' }}>
-                          ₹{i.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td>
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            style={{ color: '#f87171', padding: '4px 6px' }}
-                            onClick={() => removeItem(i.id)}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <BillItemsCard
+            items={items}
+            updateItemQty={updateItemQty}
+            removeItem={removeItem}
+            clearCurrentBill={clearCurrentBill}
+          />
 
           {/* SECTION 6: Recent Invoices & Reprint History */}
-          <div className="card">
-            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>
-                <Clock size={18} color="#a78bfa" /> Recent Invoices History
-              </div>
-              <button className="btn btn-outline btn-sm" onClick={loadInvoiceHistory} disabled={historyLoading}>
-                <RefreshCw size={14} style={{ marginRight: 4 }} /> Refresh
-              </button>
-            </div>
-
-            {historyLoading ? (
-              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading records…</div>
-            ) : invoiceHistory.length === 0 ? (
-              <div className="empty-state" style={{ padding: '24px' }}>No invoices created yet.</div>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Invoice No.</th>
-                      <th>Date</th>
-                      <th>Buyer</th>
-                      <th>Payment Mode</th>
-                      <th>Tax</th>
-                      <th>Grand Total</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoiceHistory.slice(0, 10).map(inv => (
-                      <tr key={inv.id || inv._id}>
-                        <td style={{ fontWeight: 700, color: 'var(--brand-400)', fontSize: '0.82rem' }}>
-                          {inv.invoiceNo || inv.id}
-                        </td>
-                        <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                          {new Date(inv.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
-                        </td>
-                        <td style={{ fontSize: '0.85rem' }}>{inv.customerName || 'Walk-in'}</td>
-                        <td>
-                          <span
-                            className={`badge ${
-                              inv.paymentMode === 'Credit Purchase' ? 'badge-purple' :
-                              inv.paymentMode === 'UPI' ? 'badge-blue' :
-                              inv.paymentMode === 'Bank Transfer' ? 'badge-teal' : 'badge-green'
-                            }`}
-                            style={{ fontSize: '0.72rem' }}
-                          >
-                            {inv.paymentMode || 'Cash'}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
-                          ₹{Number(inv.totalGst || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td style={{ fontWeight: 700, color: '#34d399' }}>
-                          ₹{Number(inv.grandTotal || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td>
-                          <button
-                            className="btn btn-outline btn-sm"
-                            style={{ padding: '3px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}
-                            onClick={() => {
-                              setActiveInvoiceForView(inv)
-                              setIsInvoiceModalOpen(true)
-                            }}
-                          >
-                            <Printer size={13} /> View &amp; Print
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <RecentInvoicesCard
+            invoiceHistory={invoiceHistory}
+            historyLoading={historyLoading}
+            onRefresh={loadInvoiceHistory}
+            onViewInvoice={(inv) => {
+              setActiveInvoiceForView(inv)
+              setIsInvoiceModalOpen(true)
+            }}
+          />
         </div>
 
         {/* RIGHT COLUMN: Payment Mode & Checkout Panel */}
@@ -1109,140 +645,32 @@ export default function BillingDashboard() {
             setOtherReferences={setOtherReferences}
           />
 
-          {/* Checkout & Bill Summary */}
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title" style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}><Banknote size={16} /> Bill Summary</div>
-            </div>
-
-            {/* Coupon Code Section */}
-            <div className="form-group" style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid var(--surface-border)' }}>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem' }}>
-                <Tag size={13} color="#a78bfa" /> Apply Coupon Code
-              </label>
-              {appliedCoupon ? (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(167, 139, 250, 0.15)', border: '1px solid #a78bfa', padding: '6px 10px', borderRadius: '6px' }}>
-                  <div>
-                    <strong style={{ color: '#a78bfa', fontSize: '0.85rem' }}>{appliedCoupon.code}</strong>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Saved ₹{couponDiscountAmount.toLocaleString('en-IN')}</div>
-                  </div>
-                  <button className="btn btn-ghost" style={{ padding: '2px 6px', fontSize: '0.72rem', color: '#f87171' }} onClick={removeCoupon}>Remove</button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <input
-                    className="form-input"
-                    placeholder="Enter CODE"
-                    value={couponCodeInput}
-                    onChange={e => setCouponCodeInput(e.target.value.toUpperCase())}
-                    style={{ fontSize: '0.82rem', textTransform: 'uppercase' }}
-                  />
-                  <button className="btn btn-outline" onClick={applyCoupon} disabled={validatingCoupon} style={{ padding: '0 10px', fontSize: '0.78rem' }}>
-                    {validatingCoupon ? '…' : 'Apply'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Manual Discount */}
-            <div className="form-group" style={{ marginBottom: 12 }}>
-              <label className="form-label" style={{ fontSize: '0.78rem' }}>Discount (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                className="form-input"
-                value={globalDiscountPercent}
-                onChange={e => setGlobalDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
-                style={{ fontSize: '0.85rem' }}
-              />
-            </div>
-
-            {/* Calculations Breakdown */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, fontSize: '0.84rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                <span>Subtotal ({items.length} items)</span>
-                <span>₹{itemsSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-
-              {manualDiscAmt > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f87171' }}>
-                  <span>Discount ({globalDiscountPercent}%)</span>
-                  <span>-₹{manualDiscAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
-              )}
-
-              {couponDiscountAmount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a78bfa' }}>
-                  <span>Coupon ({appliedCoupon?.code})</span>
-                  <span>-₹{couponDiscountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                <span>Taxable Amount</span>
-                <span>₹{taxableSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#60a5fa', fontSize: '0.8rem' }}>
-                <span>CGST (Central Tax)</span>
-                <span>+₹{totalCgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#60a5fa', fontSize: '0.8rem' }}>
-                <span>SGST (State Tax)</span>
-                <span>+₹{totalSgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-
-              {roundOff !== 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                  <span>Round Off</span>
-                  <span>{roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}</span>
-                </div>
-              )}
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontWeight: 800,
-                fontSize: '1.25rem',
-                color: 'var(--text-primary)',
-                borderTop: '1px solid var(--surface-border-subtle)',
-                paddingTop: 10,
-                marginTop: 4
-              }}>
-                <span>Grand Total</span>
-                <span style={{ color: '#34d399' }}>
-                  ₹{roundedGrandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 2 }}>
-                {grandTotalWords}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
-              <button
-                className="btn btn-primary btn-full btn-lg"
-                onClick={handleSaveAndPrintInvoice}
-                disabled={items.length === 0}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-              >
-                <Printer size={18} /> Generate &amp; Print Bill
-              </button>
-
-              <button
-                className="btn btn-outline btn-full"
-                onClick={handlePreviewCurrentBill}
-                disabled={items.length === 0}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-              >
-                <Eye size={16} /> Preview Exact Template
-              </button>
-            </div>
-          </div>
+          {/* Checkout & Bill Summary Card */}
+          <BillSummaryCard
+            appliedCoupon={appliedCoupon}
+            couponDiscountAmount={couponDiscountAmount}
+            couponCodeInput={couponCodeInput}
+            setCouponCodeInput={setCouponCodeInput}
+            validatingCoupon={validatingCoupon}
+            applyCoupon={applyCoupon}
+            removeCoupon={removeCoupon}
+            globalDiscountPercent={globalDiscountPercent}
+            setGlobalDiscountPercent={setGlobalDiscountPercent}
+            summary={{
+              itemsSubtotal,
+              manualDiscAmt,
+              couponDiscountAmount,
+              taxableSubtotal,
+              totalCgst,
+              totalSgst,
+              roundOff,
+              roundedGrandTotal,
+              grandTotalWords
+            }}
+            itemsCount={items.length}
+            handleSaveAndPrintInvoice={handleSaveAndPrintInvoice}
+            handlePreviewCurrentBill={handlePreviewCurrentBill}
+          />
         </div>
       </div>
 

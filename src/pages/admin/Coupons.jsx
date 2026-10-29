@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
 import Modal from '../../components/common/Modal'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
 import { formatCurrency } from '../../utils/formatters'
 import {
   Ticket, Plus, Edit2, Trash2, CheckCircle2, XCircle, Search,
@@ -294,13 +296,19 @@ export default function AdminCoupons() {
                   </tr>
                 ))}
 
-                {filteredCoupons.length === 0 && (
+                {loading ? (
+                  <TableLoader colSpan={8} message="Loading coupons..." />
+                ) : filteredCoupons.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                      {loading ? 'Loading coupons...' : 'No coupon codes match search.'}
+                    <td colSpan={8} style={{ padding: '36px 16px' }}>
+                      <EmptyState
+                        icon={<Ticket size={28} />}
+                        title="No coupon codes match search"
+                        description="Try adjusting your search terms or create a new promotional coupon code."
+                      />
                     </td>
                   </tr>
-                )}
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -346,13 +354,19 @@ export default function AdminCoupons() {
                   </tr>
                 ))}
 
-                {filteredUsages.length === 0 && (
+                {loading ? (
+                  <TableLoader colSpan={7} message="Loading coupon credit redemptions..." />
+                ) : filteredUsages.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                      {loading ? 'Loading coupon credit redemptions...' : 'No credit usage logs match search.'}
+                    <td colSpan={7} style={{ padding: '36px 16px' }}>
+                      <EmptyState
+                        icon={<Ticket size={28} />}
+                        title="No credit usage logs match search"
+                        description="No customer redemptions match your current filter."
+                      />
                     </td>
                   </tr>
-                )}
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -360,17 +374,13 @@ export default function AdminCoupons() {
       )}
 
       {/* CREATE / EDIT MODAL */}
-      {modalOpen && (
-        <div className="modal-overlay active" onClick={() => setModalOpen(false)} style={{ background: 'rgba(0,0,0,0.7)', zIndex: 999 }}>
-          <div className="modal-card animate-fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
-              <h2 style={{ fontSize: '1.2rem', margin: 0 }}>
-                {editingId ? '✏️ Edit Coupon Code' : '🎟️ Create New Coupon Code'}
-              </h2>
-              <button className="btn btn-ghost" onClick={() => setModalOpen(false)} style={{ fontSize: '1.2rem' }}>&times;</button>
-            </div>
-
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingId ? '✏️ Edit Coupon Code' : '🎟️ Create New Coupon Code'}
+        maxWidth="520px"
+      >
+        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="pform-field">
                 <label>Coupon Code * <em>(uppercase without spaces)</em></label>
                 <input
@@ -447,14 +457,12 @@ export default function AdminCoupons() {
                 </label>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--surface-border-subtle, rgba(0,0,0,0.1))' }}>
                 <button type="button" className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary">{editingId ? 'Update Coupon' : 'Save & Activate Coupon'}</button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </div>
   )
 }

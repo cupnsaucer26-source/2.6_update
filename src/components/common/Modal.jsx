@@ -83,7 +83,17 @@ export default function Modal({
     >
       <div
         className={`modal-card animate-fade-in ${className}`.trim()}
-        style={{ maxWidth, padding: '24px' }}
+        style={{
+          background: 'var(--surface-card, #ffffff)',
+          color: 'var(--text-primary, #0f172a)',
+          borderRadius: '16px',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          maxWidth,
+          padding: '24px',
+          width: '100%',
+        }}
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : 'Dialog'}
@@ -95,7 +105,7 @@ export default function Modal({
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: '18px',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            borderBottom: '1px solid var(--surface-border-subtle, rgba(0,0,0,0.08))',
             paddingBottom: '12px',
           }}
         >
@@ -106,20 +116,20 @@ export default function Modal({
                   fontSize: '0.72rem',
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
-                  color: 'var(--text-muted)',
+                  color: 'var(--text-muted, #64748b)',
                   marginBottom: 2,
                 }}
               >
                 {eyebrow}
               </div>
             )}
-            <h2 style={{ fontSize: '1.2rem', margin: 0 }}>{title}</h2>
+            <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700 }}>{title}</h2>
           </div>
           <button
             type="button"
             className="btn btn-ghost"
             onClick={onClose}
-            style={{ fontSize: '1.2rem', padding: '4px 8px' }}
+            style={{ fontSize: '1.2rem', padding: '4px 8px', color: 'inherit' }}
             aria-label="Close dialog"
           >
             &times;

@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
 import {
-  Plus, Edit2, Trash2, Check, X, Search, User, Filter,
-  ArrowUpDown, RefreshCw, Sparkles, Tag, ShieldAlert, BarChart3,
-  IndianRupee, Sprout, Package, Image as ImageIcon, Info, Film, Video, ChevronDown
+  Plus, Edit2, Trash2, Check, X, Search,
+  RefreshCw, Sparkles, Tag, ShieldAlert, BarChart3,
+  Sprout, Package, Video, ChevronDown
 } from 'lucide-react'
 import { parseImageList } from '../../shared/productImages.js'
 import { duplicateNameGroups, findSameNamedProduct, productNameKey } from '../../shared/productName.js'
@@ -14,6 +14,13 @@ import { packUnits } from '../../shared/packPricing'
 import ProductTranslations from './ProductTranslations'
 import ProductFormRail from './products/ProductFormRail'
 import PricingSection from './products/PricingSection'
+import MediaSection from './products/MediaSection'
+import VisibilitySection from './products/VisibilitySection'
+import VideosSection from './products/VideosSection'
+import AdvancedSection from './products/AdvancedSection'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
+import { formatCurrency } from '../../utils/formatters'
 import { invalidateCatalogProductsCache } from '../../hooks/useCatalogProducts'
 
 const PFORM_SECTIONS = [
@@ -768,15 +775,15 @@ export default function AdminProducts() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    Loading products from database...
-                  </td>
-                </tr>
+                <TableLoader colSpan={9} message="Loading products from database..." />
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    No products found. Adjust filters or click "Add New Product" to create one.
+                  <td colSpan={9} style={{ padding: '36px 16px' }}>
+                    <EmptyState
+                      icon={<Package size={28} />}
+                      title="No products found"
+                      description='Adjust filters or click "Add New Product" to create one.'
+                    />
                   </td>
                 </tr>
               ) : (
@@ -836,8 +843,12 @@ export default function AdminProducts() {
 
                     {/* Price & MRP */}
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: 700, color: 'var(--brand-400)' }}>₹{p.price}</div>
-                      {Number(p.originalPrice || p.mrp) > Number(p.price) && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>₹{p.originalPrice || p.mrp}</div>}
+                      <div style={{ fontWeight: 700, color: 'var(--brand-400)' }}>{formatCurrency(p.price)}</div>
+                      {Number(p.originalPrice || p.mrp) > Number(p.price) && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                          {formatCurrency(p.originalPrice || p.mrp)}
+                        </div>
+                      )}
                     </td>
 
                     {/* Stock Status */}
@@ -1227,318 +1238,36 @@ export default function AdminProducts() {
                 </section>
 
                 {/* PHOTOS & DESCRIPTION */}
-                <section className="pform-section" id="pform-media">
-                  <div className="pform-section-head">
-                    <span className="pform-section-icon"><ImageIcon size={15} /></span>
-                    <div>
-                      <h3>Photos &amp; Description</h3>
-                      <span className="pform-section-sub">The first photo is the card image; the rest fill the detail gallery</span>
-                    </div>
-                  </div>
-                  <div className="pform-field">
-                    <label>Product Photos * <em>(one URL or asset path per line)</em></label>
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple onChange={handlePhotoUpload} />
-                    {photoList.length > 0 && (
-                      <div className="pform-thumbs">
-                        {photoList.map((src, index) => (
-                          <figure key={`${index}-${src.slice(0, 40)}`}>
-                            <img src={src} alt="" onError={e => { e.currentTarget.style.visibility = 'hidden' }} />
-                            {index === 0 && <figcaption>Cover</figcaption>}
-                          </figure>
-                        ))}
-                      </div>
-                    )}
-                    <textarea rows="2" required value={form.images} onChange={e => setForm({ ...form, images: e.target.value })} placeholder="/assets/product-front.jpg&#10;/assets/product-label.jpg" />
-                    <p className="pform-hint">Use at least one photo. Select multiple files or add URLs/asset paths for the detail-page gallery and hover zoom.</p>
-                  </div>
-                  <div className="pform-field">
-                    <label>Product Description *</label>
-                    <textarea
-                      required
-                      rows="3"
-                      placeholder="Key farmer benefits, disease target, application instructions..."
-                      value={form.description}
-                      onChange={e => setForm({ ...form, description: e.target.value })}
-                    />
-                  </div>
-                </section>
+                <MediaSection
+                  form={form}
+                  setForm={setForm}
+                  photoList={photoList}
+                  handlePhotoUpload={handlePhotoUpload}
+                />
 
                 {/* TARGETING & VISIBILITY */}
-                <section className="pform-section" id="pform-visibility">
-                  <div className="pform-section-head">
-                    <span className="pform-section-icon"><User size={15} /></span>
-                    <div>
-                      <h3>Targeting &amp; Visibility</h3>
-                      <span className="pform-section-sub">Who sees it first, and whether it is sold online</span>
-                    </div>
-                  </div>
-                  <div className="pform-field">
-                    <label>Assign to user <em>(personalizes their catalog &amp; prioritizes it on their store page)</em></label>
-                    <select
-                      value={form.targetUserId}
-                      onChange={e => setForm({ ...form, targetUserId: e.target.value })}
-                    >
-                      <option value="all">🌐 All Users (General Public E-Commerce)</option>
-                      <optgroup label="Assign to Registered Farmer">
-                        {users.filter(u => u.role === 'farmer').map(u => (
-                          <option key={u.id} value={u.id}>
-                            👤 {u.name} — {u.phone} ({u.crop || 'Farmer'}, {u.village || 'Tamil Nadu'})
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Assign to Staff / Operations">
-                        {users.filter(u => u.role !== 'farmer').map(u => (
-                          <option key={u.id} value={u.id}>
-                            🛡️ {u.name} ({u.role})
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
-                  </div>
-                  <div className="product-visibility-panel" style={{ marginTop: '14px' }}>
-                    <div>
-                      <label className="product-visibility-title">Product Channel &amp; Visibility</label>
-                      <p>Choose where this formulation is sold and stocked.</p>
-                    </div>
-                    <div className="product-visibility-options" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px' }}>
-                      <label className={`product-visibility-option ${form.visibility === 'both' ? 'active' : ''}`} style={{ cursor: 'pointer' }}>
-                        <input type="radio" name="product-visibility" checked={form.visibility === 'both'} onChange={() => setForm({ ...form, visibility: 'both', online: true })} />
-                        <strong>🔄 Both (Web &amp; POS)</strong>
-                        <span>Available on website &amp; billing counter</span>
-                      </label>
-                      <label className={`product-visibility-option ${form.visibility === 'online' ? 'active' : ''}`} style={{ cursor: 'pointer' }}>
-                        <input type="radio" name="product-visibility" checked={form.visibility === 'online'} onChange={() => setForm({ ...form, visibility: 'online', online: true })} />
-                        <strong>🌐 Online Only</strong>
-                        <span>Customer e-commerce website only</span>
-                      </label>
-                      <label className={`product-visibility-option ${form.visibility === 'offline' ? 'active offline' : ''}`} style={{ cursor: 'pointer' }}>
-                        <input type="radio" name="product-visibility" checked={form.visibility === 'offline'} onChange={() => setForm({ ...form, visibility: 'offline', online: false })} />
-                        <strong>🏬 Offline Only</strong>
-                        <span>Billing portal only, hidden from store</span>
-                      </label>
-                    </div>
-                  </div>
-                </section>
+                <VisibilitySection
+                  form={form}
+                  setForm={setForm}
+                  users={users}
+                />
 
                 {/* PRODUCT VIDEOS & DEMONSTRATIONS */}
-                <section className="pform-section">
-                  <div className="pform-section-head">
-                    <span className="pform-section-icon"><Film size={15} /></span>
-                    <div>
-                      <h3>Product Videos &amp; Demonstrations</h3>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        Attach application demos or explainer videos. These appear in an interactive video player below the single product view on the customer website.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Attached videos list */}
-                  {Array.isArray(form.taggedVideos) && form.taggedVideos.length > 0 && (
-                    <div style={{ marginBottom: '14px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
-                        Attached Videos ({form.taggedVideos.length})
-                      </label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {form.taggedVideos.map((vid, idx) => (
-                          <div key={vid.id || vid.url || idx} style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '8px 12px', background: 'rgba(34, 197, 94, 0.08)',
-                            border: '1px solid rgba(74, 222, 128, 0.25)', borderRadius: '8px', gap: '10px'
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                              <Film size={15} style={{ color: '#22c55e', flexShrink: 0 }} />
-                              <div style={{ minWidth: 0 }}>
-                                <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {vid.title || 'Demonstration Video'}
-                                </div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {vid.category ? `[${vid.category}] ` : ''}{vid.url}
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setForm(curr => ({
-                                  ...curr,
-                                  taggedVideos: curr.taggedVideos.filter((_, i) => i !== idx)
-                                }))
-                              }}
-                              style={{
-                                background: 'transparent', border: 'none', color: '#f87171',
-                                cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center'
-                              }}
-                              title="Remove video attachment"
-                            >
-                              <X size={15} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Pick from existing media library */}
-                  {availableVideos.length > 0 && (
-                    <div style={{ marginBottom: '14px' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                        Select from Uploaded Media Library
-                      </label>
-                      <div style={{
-                        maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--dark-600)',
-                        borderRadius: '8px', padding: '8px', background: 'var(--dark-900)'
-                      }}>
-                        {availableVideos.map(v => {
-                          const isSelected = form.taggedVideos?.some(tv => tv.id === (v._id || v.id) || tv.url === (v.videoUrl || v.url))
-                          return (
-                            <div
-                              key={v._id || v.id}
-                              onClick={() => {
-                                if (isSelected) {
-                                  setForm(curr => ({
-                                    ...curr,
-                                    taggedVideos: (curr.taggedVideos || []).filter(tv => tv.id !== (v._id || v.id) && tv.url !== (v.videoUrl || v.url))
-                                  }))
-                                } else {
-                                  setForm(curr => ({
-                                    ...curr,
-                                    taggedVideos: [
-                                      ...(curr.taggedVideos || []),
-                                      {
-                                        id: v._id || v.id,
-                                        title: v.title || 'Product Demo',
-                                        url: v.videoUrl || v.url || '',
-                                        category: v.category || 'Product Demo',
-                                        thumbnailUrl: v.thumbnailUrl || ''
-                                      }
-                                    ]
-                                  }))
-                                }
-                              }}
-                              style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '6px 8px', borderRadius: '6px', cursor: 'pointer',
-                                background: isSelected ? 'rgba(74, 222, 128, 0.12)' : 'transparent',
-                                marginBottom: '4px'
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                                <input
-                                  type="checkbox"
-                                  checked={!!isSelected}
-                                  onChange={() => {}} // Handled by parent onClick
-                                  style={{ cursor: 'pointer' }}
-                                />
-                                <span style={{ fontSize: '0.82rem', fontWeight: isSelected ? 600 : 400, color: isSelected ? 'var(--brand-400)' : 'var(--text-primary)' }}>
-                                  {v.title}
-                                </span>
-                                {v.category && <span className="badge badge-gray" style={{ fontSize: '0.68rem', padding: '1px 5px' }}>{v.category}</span>}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Or add custom video URL */}
-                  <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                      Or Attach Custom Video URL / File
-                    </label>
-                    <div className="pform-adder" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <input
-                        placeholder="Video Title (e.g. Field Application Demo)"
-                        value={customVideoTitle}
-                        onChange={e => setCustomVideoTitle(e.target.value)}
-                        style={{ flex: '1 1 180px' }}
-                      />
-                      <input
-                        placeholder="Video URL (YouTube or /api/upload/... or MP4 link)"
-                        value={customVideoUrl}
-                        onChange={e => setCustomVideoUrl(e.target.value)}
-                        style={{ flex: '2 1 240px' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!customVideoUrl.trim()) { toast.error('Please enter a video URL'); return }
-                          const newVid = {
-                            id: `custom-${Date.now()}`,
-                            title: customVideoTitle.trim() || 'Product Demonstration',
-                            url: customVideoUrl.trim(),
-                            category: 'Product Demo'
-                          }
-                          setForm(curr => ({
-                            ...curr,
-                            taggedVideos: [...(curr.taggedVideos || []), newVid]
-                          }))
-                          setCustomVideoTitle('')
-                          setCustomVideoUrl('')
-                          toast.success('Video attached to product!')
-                        }}
-                        className="btn btn-outline"
-                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                      >
-                        Attach Video
-                      </button>
-                    </div>
-                  </div>
-                </section>
+                <VideosSection
+                  form={form}
+                  setForm={setForm}
+                  availableVideos={availableVideos}
+                  customVideoTitle={customVideoTitle}
+                  setCustomVideoTitle={setCustomVideoTitle}
+                  customVideoUrl={customVideoUrl}
+                  setCustomVideoUrl={setCustomVideoUrl}
+                />
 
                 {/* ADVANCED / OPTIONAL DETAILS */}
-                <details className="pform-advanced" id="pform-advanced">
-                  <summary>
-                    <span className="pform-section-icon pform-advanced-tile"><Info size={15} /></span>
-                    <Info size={15} className="pform-advanced-info" /> Advanced details
-                    <span>Ingredient, dosage, usage guidance, related content, reviews</span>
-                  </summary>
-                  <div className="pform-advanced-body">
-                    <div className="pform-field pform-grid-2">
-                      <div>
-                        <label>Active Ingredient</label>
-                        <input
-                          placeholder="Active Chemical/Bio ingredient"
-                          value={form.activeIngredient}
-                          onChange={e => setForm({ ...form, activeIngredient: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <label>Dosage</label>
-                        <input
-                          placeholder="Dosage e.g. 250g per Acre"
-                          value={form.dosage}
-                          onChange={e => setForm({ ...form, dosage: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="product-detail-fields">
-                      <div className="product-detail-grid">
-                        <div>
-                          <label>How to use</label>
-                          <textarea rows="4" value={form.howToUse} onChange={e => setForm({ ...form, howToUse: e.target.value })} placeholder="Application method, dosage, dilution and safety steps" />
-                        </div>
-                        <div>
-                          <label>When to use</label>
-                          <textarea rows="4" value={form.whenToUse} onChange={e => setForm({ ...form, whenToUse: e.target.value })} placeholder="Crop stage, symptoms, weather or timing guidance" />
-                        </div>
-                      </div>
-
-                      <label>Related blogs <span>(one per line: Blog title | https://example.com/blog)</span></label>
-                      <textarea rows="3" value={form.relatedBlogs} onChange={e => setForm({ ...form, relatedBlogs: e.target.value })} placeholder="Paddy blast prevention | /blogs/paddy-blast-prevention" />
-
-                      <label>Related product IDs <span>(comma separated)</span></label>
-                      <input value={form.relatedProductIds} onChange={e => setForm({ ...form, relatedProductIds: e.target.value })} placeholder="sb-1234, sb-5678" />
-
-                      <label className="review-toggle">
-                        <input type="checkbox" checked={form.reviewsEnabled} onChange={e => setForm({ ...form, reviewsEnabled: e.target.checked })} />
-                        Enable verified customer reviews for this product
-                      </label>
-                      <small>Ratings stay hidden until genuine review records are submitted. No seeded or random reviews are shown.</small>
-                    </div>
-                  </div>
-                </details>
+                <AdvancedSection
+                  form={form}
+                  setForm={setForm}
+                />
                 {isEditing && <ProductTranslations product={editingOriginal} onSaved={fetchProducts} />}
               </div>
               </div>

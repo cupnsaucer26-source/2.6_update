@@ -1,6 +1,17 @@
 import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
-import * as XLSX from 'xlsx'
+let xlsxModulePromise = null
+async function loadXlsx() {
+  if (!xlsxModulePromise) {
+    xlsxModulePromise = import('xlsx')
+      .then(mod => (mod.utils ? mod : (mod.default || mod)))
+      .catch(err => {
+        xlsxModulePromise = null
+        throw err
+      })
+  }
+  return xlsxModulePromise
+}
 import {
   TrendingUp,
   Store,
@@ -48,6 +59,7 @@ export default function ShopAnalytics() {
   const [sortAsc, setSortAsc] = useState(false)
   const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [exportingInvoices, setExportingInvoices] = useState(false)
 
   // Compute effective date range
   const { effectiveFrom, effectiveTo } = useMemo(() => {
@@ -171,9 +183,11 @@ export default function ShopAnalytics() {
 
   // ================= EXCEL EXPORT HANDLERS =================
 
-  const exportFullExcelReport = () => {
+  const exportFullExcelReport = async () => {
+    if (exporting || loading) return
     try {
       setExporting(true)
+      const XLSX = await loadXlsx()
       const wb = XLSX.utils.book_new()
       const timestamp = new Date().toISOString().slice(0, 10)
 
@@ -279,8 +293,11 @@ export default function ShopAnalytics() {
     }
   }
 
-  const exportInvoicesExcel = () => {
+  const exportInvoicesExcel = async () => {
+    if (exportingInvoices) return
     try {
+      setExportingInvoices(true)
+      const XLSX = await loadXlsx()
       const wb = XLSX.utils.book_new()
       const timestamp = new Date().toISOString().slice(0, 10)
       const invoiceRows = filteredInvoices.map(inv => ({
@@ -303,6 +320,9 @@ export default function ShopAnalytics() {
       XLSX.writeFile(wb, `SathyamBio_Invoices_${timestamp}.xlsx`)
     } catch (err) {
       console.error('Error exporting invoices:', err)
+      alert('Failed to export invoices. Please try again.')
+    } finally {
+      setExportingInvoices(false)
     }
   }
 
@@ -333,8 +353,14 @@ export default function ShopAnalytics() {
             Refresh
           </button>
 
-          <button onClick={exportFullExcelReport} disabled={exporting || loading} className="sa-btn sa-btn--primary">
-            <FileSpreadsheet size={17} />
+          <button
+            type="button"
+            onClick={exportFullExcelReport}
+            disabled={exporting || loading}
+            className="sa-btn sa-btn--primary"
+            aria-label="Export complete enterprise excel report"
+          >
+            <FileSpreadsheet size={17} className={exporting ? 'sa-spin' : ''} />
             {exporting ? 'Generating Excel...' : 'Export Complete Excel'}
           </button>
         </div>
@@ -618,9 +644,15 @@ export default function ShopAnalytics() {
         <section className="sa-card" style={{ overflow: 'hidden' }}>
           <div className="sa-card-head">
             <h2 className="sa-card-title"><Receipt size={19} /> Recent SAM Invoices ({filteredInvoices.length})</h2>
-            <button onClick={exportInvoicesExcel} className="sa-btn sa-btn--ghost sa-btn--sm">
-              <Download size={14} />
-              Export Invoices XLSX
+            <button
+              type="button"
+              onClick={exportInvoicesExcel}
+              disabled={exportingInvoices}
+              className="sa-btn sa-btn--ghost sa-btn--sm"
+              aria-label="Export filtered invoices to Excel"
+            >
+              <Download size={14} className={exportingInvoices ? 'sa-spin' : ''} />
+              {exportingInvoices ? 'Exporting...' : 'Export Invoices XLSX'}
             </button>
           </div>
 

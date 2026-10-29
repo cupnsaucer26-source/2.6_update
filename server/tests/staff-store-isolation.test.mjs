@@ -7,6 +7,9 @@ import { signToken, hashPassword } from '../security.js';
 const BASE = 'http://localhost:5000';
 
 async function makeUser(role, name, phone, store = {}) {
+  const allUsers = await db.getUsers();
+  const existing = allUsers.find(u => u.phone === phone);
+  if (existing) await db.deleteUser(existing.id);
   const plainPassword = 'SathyamStaff#2026!';
   const user = await db.createUser({
     name,
@@ -273,6 +276,8 @@ test('Staff, Store & Multi-Store Isolation Test Suite', async (t) => {
   });
 
   await t.test('11. Inactive store cannot issue POS billing invoices', async () => {
+    const staleStores = (await db.getStores()).filter(s => s.code === 'CLS01');
+    for (const s of staleStores) await db.deleteStore(s.id);
     // Create an inactive store
     const inactiveStore = await db.createStore({
       name: 'Closed Store Hub',

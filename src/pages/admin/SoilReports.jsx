@@ -20,6 +20,8 @@ import {
 } from 'lucide-react'
 import { soilTestService } from '../../services/soilTestService'
 import { useAuth } from '../../context/AuthContext'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
 
 export default function AdminSoilReports() {
   const { user } = useAuth()
@@ -171,12 +173,13 @@ export default function AdminSoilReports() {
 
           <div className="p2-queue-list">
             {loading && reports.length === 0 ? (
-              <div className="p2-loading">Loading…</div>
+              <TableLoader message="Loading soil reports…" size={24} />
             ) : filtered.length === 0 ? (
-              <div className="p2-empty">
-                <div className="p2-empty-icon"><FlaskConical size={28} /></div>
-                <p>No soil reports found</p>
-              </div>
+              <EmptyState
+                icon={<FlaskConical size={32} />}
+                title="No soil reports found"
+                description="No soil test submissions match search or filter."
+              />
             ) : (
               filtered.map(r => (
                 <button

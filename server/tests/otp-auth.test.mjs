@@ -53,7 +53,12 @@ Object.assign(db, {
     store.set(key, value);
     return value[field];
   },
-  getUserByIdentifier: async (identifier) => users.get(String(identifier)) ?? null,
+  getUserByIdentifier: async (identifier, { roles } = {}) => {
+    const user = users.get(String(identifier));
+    if (!user) return null;
+    if (roles && !roles.includes(user.role)) return null;
+    return user;
+  },
   getProfileFields: async () => profileForm,
   // What an admin has set as the shop's crops, grown as products are saved.
   getCatalogOptions: async () => ({ crops: ['Paddy / Rice', 'Paddy/Rice', 'Citrus / Fruits', 'Grapes / Fruits', 'Grapes', 'Potato'] }),
@@ -65,6 +70,7 @@ Object.assign(db, {
     users.set(user.phone, user);
     return user;
   },
+  setUserSessionId: async (id, sessionId) => true,
   updateUser: async (id, updates) => {
     const user = [...users.values()].find((item) => item.id === id);
     if (!user) return null;
@@ -227,8 +233,11 @@ test('a staff number is not signed in by a code, and no account is made on it', 
 
   const { status, data } = await signIn();
 
-  assert.equal(status, 403);
-  assert.equal(data.staffAccount, true);
+  // Dual identity contract: staff member verifying on store front is routed to farmer signup (isNewUser)
+  // and no token is issued for their staff account.
+  assert.equal(status, 200);
+  assert.equal(data.verified, true);
+  assert.equal(data.isNewUser, true);
   assert.equal(data.token, undefined);
   assert.equal(created, null, 'the staff account is not replaced by a farmer one');
 });
@@ -270,8 +279,9 @@ test('the password door turns a customer away and points at their code', async (
 
   const { status, data } = await post('/api/auth/login', { identifier: '9876543210', password: 'Kavya2026farm' });
 
-  assert.equal(status, 403);
-  assert.equal(data.otpOnly, true);
+  // In the dual identity contract, staff door is scoped strictly to STAFF_ROLES.
+  // A customer identifier returns 401 Invalid credentials without leaking account existence.
+  assert.equal(status, 401);
   assert.equal(data.token, undefined, 'the old password does not open a session any more');
 });
 

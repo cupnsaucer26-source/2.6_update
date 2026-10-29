@@ -2,6 +2,10 @@ import { useEffect, useState, useMemo } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
 import { downloadCsv } from '../../shared/csv'
+import Modal from '../../components/common/Modal'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
+import { formatDateTime } from '../../utils/formatters'
 import {
   Search, Filter, RefreshCw, Download, Phone, MapPin,
   Sprout, Calendar, Clock, AlertCircle, CheckCircle2,
@@ -172,7 +176,7 @@ export default function AdminEnquiries() {
       e.crop,
       e.type,
       e.status || 'Not Seen',
-      new Date(e.createdAt).toLocaleString('en-IN'),
+      formatDateTime(e.createdAt),
       String(e.message || '').replace(/\n/g, ' ')
     ])
 
@@ -340,99 +344,103 @@ export default function AdminEnquiries() {
               </tr>
             </thead>
             <tbody>
-              {filteredAndSorted.map((e, i) => {
-                const config = getStatusConfig(e.status)
-                return (
-                  <tr
-                    key={e.id || i}
-                    style={{
-                      background: config.bg,
-                      borderLeft: `4px solid ${config.border}`,
-                      transition: 'background 0.2s ease'
-                    }}
-                  >
-                    <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
-                    <td style={{ fontWeight: 700, color: '#fff' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>👤 {e.name}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <a
-                        href={`https://wa.me/91${(e.phone || '').replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="badge badge-green"
-                        style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        title="Click to WhatsApp farmer"
-                      >
-                        📱 {e.phone}
-                      </a>
-                    </td>
-                    <td>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        📍 {e.location || '—'}
-                      </span>
-                    </td>
-                    <td>
-                      {e.crop ? (
-                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                          🌾 {e.crop}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className="badge badge-blue">
-                        {e.type || 'General'}
-                      </span>
-                    </td>
-                    <td
-                      style={{ maxWidth: 300, whiteSpace: 'pre-wrap', fontSize: '0.88rem', cursor: 'pointer' }}
-                      onClick={() => setSelectedEnquiry(e)}
-                      title="Click to view full message details"
-                    >
-                      {e.message || '—'}
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                      {new Date(e.createdAt || Date.now()).toLocaleDateString('en-IN', {
-                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                      })}
-                    </td>
-                    <td>
-                      <select
-                        value={config.value}
-                        onChange={evt => handleStatusChange(e.id, evt.target.value)}
-                        style={{
-                          background: 'rgba(0,0,0,0.4)',
-                          color: config.color,
-                          borderColor: config.border,
-                          fontWeight: 700,
-                          fontSize: '0.82rem',
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          width: '100%'
-                        }}
-                      >
-                        {STATUS_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value} style={{ color: opt.color }}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                )
-              })}
-
-              {filteredAndSorted.length === 0 && (
+              {loading ? (
+                <TableLoader colSpan={9} message="Loading farmer enquiries..." />
+              ) : filteredAndSorted.length === 0 ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                    {loading ? 'Loading enquiries...' : 'No farmer enquiries match the selected filters.'}
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '24px' }}>
+                    <EmptyState
+                      icon={<MessageSquare size={32} />}
+                      title="No farmer enquiries found"
+                      description="No farmer enquiries match the selected filters."
+                    />
                   </td>
                 </tr>
+              ) : (
+                filteredAndSorted.map((e, i) => {
+                  const config = getStatusConfig(e.status)
+                  return (
+                    <tr
+                      key={e.id || i}
+                      style={{
+                        background: config.bg,
+                        borderLeft: `4px solid ${config.border}`,
+                        transition: 'background 0.2s ease'
+                      }}
+                    >
+                      <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
+                      <td style={{ fontWeight: 700, color: '#fff' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>👤 {e.name}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <a
+                          href={`https://wa.me/91${(e.phone || '').replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="badge badge-green"
+                          style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          title="Click to WhatsApp farmer"
+                        >
+                          📱 {e.phone}
+                        </a>
+                      </td>
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          📍 {e.location || '—'}
+                        </span>
+                      </td>
+                      <td>
+                        {e.crop ? (
+                          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                            🌾 {e.crop}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="badge badge-blue">
+                          {e.type || 'General'}
+                        </span>
+                      </td>
+                      <td
+                        style={{ maxWidth: 300, whiteSpace: 'pre-wrap', fontSize: '0.88rem', cursor: 'pointer' }}
+                        onClick={() => setSelectedEnquiry(e)}
+                        title="Click to view full message details"
+                      >
+                        {e.message || '—'}
+                      </td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                        {formatDateTime(e.createdAt)}
+                      </td>
+                      <td>
+                        <select
+                          value={config.value}
+                          onChange={evt => handleStatusChange(e.id, evt.target.value)}
+                          style={{
+                            background: 'rgba(0,0,0,0.4)',
+                            color: config.color,
+                            borderColor: config.border,
+                            fontWeight: 700,
+                            fontSize: '0.82rem',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            width: '100%'
+                          }}
+                        >
+                          {STATUS_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value} style={{ color: opt.color }}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -440,73 +448,69 @@ export default function AdminEnquiries() {
       </div>
 
       {/* ENQUIRY DETAILS MODAL */}
-      {selectedEnquiry && (
-        <div className="modal-overlay active" onClick={() => setSelectedEnquiry(null)} style={{ background: 'rgba(0,0,0,0.7)', zIndex: 999 }}>
-          <div className="modal-card animate-fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
-              <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                📝 Farmer Enquiry Details
-              </h2>
-              <button className="btn btn-ghost" onClick={() => setSelectedEnquiry(null)} style={{ fontSize: '1.2rem' }}>&times;</button>
+      <Modal
+        isOpen={!!selectedEnquiry}
+        onClose={() => setSelectedEnquiry(null)}
+        title="📝 Farmer Enquiry Details"
+        maxWidth="560px"
+      >
+        {selectedEnquiry && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Farmer Name</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{selectedEnquiry.name}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Location</div>
+                <div style={{ fontWeight: 600, color: '#fff' }}>📍 {selectedEnquiry.location}</div>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Farmer Name</div>
-                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{selectedEnquiry.name}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Location</div>
-                  <div style={{ fontWeight: 600, color: '#fff' }}>📍 {selectedEnquiry.location}</div>
-                </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mobile Number</div>
+                <div style={{ fontWeight: 600, color: '#34d399', marginTop: '2px' }}>📱 {selectedEnquiry.phone}</div>
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mobile Number</div>
-                  <div style={{ fontWeight: 600, color: '#34d399', marginTop: '2px' }}>📱 {selectedEnquiry.phone}</div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target Crop</div>
-                  <div style={{ fontWeight: 600, color: '#fff', marginTop: '2px' }}>🌾 {selectedEnquiry.crop || 'Not specified'}</div>
-                </div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target Crop</div>
+                <div style={{ fontWeight: 600, color: '#fff', marginTop: '2px' }}>🌾 {selectedEnquiry.crop || 'Not specified'}</div>
               </div>
+            </div>
 
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Query Message</div>
-                <div style={{ fontSize: '0.95rem', color: '#fff', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                  {selectedEnquiry.message || 'No message content provided.'}
-                </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Query Message</div>
+              <div style={{ fontSize: '0.95rem', color: '#fff', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                {selectedEnquiry.message || 'No message content provided.'}
               </div>
+            </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Update Status</div>
-                  <select
-                    value={getStatusConfig(selectedEnquiry.status).value}
-                    onChange={evt => handleStatusChange(selectedEnquiry.id, evt.target.value)}
-                    style={{ marginTop: '4px', padding: '6px 12px', borderRadius: '6px', background: '#0d1f17', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}
-                  >
-                    {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <a
-                    href={`https://wa.me/91${(selectedEnquiry.phone || '').replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-primary"
-                    style={{ textDecoration: 'none', background: '#25D366', borderColor: '#25D366' }}
-                  >
-                    💬 Chat on WhatsApp
-                  </a>
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Update Status</div>
+                <select
+                  value={getStatusConfig(selectedEnquiry.status).value}
+                  onChange={evt => handleStatusChange(selectedEnquiry.id, evt.target.value)}
+                  style={{ marginTop: '4px', padding: '6px 12px', borderRadius: '6px', background: '#0d1f17', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}
+                >
+                  {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={`https://wa.me/91${(selectedEnquiry.phone || '').replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary"
+                  style={{ textDecoration: 'none', background: '#25D366', borderColor: '#25D366' }}
+                >
+                  💬 Chat on WhatsApp
+                </a>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   )
 }

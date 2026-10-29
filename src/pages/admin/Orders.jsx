@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import { gpsMapsUrl } from '../../shared/osmAddress'
 import StatusBadge from '../../components/common/StatusBadge'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
 import { formatCurrency } from '../../utils/formatters'
 import { toast } from 'sonner'
 import {
@@ -282,9 +284,17 @@ export default function AdminOrders() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={COLUMN_COUNT} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading sales data...</td></tr>
+                <TableLoader colSpan={COLUMN_COUNT} message="Loading sales & billing records..." />
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={COLUMN_COUNT} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No sales or bills found for the selected view.</td></tr>
+                <tr>
+                  <td colSpan={COLUMN_COUNT} style={{ padding: '36px 16px' }}>
+                    <EmptyState
+                      icon={<ShoppingBag size={32} />}
+                      title="No sales or bills found"
+                      description="No records match your selected view or search criteria."
+                    />
+                  </td>
+                </tr>
               ) : (
                 filtered.map(tx => (
                   <tr key={tx.txId} style={{ borderBottom: '1px solid var(--dark-700)' }}>

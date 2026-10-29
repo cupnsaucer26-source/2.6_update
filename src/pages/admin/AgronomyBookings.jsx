@@ -4,6 +4,9 @@ import { toast } from 'sonner'
 import { Sprout, RefreshCw, Phone, Calendar, CheckCircle2, Clock, Search, UserCheck, Building2, AlertTriangle, XCircle, RotateCcw } from 'lucide-react'
 import { agronomyService } from '../../services/agronomyService'
 import { useAuth } from '../../context/AuthContext'
+import TableLoader from '../../components/common/TableLoader'
+import EmptyState from '../../components/common/EmptyState'
+import { formatDate } from '../../utils/formatters'
 
 function formatExpertSpec(spec) {
   if (!spec) return ''
@@ -227,12 +230,13 @@ export default function AgronomyBookings() {
       </div>
 
       {loading ? (
-        <p className="p2-loading">Loading agronomy bookings…</p>
+        <TableLoader message="Loading agronomy bookings…" size={24} />
       ) : filtered.length === 0 ? (
-        <div className="p2-empty p2-empty--dashed">
-          <div className="p2-empty-icon"><Calendar size={28} /></div>
-          <p>No bookings match the selected filters.</p>
-        </div>
+        <EmptyState
+          icon={<Calendar size={32} />}
+          title="No bookings found"
+          description="No bookings match the selected filters."
+        />
       ) : (
         <div className="p2-stack">
           {filtered.map(b => {
@@ -380,7 +384,7 @@ export default function AgronomyBookings() {
                 )}
                 {isDone && (
                   <div className="p2-quote p2-quote--green" style={{ marginTop: 10 }}>
-                    Done by {b.completedBy || 'staff'}{b.completedAt ? ` on ${new Date(b.completedAt).toLocaleDateString('en-IN')}` : ''}{b.callbackNotes ? `: ${b.callbackNotes}` : ''}
+                    Done by {b.completedBy || 'staff'}{b.completedAt ? ` on ${formatDate(b.completedAt)}` : ''}{b.callbackNotes ? `: ${b.callbackNotes}` : ''}
                   </div>
                 )}
 

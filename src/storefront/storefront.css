@@ -14392,7 +14392,7 @@ body.poster-open .sb-portal .call-fab {
 :is(body.sb-home-active .sb-home, .sb-portal) .chatbot-title { display: block; font-family: 'Outfit', var(--script-font, sans-serif), sans-serif; font-weight: 700; font-size: 1rem; line-height: 1.25; color: #fff; }
 :is(body.sb-home-active .sb-home, .sb-portal) .chatbot-status { display: block; font-size: 0.72rem; color: #BBF7D0; margin-top: 2px; }
 :is(body.sb-home-active .sb-home, .sb-portal) .chatbot-close {
-  width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; cursor: pointer;
+  width: 40px; height: 40px; min-width: 40px; min-height: 40px; flex-shrink: 0; border-radius: 10px; cursor: pointer;
   display: grid; place-items: center; font-size: 1.4rem; line-height: 1;
   background: rgba(255, 255, 255, 0.12); color: #fff;
 }
@@ -14439,7 +14439,9 @@ body.poster-open .sb-portal .call-fab {
 @media (max-width: 768px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .chatbot-window {
     left: 0; right: 0; bottom: 0; top: auto;
-    width: 100%; height: 78vh; height: 78dvh; max-height: none;
+    width: 100%; max-width: 100vw; box-sizing: border-box;
+    overflow-x: hidden;
+    height: 78vh; height: 78dvh; max-height: none;
     border-radius: 22px 22px 0 0; border-width: 1px 0 0;
     z-index: 10040;
     box-shadow: 0 0 0 100vmax rgba(10, 24, 17, 0), 0 -12px 40px rgba(0, 0, 0, 0.2);
@@ -15397,4 +15399,119 @@ body.poster-open .sb-portal .call-fab {
   body.slogan-tucked:not(.sb-search-open) .mobile-shop-header {
     transition: none;
   }
+}
+
+
+/* AI Farming Assistant Dynamic Suggestions & Expert Booking */
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-followup-box {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #F0FDF4;
+  border-left: 3px solid #16A34A;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #14532D;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-suggestions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  width: 100%;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-suggestion-chip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  min-height: 40px;
+  background: #FFFFFF;
+  border: 1px solid #BFE3CF;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #075437;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(10, 24, 17, 0.05);
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-suggestion-chip:hover:not(:disabled) {
+  background: #E8F5EE;
+  border-color: #0B7A4B;
+  transform: translateY(-1px);
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-suggestion-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-expert-card {
+  margin-top: 10px;
+  padding: 12px;
+  background: #F0FDF4;
+  border: 1px solid #86EFAC;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-expert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #166534;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-expert-desc {
+  font-size: 0.78rem;
+  color: #14532D;
+  margin: 0;
+  line-height: 1.4;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-expert-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 14px;
+  min-height: 40px;
+  border-radius: 8px;
+  background: #15803D;
+  color: #FFFFFF;
+  border: none;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chat-expert-btn:hover {
+  background: #166534;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chatbot-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chatbot-header-btn {
+  background: transparent;
+  border: none;
+  color: #BBF7D0;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+:is(body.sb-home-active .sb-home, .sb-portal) .chatbot-header-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
 }
