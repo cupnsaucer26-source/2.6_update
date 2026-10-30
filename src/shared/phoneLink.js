@@ -1,6 +1,25 @@
 // The shop's number when the CMS has none (admin CMS field "phone").
 export const SUPPORT_PHONE = '+91-8778613372'
 
+export const CALL_LABELS = {
+  en: 'Call us:',
+  ta: 'அழைக்க:',
+  kn: 'ಕರೆ ಮಾಡಿ:',
+  te: 'కాల్ చేయండి:',
+  hi: 'कॉल करें:',
+  ml: 'വിളിക്കുക:',
+  tulu: 'ಕರೆ ಮಲ್ಪುಲೆ:',
+}
+
+export function formatPhoneDisplay(phone) {
+  if (!phone) return ''
+  const cleaned = String(phone).replace(/[^\d+]/g, '')
+  if (cleaned.startsWith('+91') && cleaned.length === 13) {
+    return `+91 ${cleaned.slice(3, 8)} ${cleaned.slice(8)}`
+  }
+  return String(phone).replaceAll('-', ' ')
+}
+
 /**
  * An Indian mobile as its 10 digits, or null. The same rule as normalizePhone()
  * in server/server.js, so the checkout refuses exactly what the server refuses:

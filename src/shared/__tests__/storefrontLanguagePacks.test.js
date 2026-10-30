@@ -12,8 +12,10 @@ const PACKS = {
   kn: { global: 'SB_LANG_KN', script: /[ಀ-೿]/ },
   te: { global: 'SB_LANG_TE', script: /[ఀ-౿]/ },
   hi: { global: 'SB_LANG_HI', script: /[ऀ-ॿ]/ },
+  ml: { global: 'SB_LANG_ML', script: /[ഀ-ൿ]/ },
+  tulu: { global: 'SB_LANG_TULU', script: /[ಀ-೿]/ },
 };
-const OTHER_SCRIPTS = /[ऀ-ॿ஀-௿ఀ-౿ಀ-೿ഀ-ൿ]/g;
+const OTHER_SCRIPTS = /[ऀ-ॿ஀-௿ಀ-೿ఀ-౿ഀ-ൿ]/g;
 
 function loadPack(code) {
   const source = fs.readFileSync(new URL(`../../../public/js/lang-${code}.js`, import.meta.url), 'utf8');

@@ -8762,15 +8762,23 @@ html[lang="hi"] {
   --script-font: 'Noto Sans Devanagari';
   --script-leading: 1.65;
 }
+html[lang="ml"] {
+  --script-font: 'Noto Sans Malayalam';
+  --script-leading: 1.7;
+}
+html[lang="tulu"] {
+  --script-font: 'Noto Sans Kannada';
+  --script-leading: 1.95;
+}
 
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .sb-store-logo-sub,
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .mobile-nav-link > span:last-child,
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .mms-account-text strong,
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .mms-account-text span,
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .subcat-group-title,
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .subcat-circle-title,
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .rail-tab-label,
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .category-circle-label {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .sb-store-logo-sub,
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .mobile-nav-link > span:last-child,
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .mms-account-text strong,
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .mms-account-text span,
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .subcat-group-title,
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .subcat-circle-title,
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .rail-tab-label,
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .category-circle-label {
   line-height: var(--script-leading);
 }
 
@@ -8780,7 +8788,7 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .category-circle-lab
    Indian script it cut almost every heading mid-glyph. Wrapping is the better
    trade: the heading is worth more than the rule line beside it, and the count
    keeps its place either way. */
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .subcat-group-title {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .subcat-group-title {
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
@@ -8792,10 +8800,10 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .subcat-group-title 
    "மக்காச்சோளம்") are wider than the 76-78px label, so category labels were
    cut mid-glyph and crop/pest labels spilled over their neighbours. Break
    inside the word and allow a third line (desktop does the same). */
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(.category-circle-label, .crop-circle-label, .pest-circle-label) {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(.category-circle-label, .crop-circle-label, .pest-circle-label) {
   overflow-wrap: anywhere;
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .category-circle-label {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .category-circle-label {
   -webkit-line-clamp: 3;
 }
 /* ...but a Tamil word split in two ("பூச்சிக்கொ / ல்லிகள்") is hard to read.
@@ -8803,33 +8811,33 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .category-circle-lab
    so the break above is only a fallback for the rare longer one. The rails
    scroll sideways, so fewer tiles per screen only shows more of the scroll. */
 @media (max-width: 767px) {
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(.category-circle-item, .crop-circle-item, .pest-circle-item) {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(.category-circle-item, .crop-circle-item, .pest-circle-item) {
     flex-basis: 124px;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(.category-circle-label, .crop-circle-label, .pest-circle-label) {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(.category-circle-label, .crop-circle-label, .pest-circle-label) {
     max-width: 124px;
     font-size: 10.5px;
   }
 }
 @media (min-width: 768px) {
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .all-products-page :is(.category-circle-item, .crop-circle-item, .pest-circle-item) {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .all-products-page :is(.category-circle-item, .crop-circle-item, .pest-circle-item) {
     flex-basis: 132px;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .all-products-page :is(.category-circle-label, .crop-circle-label, .pest-circle-label) {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .all-products-page :is(.category-circle-label, .crop-circle-label, .pest-circle-label) {
     max-width: 132px;
   }
 }
 /* /categories: the side rail labels ("பூஞ்சைக்கொல்லிகள்" needs 143px of a 66px
    tab) were cut mid-glyph, and the banner title ran out of its card over the
    category image on phones. */
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .rail-tab-label {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .rail-tab-label {
   overflow-wrap: anywhere;
   -webkit-line-clamp: 3;
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .subcat-banner-content {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .subcat-banner-content {
   min-width: 0;
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .subcat-banner-title {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .subcat-banner-title {
   overflow-wrap: anywhere;
 }
 
@@ -8838,13 +8846,13 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .subcat-banner-title
    a single long word spilled out of its card on 360px phones. Buttons: the
    CMS "Publish All Changes" button was wider than the phone and ran off the
    left edge, because .btn never wraps. */
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(.sidebar-link, .stat-label, .card h3, .page-content h3) {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(.sidebar-link, .stat-label, .card h3, .page-content h3) {
   overflow-wrap: anywhere;
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .sidebar-link .nav-badge {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .sidebar-link .nav-badge {
   flex-shrink: 0;
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .page-content .btn {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .page-content .btn {
   max-width: 100%;
   white-space: normal;
   text-align: center;
@@ -8852,7 +8860,7 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .page-content .btn {
 
 /* Menu sheet headings: capitals and letter-spacing suit English, but spacing
    out Indian-language letters pulls their joined forms apart. */
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .mms-title {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .mms-title {
   letter-spacing: 0;
   text-transform: none;
 }
@@ -8861,7 +8869,7 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .mms-title {
    compact bar ("THE BAR WHILE SCROLLING"); the script's taller line needs the
    cap to match it. The compact bar still folds them to 0. */
 @media (max-width: 767px) {
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .sathya-mobile-bottom-nav:not(.is-compact) .mobile-nav-link > span:last-child {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .sathya-mobile-bottom-nav:not(.is-compact) .mobile-nav-link > span:last-child {
     max-height: calc(1em * var(--script-leading));
   }
 }
@@ -12496,7 +12504,7 @@ input[type='password']::-ms-clear {
   from { opacity: 0; transform: translateY(-5px); }
   to   { opacity: 1; transform: none; }
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .header-slogan-text {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .header-slogan-text {
   letter-spacing: 0;
   font-size: 0.64rem;
   animation-name: sloganInPlain, sloganSheen;
@@ -12964,7 +12972,7 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .header-slogan-text 
   .farmer-service-icon { width: 44px; height: 44px; margin-bottom: 0; border-radius: 50%; }
   .farmer-service-title { max-width: 100%; font-size: 0.7rem; font-weight: 700; overflow-wrap: break-word; }
   .farmer-services--n5 .farmer-service-title { font-size: 0.64rem; }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .farmer-service-title { overflow-wrap: anywhere; }
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .farmer-service-title { overflow-wrap: anywhere; }
   .farmer-service-desc,
   .farmer-service-cta { display: none; }
 }
@@ -12975,7 +12983,7 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .header-slogan-text 
 @media (min-width: 769px) and (max-width: 1024px) {
   .farmer-services--n4 .farmer-services-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) .farmer-service-title {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) .farmer-service-title {
   line-height: var(--script-leading, 1.4);
 }
 

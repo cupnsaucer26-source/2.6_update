@@ -848,11 +848,11 @@ body.sb-home-active {
 /* Wide desktops, English: phone, crop and the button share one row. The
    Indian-language labels are too long for that, so they keep two rows. */
 @media (min-width: 1280px) {
-  html:not(:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"])) :is(body.sb-home-active .sb-home, .sb-portal) .newsletter-form {
+  html:not(:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"])) :is(body.sb-home-active .sb-home, .sb-portal) .newsletter-form {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) auto;
     align-items: end;
   }
-  html:not(:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"])) :is(body.sb-home-active .sb-home, .sb-portal) .newsletter-btn {
+  html:not(:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"])) :is(body.sb-home-active .sb-home, .sb-portal) .newsletter-btn {
     grid-column: auto;
     white-space: nowrap;
   }
@@ -4513,7 +4513,7 @@ body.sb-home-active {
     line-height: 1.15;
     letter-spacing: 0.09em;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .logo-sub {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .logo-sub {
     letter-spacing: 0;
   }
   :is(body.sb-home-active .sb-home, .sb-portal) .header-actions {
@@ -4805,7 +4805,7 @@ body.sb-home-active {
   }
   /* The policy links are one no-wrap line; in Tamil/Kannada/Telugu/Hindi it
      is wider than the phone and ran off both edges. */
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .footer-bottom-row > div {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .footer-bottom-row > div {
     flex-wrap: wrap;
     justify-content: center;
     row-gap: 6px;
@@ -6809,7 +6809,7 @@ body.sb-home-active {
     line-height: 1.15;
     letter-spacing: 0.09em;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .auth-brand-sub {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .auth-brand-sub {
     letter-spacing: 0;
   }
   :is(body.sb-home-active .sb-home, .sb-portal) .auth-topbar {
@@ -7205,14 +7205,14 @@ body.sb-home-active {
    and fixed-width labels overflow. These cover the home page itself; the
    ticker, header row, bottom bar and Menu sheet sit outside .sb-home and have
    theirs in index.css ("INDIAN-LANGUAGE TEXT"), with --script-leading. */
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-title[data-i18n="hero_title"] {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-title[data-i18n="hero_title"] {
   white-space: pre-line;
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) h1, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) h2, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) h3, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) h4, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-title, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .section-title, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .deal-title, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .welcome-poster-title {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) h1, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) h2, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) h3, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) h4, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-title, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .section-title, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .deal-title, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .welcome-poster-title {
   line-height: 1.4;
   letter-spacing: 0;
 }
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-tag, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .lang-quick-title {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-tag, html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .lang-quick-title {
   letter-spacing: 0;
   text-transform: none;
 }
@@ -7230,8 +7230,8 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-act
      untouched, so nothing moves until the text genuinely needs the room — and
      a long headline an admin types is handled the same way. Scoped to the four
      Indian scripts, so English renders identically at every width. */
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card > .bento-overlay,
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card > .bento-overlay-light {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card > .bento-overlay,
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card > .bento-overlay-light {
     position: relative;
     inset: auto;
     flex: 1 1 auto;
@@ -7239,19 +7239,19 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-act
 }
 
 @media (max-width: 768px) {
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card.bento-span-2.bento-row-2 .bento-title {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card.bento-span-2.bento-row-2 .bento-title {
     font-size: 1.08rem !important;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card .bento-title {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card .bento-title {
     font-size: 0.98rem !important;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .section-title {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .section-title {
     font-size: 1.2rem;
   }
   /* Tags are one-line pills; a wrapped Tamil tag became a two-line blob. The
      pill takes the script's line-height, so it grows to fit the vowel signs
      instead of clipping them. */
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-tag {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-tag {
     max-width: 100%;
     overflow: hidden;
     white-space: nowrap;
@@ -7264,14 +7264,14 @@ html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-act
      card's height (still at least 220px) and the description keeps the
      two-line limit at the script's line-height. The !important only beats
      the phone rules' own !important above. */
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card.bento-span-2.bento-row-2 {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card.bento-span-2.bento-row-2 {
     height: auto !important;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card.bento-span-2.bento-row-2 .bento-overlay {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card.bento-span-2.bento-row-2 .bento-overlay {
     position: relative;
     flex: 1 0 auto;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card.bento-span-2.bento-row-2 .bento-desc {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .bento-card.bento-span-2.bento-row-2 .bento-desc {
     line-height: var(--script-leading) !important;
   }
 }
@@ -10598,7 +10598,7 @@ html.sb-loc-lock {
   /* The Indic delivery promise (~350px) was hard-cut mid-word - an ellipsis
      cannot show on an inline-flex box; the scrolling ticker beside it gives
      up the room instead. */
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-utility-shell .topbar-shipping-note {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-utility-shell .topbar-shipping-note {
     flex: none;
   }
   :is(body.sb-home-active .sb-home, .sb-portal) .sb-utility-shell .lang-selector-wrapper {
@@ -11098,12 +11098,12 @@ html.sb-loc-lock {
   }
   /* At every desktop width for the Indic languages: the bar's content box
      tops out at 1256px, so a wider window never makes room for the label. */
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell :is(#headerAccountBtn, .header-actions > .action-item:not(.action-track, .action-wishlist, .cart-trigger-btn)) {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell :is(#headerAccountBtn, .header-actions > .action-item:not(.action-track, .action-wishlist, .cart-trigger-btn)) {
     justify-content: center;
     width: 40px;
     padding: 0;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell :is(#headerAccountBtn, .header-actions > .action-item:not(.action-track, .action-wishlist, .cart-trigger-btn)) > div {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell :is(#headerAccountBtn, .header-actions > .action-item:not(.action-track, .action-wishlist, .cart-trigger-btn)) > div {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -11144,7 +11144,7 @@ html.sb-loc-lock {
       white-space: nowrap;
     }
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .action-track .action-title {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .action-track .action-title {
     font-size: 0.74rem;
   }
 
@@ -12224,7 +12224,7 @@ html.sb-loc-lock {
 }
 /* Indian scripts are never letter-spaced: it pulls a letter's parts apart
    ("எ ங் க ள்") and widens the line until the ellipsis cuts it. */
-html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .header-slogan-text {
+html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .header-slogan-text {
   letter-spacing: 0;
   font-size: 0.64rem;
   animation-name: sloganInPlain, sloganSheen; /* index.css: no letter-spacing */
@@ -12572,7 +12572,7 @@ body.poster-open .sb-portal .help-fab {
    Hidden while any sheet is open (basket, checkout, payment, sign-in,
    enquiry: body.overlay-open), under the phone Menu and the welcome poster.
    ========================================================================== */
-.sb-portal .call-fab {
+:is(body.sb-home-active, body) .sb-portal .call-fab {
   position: fixed;
   right: 12px;
   bottom: calc(146px + env(safe-area-inset-bottom, 0px));
@@ -12597,13 +12597,13 @@ body.poster-open .sb-portal .help-fab {
     bottom: calc(218px + env(safe-area-inset-bottom, 0px));
   }
 }
-.sb-portal .call-fab:hover {
+:is(body.sb-home-active, body) .sb-portal .call-fab:hover {
   background: #5C3A0E;
   color: #ffffff;
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(107, 68, 18, 0.45);
 }
-.sb-portal .call-fab:active {
+:is(body.sb-home-active, body) .sb-portal .call-fab:active {
   background: #4A2E0A;
   color: #ffffff;
   transform: scale(0.96);
@@ -12611,28 +12611,28 @@ body.poster-open .sb-portal .help-fab {
 }
 /* On the icon itself: the store's `:is(...) a { color: inherit }` outranks
    `.sb-portal .call-fab`, so a colour on the link never reaches the glyph. */
-.sb-portal .call-fab > i {
+:is(body.sb-home-active, body) .sb-portal .call-fab > i {
   color: #ffffff;
   transition: transform 0.2s ease;
 }
-.sb-portal .call-fab:hover > i {
+:is(body.sb-home-active, body) .sb-portal .call-fab:hover > i {
   transform: scale(1.08);
 }
-.sb-portal .call-fab:focus-visible {
+:is(body.sb-home-active, body) .sb-portal .call-fab:focus-visible {
   outline: 3px solid rgba(139, 94, 26, 0.55);
   outline-offset: 3px;
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(107, 68, 18, 0.45);
 }
-.sb-portal .call-fab .call-fab-label {
+:is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label {
   position: absolute;
   top: 50%;
   right: calc(100% + 14px);
-  transform: translateY(-50%) translateX(8px);
+  transform: translateY(-50%) translateX(6px);
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 24px 8px 12px;
+  padding: 8px 24px 8px 14px !important;
   border-radius: 9999px;
   background: #ffffff;
   color: #1e293b;
@@ -12646,15 +12646,29 @@ body.poster-open .sb-portal .help-fab {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s ease;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s ease;
   z-index: 20;
+  max-width: calc(100vw - 76px);
+  box-sizing: border-box;
+}
+/* Invisible hover bridge extending across gap to button so mouse movement doesn't drop hover */
+:is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -8px;
+  right: -20px;
+  background: transparent;
+  pointer-events: auto;
+  z-index: -1;
 }
 /* Crisp seamless pointer arrow matching border and background */
-.sb-portal .call-fab .call-fab-label::after {
+:is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label::after {
   content: '';
   position: absolute;
   top: 50%;
-  right: -5px;
+  right: -6px;
   transform: translateY(-50%) rotate(45deg);
   width: 10px;
   height: 10px;
@@ -12664,9 +12678,10 @@ body.poster-open .sb-portal .help-fab {
   border-bottom: none;
   border-left: none;
   border-radius: 0 1px 0 0;
-  z-index: 1;
+  z-index: 2;
+  pointer-events: none;
 }
-.sb-portal .call-fab .call-fab-label .call-fab-icon-pill {
+:is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label .call-fab-icon-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -12678,26 +12693,51 @@ body.poster-open .sb-portal .help-fab {
   font-size: 0.72rem;
   flex-shrink: 0;
 }
-.sb-portal .call-fab .call-fab-label .call-fab-text {
+:is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label .call-fab-text {
   color: #334155;
   font-size: 0.85rem;
   font-weight: 600;
+  flex-shrink: 0;
 }
-.sb-portal .call-fab .call-fab-label .call-fab-number {
+:is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label .call-fab-number {
   color: #15803d;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  flex-shrink: 0;
+  padding-right: 4px;
 }
-.sb-portal .call-fab:hover .call-fab-label,
-.sb-portal .call-fab:focus-visible .call-fab-label {
+:is(body.sb-home-active, body) .sb-portal .call-fab:hover .call-fab-label,
+:is(body.sb-home-active, body) .sb-portal .call-fab:focus .call-fab-label,
+:is(body.sb-home-active, body) .sb-portal .call-fab:focus-visible .call-fab-label,
+:is(body.sb-home-active, body) .sb-portal .call-fab:active .call-fab-label,
+:is(body.sb-home-active, body) .sb-portal .call-fab.is-expanded .call-fab-label {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
   transform: translateY(-50%) translateX(0);
 }
-@media (hover: none) and (pointer: coarse) {
-  .sb-portal .call-fab:not(:focus-visible) .call-fab-label {
-    display: none !important;
+@media (max-width: 480px) {
+  :is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label {
+    gap: 6px;
+    padding: 6px 18px 6px 10px !important;
+    font-size: 0.8rem;
+    max-width: calc(100vw - 72px);
+    right: calc(100% + 10px);
+  }
+  :is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label::before {
+    right: -14px;
+  }
+  :is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label .call-fab-icon-pill {
+    width: 20px;
+    height: 20px;
+    font-size: 0.65rem;
+  }
+  :is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label .call-fab-text {
+    display: none;
+  }
+  :is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label .call-fab-number {
+    font-size: 0.85rem;
   }
 }
 body.overlay-open .sb-portal .call-fab,
@@ -12707,7 +12747,7 @@ body.poster-open .sb-portal .call-fab {
   pointer-events: none;
 }
 @media (min-width: 769px) {
-  .sb-portal .call-fab {
+  :is(body.sb-home-active, body) .sb-portal .call-fab {
     right: 24px;
     bottom: 88px;
     width: 52px;
@@ -12727,16 +12767,16 @@ body.poster-open .sb-portal .call-fab {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sb-portal .call-fab,
-  .sb-portal .call-fab-label {
+  :is(body.sb-home-active, body) .sb-portal .call-fab,
+  :is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label {
     transition: none;
   }
-  .sb-portal .call-fab .call-fab-label .call-fab-pulse-dot::before {
+  :is(body.sb-home-active, body) .sb-portal .call-fab .call-fab-label .call-fab-pulse-dot::before {
     animation: none;
   }
 }
 @media print {
-  .sb-portal .call-fab {
+  :is(body.sb-home-active, body) .sb-portal .call-fab {
     display: none;
   }
 }
@@ -14211,12 +14251,12 @@ body.poster-open .sb-portal .call-fab {
    mid-word in the compact bento cards.
    ========================================================================== */
 @media (min-width: 1025px) {
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .hero-bento .bento-row-2 .bento-title {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .hero-bento .bento-row-2 .bento-title {
     max-width: none;
     --hero-title-size: clamp(1.75rem, 2.3vw, 2.35rem);
     line-height: 1.25;
   }
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .cat-card:is(:nth-child(2), :nth-child(3), :nth-child(4), :nth-child(5)) .bento-title {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .cat-card:is(:nth-child(2), :nth-child(3), :nth-child(4), :nth-child(5)) .bento-title {
     font-size: 1.05rem;
     overflow-wrap: normal;
   }
@@ -14225,13 +14265,13 @@ body.poster-open .sb-portal .call-fab {
 /* Phones: Tamil/Kannada category names are single long words
    ("பூஞ்சைக்கொல்லிகள்") and broke mid-word in the 2-column cards. */
 @media (max-width: 768px) {
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .bento-title {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .bento-title {
     --cat-title-size: 0.76rem;
     overflow-wrap: normal;
   }
   /* Icon tiles two across: a 3-across tile is ~100px, and "பூஞ்சைக்கொல்லிகள்"
      needs ~155px whole. */
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .bento-grid-3 {
+  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .bento-grid-3 {
     --cat-cols: 2;
   }
 }
@@ -14350,11 +14390,28 @@ body.poster-open .sb-portal .call-fab {
   .p2-split { --p2-split: minmax(0, 1fr); }
 }
 
-/* Tablet, Indian scripts: "AI இலை மருத்துவர்" is wider than "AI Leaf Doctor"
-   and pushed the nav 17px past a 1024px screen. */
+/* Tablet (769px-1024px): 8 navigation links plus the scan button exceeded 1024px
+   screen width with gap:24px, causing 63px horizontal overflow. Tighten gap and
+   compact the scan button to icon-only like the >=1025px desktop header. */
 @media (min-width: 769px) and (max-width: 1024px) {
-  html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"]) :is(body.sb-home-active .sb-home, .sb-portal) .nav-scan-btn {
-    padding-inline: 12px;
+  :is(body.sb-home-active .sb-home, .sb-portal) .navbar .nav-links {
+    gap: 12px;
+    font-size: 0.85rem;
+  }
+  :is(body.sb-home-active .sb-home, .sb-portal) .navbar .nav-scan-btn {
+    padding: 6px 10px;
+  }
+  :is(body.sb-home-active .sb-home, .sb-portal) .navbar .nav-scan-btn span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  :is(body.sb-home-active .sb-home, .sb-portal) .navbar .nav-content {
+    min-width: 0;
   }
 }
 

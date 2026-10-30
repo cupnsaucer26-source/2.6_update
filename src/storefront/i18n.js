@@ -55,10 +55,34 @@ export const EN_KEYS = {
   voice_search_btn: 'Voice Search',
   voice_search: 'Voice search',
   voice_search_stop: 'Stop voice search',
+  // Soil, tickets, experts and checkout labels for complete dictionary parity:
+  hero_soil_btn: 'Soil Report',
+  soil_title: 'Soil Test Report Analysis',
+  soil_desc: 'Upload your lab soil test document (PDF or image). Our AI analyzes Nitrogen, Phosphorus, Potassium levels and recommends appropriate Sathyam Agro Mart bio-stimulants.',
+  soil_upload_btn: 'Upload Soil Report',
+  soil_dropzone: 'Drag and drop your soil document here',
+  soil_formats: 'PDF, PNG, JPG accepted',
+  n8n_title: 'WhatsApp N8N Automation Assistant',
+  n8n_subtitle: 'See how N8N automated workflows help farmers 24/7 via WhatsApp',
+  n8n_test_btn: 'Run N8N Test',
+  tickets_title: 'Help Ticket System',
+  tickets_subtitle: 'Field technical help & pesticide dosage queries',
+  ticket_new_btn: 'Submit Ticket',
+  experts_title: 'Connect with Plant Doctor',
+  experts_subtitle: 'Direct consultation calls with senior agricultural scientists',
+  checkout_title: 'Complete Your Order',
+  field_name: 'Full Name',
+  field_phone: 'Mobile Number (for WhatsApp updates)',
+  field_address: 'Farm Delivery Address',
+  field_payment: 'Payment Method',
+  pay_cod: 'Cash on Delivery (COD)',
+  pay_upi: 'UPI / Google Pay / PhonePe',
+  pay_bank: 'Net Banking / KCC Card',
+  place_order: 'Place Order Now',
 }
 
 const TRANSLATIONS = { en: EN_KEYS }
-const LANGUAGE_PACK_GLOBALS = { ta: 'SB_LANG_TA', kn: 'SB_LANG_KN', te: 'SB_LANG_TE', hi: 'SB_LANG_HI' }
+const LANGUAGE_PACK_GLOBALS = { ta: 'SB_LANG_TA', kn: 'SB_LANG_KN', te: 'SB_LANG_TE', hi: 'SB_LANG_HI', ml: 'SB_LANG_ML', tulu: 'SB_LANG_TULU' }
 export const TEXT_PACKS = {}
 
 function registerLanguagePack(code) {
@@ -107,7 +131,7 @@ export function loadLanguagePack(code) {
 // Staff portals (admin, employee, delivery, billing) have their own phrases in
 // public/js/lang-staff-<code>.js, loaded only on those pages so store visitors
 // never download them. They are merged into the store pack for that language.
-const STAFF_PACK_GLOBALS = { ta: 'SB_LANG_STAFF_TA', kn: 'SB_LANG_STAFF_KN', te: 'SB_LANG_STAFF_TE', hi: 'SB_LANG_STAFF_HI' }
+const STAFF_PACK_GLOBALS = { ta: 'SB_LANG_STAFF_TA', kn: 'SB_LANG_STAFF_KN', te: 'SB_LANG_STAFF_TE', hi: 'SB_LANG_STAFF_HI', ml: 'SB_LANG_STAFF_ML', tulu: 'SB_LANG_STAFF_TULU' }
 const staffPackLoads = {}
 function mergeStaffPack(code) {
   const staff = window[STAFF_PACK_GLOBALS[code]]

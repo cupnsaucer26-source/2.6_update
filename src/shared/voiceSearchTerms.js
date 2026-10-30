@@ -98,6 +98,35 @@ const SPOKEN = {
     'పచ్చదోమ': 'Leaf hopper', 'పచ్చ దోమ': 'Leaf hopper', 'కలుపు మొక్కలు': 'Weeds', 'బయో స్టిమ్యులెంట్': 'Bio-Stimulant', 'నులిపురుగు మందు': 'Nematicide',
     'విత్తనం': 'Seeds', 'జెల్': 'Gel', 'పొడి': 'Powder', 'ద్రవం': 'Liquid', 'గుళికలు': 'Granules',
   },
+  ml: {
+    'നെല്ല്': 'Paddy', 'അരി': 'Paddy', 'പരുത്തി': 'Cotton', 'തക്കാളി': 'Tomato', 'ഗോതമ്പ്': 'Wheat',
+    'കരിമ്പ്': 'Sugarcane', 'ചോളം': 'Corn', 'മുന്തിരി': 'Grapes', 'ഉരുളക്കിഴങ്ങ്': 'Potato', 'വാഴ': 'Banana',
+    'തെങ്ങ്': 'Coconut', 'തേങ്ങ': 'Coconut', 'അടയ്ക്ക': 'Arecanut', 'മരച്ചീനി': 'Tapioca', 'കിഴങ്ങ്': 'Tubers',
+    'മുളക്': 'Chilli', 'ഉള്ളി': 'Onion', 'വഴുതന': 'Brinjal', 'നിലക്കടല': 'Groundnut', 'മഞ്ഞൾ': 'Turmeric',
+    'നാരങ്ങ': 'Citrus', 'മാങ്ങ': 'Mango', 'പച്ചക്കറികൾ': 'Vegetables',
+    'കുലവാട്ടം': 'Blast', 'കരിമ്പൻ': 'Blight', 'തുരുമ്പ്': 'Rust', 'വെള്ളീച്ച': 'Whitefly', 'മുഞ്ഞ': 'Aphids',
+    'ഇലപ്പേൻ': 'Thrips', 'മൈറ്റ്': 'Mites', 'തണ്ട് തുരപ്പൻ': 'Stem Borer', 'തുരപ്പൻ': 'Borer',
+    'കായ് തുരപ്പൻ': 'Fruit Borer', 'ചൂർണ്ണപ്പൂപ്പ്': 'Powdery Mildew', 'അടിപ്പൂപ്പ്': 'Downy Mildew',
+    'ഇലപ്പുള്ളി': 'Leaf Spot', 'വാട്ടം': 'Wilt', 'വേരുചീയൽ': 'Root Rot', 'ചീയൽ': 'Rot',
+    'നിമാവിര': 'Nematode', 'പട്ടാളപ്പുഴു': 'Armyworm', 'പുഴു': 'Worm', 'ഇലചുരുട്ടിപ്പുഴു': 'Leaf Folder',
+    'തുള്ളൻ': 'Leaf hopper', 'കളകൾ': 'Weeds', 'കുമിൾനാശിനി': 'Fungicide', 'കീടനാശിനി': 'Insecticide',
+    'കളനാശിനി': 'Herbicide', 'വളം': 'Fertilizer', 'വിത്ത്': 'Seeds', 'ജൈവ ഉത്തേജകം': 'Bio-Stimulant',
+    'വിരനാശിനി': 'Nematicide', 'ജെൽ': 'Gel', 'പൊടി': 'Powder', 'ദ്രാവകം': 'Liquid', 'തരികൾ': 'Granules',
+  },
+  tulu: {
+    'ಬಾರ್': 'Paddy', 'ಅರಿ': 'Paddy', 'ಪತ್ತಿ': 'Cotton', 'ಟೊಮೆಟೊ': 'Tomato', 'ಗೋಧಿ': 'Wheat',
+    'ಕರ್ಬು': 'Sugarcane', 'ಜೋಳ': 'Corn', 'ದ್ರಾಕ್ಷಿ': 'Grapes', 'ಬಟಾಟೆ': 'Potato', 'ಬಾರೆ': 'Banana',
+    'ತಾರಾಯಿ': 'Coconut', 'ಬಜ್ಜೆಯಿ': 'Arecanut', 'ಮರಸೇಬು': 'Tapioca', 'ಕಿರೆಂಗ್': 'Tubers',
+    'ಮುಂಚಿ': 'Chilli', 'ನೀರುಳ್ಳಿ': 'Onion', 'ಬದನೆ': 'Brinjal', 'ಕಡ್ಲೆ': 'Groundnut', 'ಮಂಜೊಲ್': 'Turmeric',
+    'ಲಿಂಬೆ': 'Citrus', 'ಕುಕ್ಕುದ ಮರ': 'Mango', 'ತರಕಾರಿ': 'Vegetables',
+    'ಬೆಂಕಿ ಸೀಕು': 'Blast', 'ಕರಿಕ ಸೀಕು': 'Blight', 'ತುಕ್ಕು ಸೀಕು': 'Rust', 'ಬೊಳ್ಚೊಣ': 'Whitefly',
+    'ಹೇನ್': 'Aphids', 'ನುಸಿ': 'Mites', 'ಕಾಂಡ ಕೊರಕ': 'Stem Borer', 'ಕೊರಕ': 'Borer',
+    'ಕಾಯಿ ಕೊರಕ': 'Fruit Borer', 'ಬೂದಿ ಸೀಕು': 'Powdery Mildew', 'ಎಲೆ ಚುಕ್ಕೆ': 'Leaf Spot',
+    'ಸೊರಗು ಸೀಕು': 'Wilt', 'ಕಿರೆ ಕೊಳೆ': 'Root Rot', 'ಕೊಳೆ ಸೀಕು': 'Rot', 'ಜಂತುಪುರಿ': 'Nematode',
+    'ಪುರಿ': 'Worm', 'ಕಳೆಕುಲು': 'Weeds', 'ಶಿಲೀಂಧ್ರನಾಶಕ': 'Fungicide', 'ಕ್ರಿಮಿನಾಶಕ': 'Insecticide',
+    'ಕಳೆನಾಶಕ': 'Herbicide', 'ಗೊಬ್ಬರ': 'Fertilizer', 'ಬೀಜೊಲು': 'Seeds', 'ಜೈವಿಕ ಉತ್ತೇಜಕ': 'Bio-Stimulant',
+    'ಜೆಲ್': 'Gel', 'ಪುಡಿ': 'Powder', 'ದ್ರವ': 'Liquid', 'ಹರಳು': 'Granules',
+  },
 }
 
 // Filler a farmer adds around the words that matter ("... க்கு மருந்து வேண்டும்").
@@ -106,9 +135,11 @@ const FILLER = {
   hi: ['दवा', 'दवाई', 'चाहिए', 'के', 'लिए', 'में', 'और', 'मेरी', 'मेरे', 'फसल', 'रोग', 'बताओ', 'दिखाओ', 'कौन', 'सी', 'अच्छी', 'का', 'की'],
   kn: ['ಔಷಧಿ', 'ಔಷಧ', 'ಬೇಕು', 'ಗೆ', 'ನನ್ನ', 'ಬೆಳೆ', 'ಬೆಳೆಗೆ', 'ಮತ್ತು', 'ರೋಗ', 'ತೋರಿಸಿ', 'ಯಾವುದು', 'ಒಳ್ಳೆಯ'],
   te: ['మందు', 'మందులు', 'కావాలి', 'కి', 'నా', 'పంట', 'పంటకు', 'మరియు', 'తెగులుకు', 'చూపించు', 'ఏది', 'మంచి'],
+  ml: ['മരുന്ന്', 'വേണം', 'ആവശ്യമുണ്ട്', 'കാണിക്കൂ', 'എനിക്ക്', 'എന്റെ', 'വിള', 'രോഗം', 'ഏതാണ്', 'നല്ല'],
+  tulu: ['ಮರ್ದ್', 'ಬೋಡು', 'ತೋಜಾಲೆ', 'ಎಂಕ್', 'ಎನ್ನ', 'ಬುಳೆ', 'ಸೀಕು', 'ಓವು', 'ಎಡ್ಡೆ'],
 }
 
-const INDIAN_SCRIPT = /[ऀ-ॿ஀-௿ఀ-౿ಀ-೿]/
+const INDIAN_SCRIPT = /[ऀ-ॿ஀-௿ఀ-౿ಀ-೿ഀ-ൿ]/
 const clean = s => String(s || '').normalize('NFC').replace(/[.,;:!?।॥]/g, ' ').replace(/\s+/g, ' ').trim()
 
 // One dictionary per language: page labels first, then the spoken forms on top.

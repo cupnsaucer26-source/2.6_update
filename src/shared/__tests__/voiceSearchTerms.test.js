@@ -72,8 +72,15 @@ test('Hindi, Kannada and Telugu pests, diseases and product forms', () => {
   assert.equal(q('ಶಿಲೀಂಧ್ರನಾಶಕ ಪುಡಿ', 'kn', {}).query, 'Fungicide Powder');
 });
 
-test('the Hindi, Kannada and Telugu packs add their crop and pest labels', () => {
-  for (const code of ['hi', 'kn', 'te']) {
+test('Malayalam and Tulu farmer words work without a pack', () => {
+  assert.equal(q('നെല്ല് മരുന്ന് വേണം', 'ml', {}).query, 'Paddy');
+  assert.equal(q('പരുത്തി വെള്ളീച്ച', 'ml', {}).query, 'Cotton Whitefly');
+  assert.equal(q('ಬಾರ್ ಮರ್ದ್ ಬೋಡು', 'tulu', {}).query, 'Paddy');
+  assert.equal(q('ಪತ್ತಿ ಬೊಳ್ಚೊಣ', 'tulu', {}).query, 'Cotton Whitefly');
+});
+
+test('the all Indian packs add their crop and pest labels', () => {
+  for (const code of ['hi', 'kn', 'te', 'ml', 'tulu']) {
     require(`../../../public/js/lang-${code}.js`);
     const pack = globalThis.window[`SB_LANG_${code.toUpperCase()}`].text;
     const vocab = catalogueVocabulary([['Mango', 'Onion', 'Groundnut'], ['Nematode', 'Wilt']]);
@@ -81,3 +88,4 @@ test('the Hindi, Kannada and Telugu packs add their crop and pest labels', () =>
     assert.equal(spokenToCatalogQuery(pack.Mango, code, pack, vocab).query, 'Mango', code);
   }
 });
+
