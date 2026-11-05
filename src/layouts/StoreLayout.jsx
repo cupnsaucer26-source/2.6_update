@@ -1,6 +1,8 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext'
+import { useAuth } from '../context/AuthContext'
+import { useBasket } from '../hooks/useCheckout'
 import { StoreChrome } from '../storefront/sections/Header'
 import { isLanguageReady, loadLanguagePack, translationFor } from '../storefront/i18n'
 import Footer from '../components/home/Footer'
@@ -19,6 +21,10 @@ import Footer from '../components/home/Footer'
 // app's shared phone chrome (StoreTopChrome/MobileBottomNav, mounted in
 // App.jsx outside <Routes>) if not forced off here.
 export default function StoreLayout() {
+  const { user } = useAuth()
+  const { count: cartCount, totals } = useBasket()
+  const cartTotal = totals?.total || 0
+
   // Same rule as the home page (Storefront.jsx): the chosen language applies
   // once its pack has loaded. The chrome's data-i18n labels are skipped by the
   // page walker, so without t they stayed English on every page but home.
@@ -39,7 +45,13 @@ export default function StoreLayout() {
         {/* The same chrome the home page renders. It used to be a second
             copy (components/home/Navigation.jsx) kept in step by hand. */}
         <div className="sb-portal">
-          <StoreChrome t={t} appliedLang={appliedLang} />
+          <StoreChrome
+            t={t}
+            appliedLang={appliedLang}
+            user={user}
+            cartCount={cartCount}
+            cartTotal={cartTotal}
+          />
         </div>
       </div>
       <main className="public-page-shell">

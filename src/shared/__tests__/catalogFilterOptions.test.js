@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cropHandle, dedupeCropLabels, isSameCrop, matchesCrop, topSelling } from '../../utils/catalogUtils.js';
+import { cropHandle, dedupeCropLabels, isSameCrop, matchesCrop, topSelling, sortProducts } from '../../utils/catalogUtils.js';
 
 test('the same crop spelled two ways is offered once, under its fuller name', () => {
   assert.deepEqual(dedupeCropLabels(['Corn / Maize', 'Corn']), ['Corn / Maize']);
@@ -97,4 +97,69 @@ test('a product not priced yet is never a best seller', () => {
     { id: 'none', unitsSold: 60 },
   ];
   assert.deepEqual(topSelling(products, 3).map(p => p.id), ['a']);
+});
+
+test('sortProducts: recommended preserves original array order and never mutates input', () => {
+  const original = [
+    { id: 'prod-2', name: 'Zebra Tonic', price: 50 },
+    { id: 'prod-1', name: 'Apple Fertilizer', price: 150 },
+  ];
+  const inputCopy = [...original];
+  const result = sortProducts(original, 'recommended');
+  assert.deepEqual(result.map(p => p.id), ['prod-2', 'prod-1']);
+  assert.deepEqual(original, inputCopy);
+  assert.notEqual(result, original, 'Must return a fresh array copy');
+});
+
+test('sortProducts: name-asc performs case-insensitive alphabetical sort with id tie-breaker', () => {
+  const products = [
+    { id: 'p3', name: 'zinc chelate' },
+    { id: 'p1', name: 'Apple Growth' },
+    { id: 'p2', name: 'apple booster' },
+    { id: 'p4', name: 'Zinc Chelate' },
+  ];
+  const result = sortProducts(products, 'name-asc');
+  assert.deepEqual(result.map(p => p.id), ['p2', 'p1', 'p3', 'p4']);
+});
+
+test('sortProducts: price-low sorts ascending and puts unpriced items at the bottom', () => {
+  const products = [
+    { id: 'p-unpriced', name: 'Upcoming Seed', price: 0 },
+    { id: 'p-mid', name: 'Bio Fungicide', price: 250 },
+    { id: 'p-low', name: 'Neem Oil', price: 120 },
+    { id: 'p-null', name: 'Unlisted Item', price: null },
+    { id: 'p-high', name: 'Sprayer Pump', price: 1500 },
+  ];
+  const result = sortProducts(products, 'price-low');
+  assert.deepEqual(result.map(p => p.id), ['p-low', 'p-mid', 'p-high', 'p-null', 'p-unpriced']);
+});
+
+test('sortProducts: price-high sorts descending and puts unpriced items at the bottom', () => {
+  const products = [
+    { id: 'p-unpriced', name: 'Upcoming Seed', price: 0 },
+    { id: 'p-mid', name: 'Bio Fungicide', price: 250 },
+    { id: 'p-low', name: 'Neem Oil', price: 120 },
+    { id: 'p-null', name: 'Unlisted Item', price: null },
+    { id: 'p-high', name: 'Sprayer Pump', price: 1500 },
+  ];
+  const result = sortProducts(products, 'price-high');
+  assert.deepEqual(result.map(p => p.id), ['p-high', 'p-mid', 'p-low', 'p-null', 'p-unpriced']);
+});
+
+test('sortProducts: popular sorts by unitsSold and falls back cleanly if no sales exist', () => {
+  const withSales = [
+    { id: 'p1', name: 'Pest Guard', price: 200, unitsSold: 12 },
+    { id: 'p2', name: 'Root Booster', price: 300, unitsSold: 85 },
+    { id: 'p3', name: 'Coming Soon', price: 0, unitsSold: 100 },
+    { id: 'p4', name: 'Crop Tonic', price: 150, unitsSold: 12, rating: 4.8 },
+  ];
+  const resultSales = sortProducts(withSales, 'popular');
+  assert.deepEqual(resultSales.map(p => p.id), ['p2', 'p4', 'p1', 'p3']);
+
+  const noSales = [
+    { id: 'a', name: 'Item A', price: 100, unitsSold: 0 },
+    { id: 'b', name: 'Item B', price: 200, unitsSold: 0 },
+  ];
+  const resultNoSales = sortProducts(noSales, 'popular');
+  assert.deepEqual(resultNoSales.map(p => p.id), ['a', 'b']);
 });

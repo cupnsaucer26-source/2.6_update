@@ -215,6 +215,77 @@ export function topSelling(products, count) {
 }
 
 /**
+ * Authoritative client-side product catalog sorting for Sathyam Agro Mart.
+ * Preserves the original array (non-mutating).
+ */
+export function sortProducts(products, sortBy = 'recommended') {
+  if (!Array.isArray(products) || products.length <= 1) return Array.isArray(products) ? [...products] : []
+  const list = [...products]
+
+  if (sortBy === 'price-low') {
+    list.sort((a, b) => {
+      const aHas = hasPrice(a)
+      const bHas = hasPrice(b)
+      if (aHas && !bHas) return -1
+      if (!aHas && bHas) return 1
+      if (!aHas && !bHas) return String(a.name || '').localeCompare(String(b.name || ''))
+      const diff = Number(a.price) - Number(b.price)
+      return diff !== 0 ? diff : String(a.name || '').localeCompare(String(b.name || ''))
+    })
+  } else if (sortBy === 'price-high') {
+    list.sort((a, b) => {
+      const aHas = hasPrice(a)
+      const bHas = hasPrice(b)
+      if (aHas && !bHas) return -1
+      if (!aHas && bHas) return 1
+      if (!aHas && !bHas) return String(a.name || '').localeCompare(String(b.name || ''))
+      const diff = Number(b.price) - Number(a.price)
+      return diff !== 0 ? diff : String(a.name || '').localeCompare(String(b.name || ''))
+    })
+  } else if (sortBy === 'name-asc') {
+    list.sort((a, b) => {
+      const cmp = String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })
+      return cmp !== 0 ? cmp : String(a.id || '').localeCompare(String(b.id || ''))
+    })
+  } else if (sortBy === 'popular') {
+    const sold = p => Math.max(0, Number(p?.unitsSold) || 0)
+    const hasSales = list.some(p => sold(p) > 0)
+    if (hasSales) {
+      list.sort((a, b) => {
+        const aHas = hasPrice(a)
+        const bHas = hasPrice(b)
+        if (aHas && !bHas) return -1
+        if (!aHas && bHas) return 1
+        return (
+          sold(b) - sold(a)
+          || (Number(b?.rating) || 0) - (Number(a?.rating) || 0)
+          || (Number(b?.reviewsCount) || 0) - (Number(a?.reviewsCount) || 0)
+          || String(a.name || '').localeCompare(String(b.name || ''))
+        )
+      })
+    }
+  } else if (sortBy === 'discount') {
+    const parseDiscount = p => {
+      const d = p?.discount
+      if (typeof d === 'number') return d
+      const m = String(d || '').match(/(\d+)/)
+      return m ? Number(m[1]) : 0
+    }
+    list.sort((a, b) => {
+      const diff = parseDiscount(b) - parseDiscount(a)
+      return diff !== 0 ? diff : (Number(b.price || 0) - Number(a.price || 0))
+    })
+  } else if (sortBy === 'rating') {
+    const ratingVal = p => (Number(p?.reviewsCount) > 0 ? Number(p?.rating || 0) : 0)
+    list.sort((a, b) => {
+      const diff = ratingVal(b) - ratingVal(a)
+      return diff !== 0 ? diff : (Number(b?.reviewsCount || 0) - Number(a?.reviewsCount || 0))
+    })
+  }
+  return list
+}
+
+/**
  * The crops the home page advisory form offers: the sign-up list first (the
  * crops farmers pick for their profile, in that order), then every crop the
  * admin has added to the catalogue that is not already there, A to Z.

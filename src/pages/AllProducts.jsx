@@ -11,7 +11,7 @@ import useCatalogProducts from '../hooks/useCatalogProducts'
 import { hasPrice } from '../shared/comingSoon'
 import { packMrp, packPrice } from '../shared/packPricing'
 import { cacheWishlistIds, cacheWishlistItem, cachedWishlistIds, wishlistIdsFrom, wishlistVisitorId } from '../shared/wishlist'
-import { dedupeCropLabels, isSameCrop, matchesCrop, matchesCategory, matchesDisease, normalizeCrop, topSelling } from '../utils/catalogUtils'
+import { dedupeCropLabels, isSameCrop, matchesCrop, matchesCategory, matchesDisease, normalizeCrop, topSelling, sortProducts } from '../utils/catalogUtils'
 import { ALL_CROPS, cropList } from '../shared/profileFieldRules'
 import { PRODUCT_FORMS, formCounts, matchesForm, productForm } from '../shared/productForm'
 import axios from 'axios'
@@ -96,7 +96,7 @@ export default function AllProducts() {
   const [activeForm, setActiveForm] = useState(searchParams.get('form') || '')
   const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-  const [sortBy, setSortBy] = useState('popular')
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'recommended')
   // The pest row is a side-scroller; "View All" opens every tile instead.
   const [showAllPests, setShowAllPests] = useState(false)
   // How many catalogue cards are built right now. Painting all 78 up front is
@@ -176,6 +176,7 @@ export default function AllProducts() {
     setActiveNutrient(searchParams.get('nutrient') || '')
     setActiveForm(searchParams.get('form') || '')
     setSearchQuery(searchParams.get('search') || '')
+    setSortBy(searchParams.get('sort') || 'recommended')
   }, [searchParams])
 
   // Keep the card state and the server-backed Wishlist page in sync. The
@@ -472,17 +473,7 @@ export default function AllProducts() {
       )
     }
 
-    if (sortBy === 'price-low') {
-      list.sort((a, b) => a.price - b.price)
-    } else if (sortBy === 'price-high') {
-      list.sort((a, b) => b.price - a.price)
-    } else if (sortBy === 'discount') {
-      list.sort((a, b) => (b.discount || 0) - (a.discount || 0))
-    } else if (sortBy === 'rating') {
-      list.sort((a, b) => (b.rating || 0) - (a.rating || 0))
-    }
-
-    return list
+    return sortProducts(list, sortBy)
   }, [dbProducts, activeCategory, activeCrop, activeDisease, activeNutrient, activeForm, formOptions, searchQuery, sortBy])
 
   const formCountsAll = useMemo(() => formCounts(dbProducts, formOptions), [dbProducts, formOptions])
@@ -522,6 +513,8 @@ export default function AllProducts() {
   const applyBrowseFilter = (name, value) => {
     const next = new URLSearchParams()
     if (value) next.set(name, value)
+    const currentSort = searchParams.get('sort')
+    if (currentSort && currentSort !== 'recommended') next.set('sort', currentSort)
     setSearchParams(next)
     // Going from "no query string" to "no query string" is not a navigation,
     // so the effect above never re-runs. A search typed straight into the box
@@ -576,11 +569,22 @@ export default function AllProducts() {
     setSearchParams(next, { replace: true })
   }
 
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort)
+    const next = new URLSearchParams(searchParams)
+    if (!newSort || newSort === 'recommended') {
+      next.delete('sort')
+    } else {
+      next.set('sort', newSort)
+    }
+    setSearchParams(next, { replace: true })
+  }
+
   const clearAllFilters = () => {
     setSearchParams(new URLSearchParams())
     setSearchQuery('')
     setMobileSearchOpen(false)
-    setSortBy('popular')
+    setSortBy('recommended')
   }
 
   // Removing one chip keeps the rest of the filters intact.
@@ -1355,13 +1359,15 @@ export default function AllProducts() {
                 <select 
                   id="catalog-sort-dropdown"
                   value={sortBy} 
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onChange={(e) => handleSortChange(e.target.value)}
                 >
+                  <option value="recommended">Recommended</option>
                   <option value="popular">Best Selling</option>
-                  <option value="discount">Highest Discount</option>
-                  <option value="rating">Top Rated</option>
                   <option value="price-low">Price: Low to High</option>
                   <option value="price-high">Price: High to Low</option>
+                  <option value="name-asc">Name: A to Z</option>
+                  <option value="discount">Highest Discount</option>
+                  <option value="rating">Top Rated</option>
                 </select>
               </div>
             </div>

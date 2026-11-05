@@ -2246,15 +2246,11 @@ body.sb-home-active .sb-home .sb-home-services .farmer-services {
 }
 
 /* =========================================
-   DESKTOP REFINEMENT LAYER — HERO BENTO GRID (>=1025px)
-   The bento grid already collapses to a 2-column, then compact, layout at
-   1024px and below (see the max-width:1024px and max-width:768px blocks
-   further down, which both use !important to override the JSX inline
-   font-size on .bento-title). This block mirrors that same !important
-   pattern, scoped to >=1025px only, to give the main hero card a bigger
-   desktop headline without touching either of those existing overrides.
+   DESKTOP REFINEMENT LAYER — HERO BENTO GRID (>=769px)
+   Scoped to >=769px to give the hero card the approved headline and shadows
+   on all tablets, restored-down windows, and desktop displays.
    ========================================= */
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .bento-card {
     box-shadow: var(--shadow-md);
   }
@@ -3428,7 +3424,7 @@ body.sb-home-active {
    3. TABLET LANDSCAPE
    ------------------------------------------------------------ */
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .hero-banner-grid,
   :is(body.sb-home-active .sb-home, .sb-portal) .shop-layout {
     grid-template-columns: 1fr;
@@ -3441,8 +3437,7 @@ body.sb-home-active {
   :is(body.sb-home-active .sb-home, .sb-portal) .trust-strip-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  :is(body.sb-home-active .sb-home, .sb-portal) .bento-grid-3,
-  :is(body.sb-home-active .sb-home, .sb-portal) .bento-grid-4 {
+  :is(body.sb-home-active .sb-home, .sb-portal) .bento-grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
   /* Mobile / Tablet Filter Controls */
@@ -3648,7 +3643,7 @@ body.sb-home-active {
    to its own full-width row - what the phone layout already did at 768px.
    ------------------------------------------------------------ */
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .topbar {
     display: none;
   }
@@ -5202,7 +5197,7 @@ body.sb-home-active {
   word-break: break-all;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   /* The filter drawer footer already has Reset; the inline one duplicated it. */
   :is(body.sb-home-active .sb-home, .sb-portal) .filter-reset-inline {
     display: none !important;
@@ -7043,7 +7038,7 @@ body.sb-home-active {
   display: none;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   /* A compact pill. min-height: 0 matters: the touch-device rule gives every
      button a 44px minimum, which stretched it taller on real phones. The
      invisible ::after keeps a comfortable ~44px tap area. */
@@ -9344,7 +9339,7 @@ html.sb-loc-lock {
   padding: 44px 0 40px;
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.7fr);
-  gap: 36px;
+  gap: clamp(20px, 2.2vw, 36px);
 }
 /* The official logo (the header's mark + wordmark) on a white badge: its
    dark green lettering would vanish on the footer's green. */
@@ -9573,8 +9568,8 @@ html.sb-loc-lock {
   }
 }
 
-/* Tablets: brand across the top, three link groups, contact cards in a row. */
-@media (max-width: 1024px) {
+/* Tablets & laptops: brand across the top, three link groups, contact cards in a row. */
+@media (max-width: 1279px) {
   .public-footer-promises {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -10078,7 +10073,7 @@ html.sb-loc-lock {
   display: contents;
 }
 
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
   /* ---- header: floating inset bar, not edge-to-edge --------------------
      Detached from the viewport's left/right/top edges with a margin, so it
      reads as a rounded floating card rather than a bar stuck to the frame.
@@ -10406,13 +10401,18 @@ html.sb-loc-lock {
      --sb-card-pad each side, so the logo sits on the page's left edge.
      At rest: 36 + 12 + 76 = 124px (was 188). Pinned: 12 + 76 = 88px. */
   :is(body.sb-home-active .sb-home, .sb-portal) :is(.sb-utility-shell, .sb-header-shell) {
-    --sb-gutter: var(--space-8);
+    --sb-gutter: var(--space-4);
     --sb-card-pad: 20px;
     --sb-ink: #16241d;
     --sb-ink-soft: #5b6a62;
     --sb-tint: rgba(11, 122, 75, 0.07);
     --sb-tint-strong: rgba(11, 122, 75, 0.13);
     --sb-line: rgba(22, 36, 29, 0.09);
+  }
+  @media (min-width: 1025px) {
+    :is(body.sb-home-active .sb-home, .sb-portal) :is(.sb-utility-shell, .sb-header-shell) {
+      --sb-gutter: var(--space-8);
+    }
   }
   @media (min-width: 1440px) {
     :is(body.sb-home-active .sb-home, .sb-portal) :is(.sb-utility-shell, .sb-header-shell) {
@@ -10638,6 +10638,7 @@ html.sb-loc-lock {
     gap: 12px;
     box-sizing: border-box;
     width: calc(min(100%, 1320px) - 2 * var(--sb-gutter) + 2 * var(--sb-card-pad));
+    max-width: calc(100% - 24px);
     height: 76px;
     margin: 12px auto 0;
     /* -1px pays for the border, so the content box still lands on the grid. */
@@ -10665,11 +10666,11 @@ html.sb-loc-lock {
   }
   /* Discovery on the left (brand, browse, search, AI), account and money on
      the right. */
-  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .logo-box { order: 1; }
-  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .nav-links { order: 2; }
-  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .header-search { order: 3; }
-  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .nav-actions { order: 4; }
-  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .header-actions { order: 5; }
+  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .logo-box { order: 1; flex-shrink: 0; }
+  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .nav-links { order: 2; flex-shrink: 0; }
+  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .header-search { order: 3; flex: 1 1 120px; min-width: 100px; margin: 0; max-width: none; }
+  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .nav-actions { order: 4; flex-shrink: 0; }
+  :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .header-actions { order: 5; flex-shrink: 0; }
   /* The slogan belongs UNDER everything, centred across the card. The header
      row is one flex line and must stay one line - letting it wrap threw the
      account and basket onto a second row - so the slogan is taken out of the
@@ -11125,7 +11126,7 @@ html.sb-loc-lock {
     color: var(--primary-dark, #0b4630);
     font-size: 0.95rem;
   }
-  @media (min-width: 1025px) {
+  @media (min-width: 769px) {
     :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .action-track {
       width: 40px;
       padding: 0;
@@ -11146,6 +11147,71 @@ html.sb-loc-lock {
   }
   html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .action-track .action-title {
     font-size: 0.74rem;
+  }
+
+  /* Tablet & compact desktop refinement (769px-1279px): compact spacing and typography so all controls
+     (logo, categories, crop menu, search, scanner, account, wishlist, cart) fit within
+     the floating shell without overflowing. */
+  @media (min-width: 769px) and (max-width: 1279px) {
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell {
+      gap: 5px;
+      padding: 0 6px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .logo-box {
+      gap: 5px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .logo-icon {
+      width: 34px;
+      height: 34px;
+      font-size: 0.92rem;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .brand-wordmark {
+      height: 26px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .logo-sub {
+      display: none;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .nav-links {
+      margin: 0;
+      gap: 2px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .nav-links::before {
+      margin-right: 3px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .nav-mega-trigger {
+      height: 34px;
+      padding: 0 3px;
+      font-size: 0.8rem;
+      gap: 3px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .header-search {
+      flex: 1 1 clamp(100px, 15vw, 260px);
+      min-width: clamp(70px, 9vw, 120px);
+      height: 38px;
+      margin: 0 2px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .header-search input {
+      font-size: clamp(0.75rem, 0.95vw, 0.875rem);
+      padding: 0 6px 0 10px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .header-actions {
+      padding-left: 3px;
+      gap: 3px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .header-actions::before {
+      margin-right: 3px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .action-item {
+      height: 34px;
+      padding: 0 4px 0 2px;
+      gap: 3px;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .action-item .action-sub {
+      display: none;
+    }
+    :is(body.sb-home-active .sb-home, .sb-portal) .sb-header-shell .cart-trigger-btn {
+      padding: 0 6px 0 2px;
+    }
   }
 
   /* ---- focus: the bar is light now, so the ring is brand green, and each
@@ -12007,7 +12073,7 @@ html.sb-loc-lock {
    1025px up: below it, a store page renders inside the shared phone/tablet
    chrome, which has its own control, and a second one shifted the tablet
    action row. Desktop-only, so the tablet header is byte-identical again. */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .header-lang-slot {
     display: none;
   }
@@ -12782,13 +12848,13 @@ body.poster-open .sb-portal .call-fab {
 }
 
 /* ==========================================================================
-   CERTIFICATIONS 2026 (>=1025px) - trust badges
+   CERTIFICATIONS 2026 (>=769px) - trust badges
    Icon tile + label + caption, laid out as a row of horizontal cards. When the
    admin CMS still holds the placeholder stock photo (.is-stock) the photo is
-   swapped for an icon badge; a real uploaded logo keeps its image. Phones and
-   tablets keep the CERTIFICATIONS STRIP rules above untouched.
+   swapped for an icon badge; a real uploaded logo keeps its image. Phones
+   keep the CERTIFICATIONS STRIP rules above untouched.
    ========================================================================== */
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .cert-strip {
     padding: 56px 0 60px;
     border: 0;
@@ -12918,14 +12984,14 @@ body.poster-open .sb-portal .call-fab {
 }
 
 /* ==========================================================================
-   TRUST + STATS 2026 (>=1025px) - Hero.jsx TrustStrip / StatsStrip
+   TRUST + STATS 2026 (>=769px) - Hero.jsx TrustStrip / StatsStrip
    The two full-bleed bands become two contained cards on the page grid:
    a white trust card (icon tiles, hairline dividers) and a deep-green
    impact card (soft glows, gradient numerals). The card width follows the
    page content box: min(100%, 1320px) minus --sb-gutter on each side.
-   Phones and tablets keep the LIVE STATS / BIGHAAT TRUST rules above.
+   Phones keep the LIVE STATS / BIGHAAT TRUST rules above.
    ========================================================================== */
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .trust-strip {
     margin: 0;
     padding: 40px 0 24px;
@@ -13063,19 +13129,17 @@ body.poster-open .sb-portal .call-fab {
 }
 
 /* ==========================================================================
-   HERO 2026 (>=1025px) - Hero.jsx, scoped to section.hero-bento
+   HERO 2026 (>=769px) - Hero.jsx, scoped to section.hero-bento
    Editorial hero: a left-weighted scrim so the headline reads on any photo,
    a tighter display headline, a two-button row (white primary with an arrow
    and a glass "Talk to an Expert"), and side cards with a glass arrow
-   button that turns on hover. Arrows are Font Awesome glyphs in ::after, so
-   the markup only gained the secondary link (hidden below 1025px).
-   The headline size itself lives in the HERO BENTO GRID refinement layer
-   above (flagged important there, to beat the JSX inline font-size).
+   button that turns on hover. Arrows are Font Awesome glyphs in ::after.
    ========================================================================== */
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .hero-bento .bento-grid-4 {
     /* Clear of the FACTORY 2 FARMER tag hanging under the header. */
     margin-top: 36px;
+    grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(2, minmax(215px, 1fr));
     gap: 20px;
   }
@@ -13341,18 +13405,18 @@ body.poster-open .sb-portal .call-fab {
 }
 
 /* ==========================================================================
-   SHOP BY CATEGORY 2026 (>=1025px) - ShopGrids.jsx CategoryGrid
+   SHOP BY CATEGORY 2026 (>=769px) - ShopGrids.jsx CategoryGrid
    Editorial bento: the first category is a 2x2 feature, four compact cards
    sit beside it, and the last card ("All ... Formulations") is a full-width
    banner. Frosted tags, the hero's glass arrow chip, slow image zoom.
    The card height used to be an inline 240px; it now lives in the first rule
-   (same result below 1025px - the phone rules still win with their
+   (same result below 769px - the phone rules still win with their
    important-flagged 120px).
    ========================================================================== */
 :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .bento-card.cat-card {
   height: 240px;
 }
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
   :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .section-header-flex {
     align-items: flex-end;
     margin-bottom: 28px;
@@ -13543,17 +13607,17 @@ body.poster-open .sb-portal .call-fab {
 }
 
 /* ==========================================================================
-   SHOP BY CROP 2026 (>=1025px) - ShopGrids.jsx CropGrid
+   SHOP BY CROP 2026 (>=769px) - ShopGrids.jsx CropGrid
    Clean white crop cards that contrast with the photo-led category bento
    above: a framed photo, the crop name in ink, the problem it solves as a
    green dotted label, and an arrow chip that fills green on hover.
    The card height used to be an inline 200px; it now lives in the first rule
-   (same result below 1025px - phones keep their important-flagged 105px).
+   (same result below 769px - phones keep their important-flagged 105px).
    ========================================================================== */
 :is(body.sb-home-active .sb-home, .sb-portal) #cropSection .bento-card.crop-card {
   height: 200px;
 }
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
   :is(body.sb-home-active .sb-home, .sb-portal) #cropSection .section-header-flex {
     margin-bottom: 28px;
   }
@@ -13791,9 +13855,8 @@ body.poster-open .sb-portal .call-fab {
   color: #16A46A;
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
-/* Phones share the desktop card (the client asked for one card everywhere);
-   tablet keeps its own. */
-@media (min-width: 1025px), (max-width: 768px) {
+/* Phones, tablets, and desktop all share the approved 2026 card design */
+@media (min-width: 769px), (max-width: 768px) {
   /* ---- shared shell: edge-to-edge photo on top, a hairline ring, no frame ---- */
   :is(body.sb-home-active .sb-home, .sb-portal) :is(#catalog, #relatedProductsSection) .product-card,
   .all-products-page .agro-product-card {
@@ -14245,12 +14308,12 @@ body.poster-open .sb-portal .call-fab {
 }
 
 /* ==========================================================================
-   INDIAN LANGUAGES ON THE 2026 DESKTOP SECTIONS (>=1025px)
+   INDIAN LANGUAGES ON THE 2026 DESKTOP SECTIONS (>=769px)
    Tamil and Kannada words run long: the hero headline's 14ch cap put Tamil on
    five lines, and one-word category names ("நூற்புழுக்கொல்லிகள்") broke
    mid-word in the compact bento cards.
    ========================================================================== */
-@media (min-width: 1025px) {
+@media (min-width: 769px) {
   html:is([lang="ta"], [lang="kn"], [lang="te"], [lang="hi"], [lang="ml"], [lang="tulu"]) :is(body.sb-home-active .sb-home, .sb-portal) .hero-bento .bento-row-2 .bento-title {
     max-width: none;
     --hero-title-size: clamp(1.75rem, 2.3vw, 2.35rem);
@@ -14284,7 +14347,7 @@ body.poster-open .sb-portal .call-fab {
    placeholder stock photos (a brain scan, a workout...), which desktop
    already swapped out.
    ========================================================================== */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .cert-logo-card.is-stock img {
     display: none;
   }
