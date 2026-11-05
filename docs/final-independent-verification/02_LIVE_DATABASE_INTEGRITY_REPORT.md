@@ -12,7 +12,7 @@ A read-only inventory of the `sathyambio` database confirmed the following core 
 
 | Collection Name | Document Count | Purpose | Audit Status |
 |---|:---:|---|:---:|
-| `orders` | 181 | Customer and QA purchase orders | **VERIFIED & AUDITED** |
+| `orders` | 182 | Customer and QA purchase orders | **VERIFIED & AUDITED** |
 | `products` | 41 | Catalog agricultural formulations | **VERIFIED & AUDITED** |
 | `users` | 33 | Customer, staff, and admin accounts | **VERIFIED & AUDITED** |
 | `settings` | 1 | Global master data, crops, categories | **VERIFIED & AUDITED** |
@@ -27,23 +27,23 @@ A read-only inventory of the `sathyambio` database confirmed the following core 
 Because QA testing is intentionally conducted against the live environment, orders were categorized using multi-attribute metadata heuristics (phone number, customer name, delivery address, test session metadata, and payment records).
 
 ```
-Total Orders in Database: 181
+Total Orders in Database: 182
 ├── Genuine Customer Orders: 2 (1.1%)
-└── QA / Test Orders: 179 (98.9%)
+└── QA / Test Orders: 180 (98.9%)
 ```
 
 ### Exact Breakdown:
-- **Total Orders**: 181
+- **Total Orders**: 182
 - **Genuine Customer Orders**: 2
-- **QA / Test Orders**: 179
-- **Cash on Delivery (COD) Orders**: 173 (95.6%)
+- **QA / Test Orders**: 180
+- **Cash on Delivery (COD) Orders**: 174 (95.6%)
 - **Online Payment Orders (Razorpay / UPI)**: 8 (4.4%)
-- **Pending Payment Orders**: 120 (66.3%)
-- **Paid Orders**: 61 (33.7%)
+- **Pending Payment Orders**: 121 (66.5%)
+- **Paid Orders**: 61 (33.5%)
 - **Failed Payment Orders**: 0 (0.0%)
 
 ### Order Lifecycle Status:
-- **Placed**: 78
+- **Placed**: 79
 - **Delivered**: 102
 - **Cancelled**: 1
 - **Processing**: 0
@@ -53,7 +53,7 @@ Total Orders in Database: 181
 ## 3. Financial & Referential Integrity Audits
 
 ### A. Line Item Math & Price Consistency
-- **Audit Procedure**: Every line item across all 181 orders was re-priced:
+- **Audit Procedure**: Every line item across all 182 orders was re-priced:
   $$\text{Item Total} = \text{item.price} \times \text{item.quantity}$$
   $$\text{Order Subtotal} = \sum \text{Item Total}$$
 - **Discrepancies Detected**: **0**
@@ -65,12 +65,12 @@ Total Orders in Database: 181
 
 ### C. Primary Key & Reference Uniqueness
 - **Audit Procedure**: Scanned for duplicate order primary keys (`order.id`).
-- **Duplicate Order IDs**: **0** (All 181 order IDs are globally unique).
+- **Duplicate Order IDs**: **0** (All 182 order IDs are globally unique).
 
 ### D. Revenue Segregation
 - **Genuine Customer Revenue**: ₹6,298.00
-- **QA Testing Volume**: ₹140,402.00
-- **Total Financial Ledger**: ₹146,700.00
+- **QA Testing Volume**: ₹143,551.00
+- **Total Financial Ledger**: ₹149,849.00
 
 ---
 

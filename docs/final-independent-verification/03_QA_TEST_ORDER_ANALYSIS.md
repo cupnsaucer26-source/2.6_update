@@ -7,7 +7,7 @@
 
 ## 1. Intentional QA Testing in Production: Context & Scope
 
-In accordance with Sathyam Agro Mart's operational testing strategy, regression tests and payment flows are validated directly against the live environment. Consequently, the presence of **179 QA test orders** in the live database is **expected, intentional, and part of the validation lifecycle**. 
+In accordance with Sathyam Agro Mart's operational testing strategy, regression tests and payment flows are validated directly against the live environment. Consequently, the presence of **180 QA test orders** in the live database is **expected, intentional, and part of the validation lifecycle**. 
 
 These orders do not represent system errors, data corruption, or runaway test scripts.
 
@@ -19,7 +19,7 @@ An inspection of the backend API (`server/server.js`) was performed to determine
 
 ### A. Admin Order Management (`GET /api/orders`)
 - **Current Behavior**: When an administrator or staff member requests `/api/orders`, the backend queries `db.getOrders()` and returns all orders in the database.
-- **Impact**: All 181 orders (including the 179 QA orders) are displayed in the Admin Orders table.
+- **Impact**: All 182 orders (including the 180 QA orders) are displayed in the Admin Orders table.
 - **Business Logic Fit**: Allows administrators and QA testers to view and verify newly created test orders in real-time.
 
 ### B. Customer Order History (`GET /api/orders`)
@@ -28,7 +28,7 @@ An inspection of the backend API (`server/server.js`) was performed to determine
 
 ### C. Financial & Sales Reporting
 - **Current Behavior**: Total order count calculations (e.g. in `userProductSummary` or admin analytics) aggregate across all orders in the collection.
-- **Impact**: Sales and revenue summaries include QA order volumes (₹140,402.00 QA vs. ₹6,298.00 genuine).
+- **Impact**: Sales and revenue summaries include QA order volumes (₹143,551.00 QA vs. ₹6,298.00 genuine).
 - **Business Logic Fit**: Acceptable for pre-launch staging/testing; however, post-launch analytics will benefit from an optional filter.
 
 ### D. Inventory Calculations
