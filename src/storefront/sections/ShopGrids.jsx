@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useStore } from '../StoreContext'
 import { cmsText } from '../../hooks/useCmsSettings'
 import { photoUrl, photoSrcSet } from '../../shared/responsiveImage'
+import { resolveCropCards } from '../../shared/cropTaxonomy.js'
 
 const CATEGORY_CARDS = [
   { value: 'Fungicide', image: 'photo-1692481060581-98c224124f12', alt: 'Leaf with fungal disease spots', tag: 'Crop Disease Defense', title: 'Fungicides', desc: 'Cure Blast, Blight, Powdery Mildew & Rust' },
@@ -11,17 +12,6 @@ const CATEGORY_CARDS = [
   { value: 'Herbicide', image: 'photo-1627920769541-daa658ed6b59', alt: 'Boom sprayers treating a crop field', tag: 'Weed Elimination', title: 'Herbicides', desc: 'Selective Pre & Post Emergence Weed Control' },
   { value: 'Nematicide', image: 'photo-1623385523057-08414b3665b4', alt: 'Plant root ball in soil', tag: 'Soil Protection', title: 'Nematicides', desc: 'Protect Roots Against Nematode Attacks' },
   { value: 'All', image: 'photo-1500382017468-9049fed747ef', alt: 'Full Store Catalog', tag: 'Full Catalog', tagStyle: { background: 'white', color: 'black' }, title: 'All 35 Agro Formulations', desc: 'Browse complete Sathyam Agro Mart product range' },
-]
-
-const CROP_CARDS = [
-  { value: 'Paddy/Rice', image: 'photo-1530507629858-e4977d30e9e0', alt: 'Paddy Rice Field', tag: 'Blast Defense', title: 'Paddy / Rice' },
-  { value: 'Cotton', image: 'photo-1634337781106-4c6a12b820a1', alt: 'Cotton Crop Field', tag: 'Whitefly Shield', title: 'Cotton' },
-  { value: 'Tomato', image: 'photo-1592924357228-91a4daadcfea', alt: 'Tomato Farm Harvest', tag: 'Blight Care', title: 'Tomato' },
-  { value: 'Wheat', image: 'photo-1574323347407-f5e1ad6d020b', alt: 'Golden Wheat Field', tag: 'Rust Control', title: 'Wheat' },
-  { value: 'Sugarcane', image: 'photo-1719424668314-a0def541377b', alt: 'Sugarcane Plantation', tag: 'Borer Solution', title: 'Sugarcane' },
-  { value: 'Corn', image: 'photo-1551754655-cd27e38d2076', alt: 'Corn Maize Field', tag: 'Armyworm Defense', title: 'Corn / Maize' },
-  { value: 'Grapes', image: 'photo-1537640538966-79f369143f8f', alt: 'Grape clusters on the vine', tag: 'Mildew Protect', title: 'Grapes' },
-  { value: 'Potato', image: 'photo-1518977676601-b53f82aba655', alt: 'Potato Crop Harvest', tag: 'Tuber Guard', title: 'Potato' },
 ]
 
 const unsplash = (id, width) => photoUrl(`https://images.unsplash.com/${id}`, width)
@@ -72,20 +62,9 @@ export const CropGrid = memo(function CropGrid({ cms, dynamicCrops = [] }) {
   const cropTitle    = cmsText(cms, 'cropGridTitle',    'Shop by Crop')
   const cropSubtitle = cmsText(cms, 'cropGridSubtitle', 'Select your crop to get customized pesticide & nutrient recommendations')
 
-  const cropCards = useMemo(() => {
-    if (!dynamicCrops || !dynamicCrops.length) return CROP_CARDS
-    const knownValues = new Set(CROP_CARDS.map(c => c.value.toLowerCase()))
-    const extraCards = dynamicCrops
-      .filter(crop => crop && !knownValues.has(crop.toLowerCase()))
-      .map(crop => ({
-        value: crop,
-        image: 'photo-1500382017468-9049fed747ef',
-        alt: `${crop} Field`,
-        tag: 'Crop Protection',
-        title: crop
-      }))
-    return [...CROP_CARDS, ...extraCards]
-  }, [dynamicCrops])
+  const cropCards = useMemo(() => resolveCropCards(dynamicCrops), [dynamicCrops])
+  // Homepage displays strictly two rows of crop cards (4 columns x 2 rows = 8 cards)
+  const displayedCards = useMemo(() => cropCards.slice(0, 8), [cropCards])
 
   return (
     <section className="section" id="cropSection" style={{ background: 'var(--bg-section)', padding: '40px 0' }}>
@@ -95,15 +74,19 @@ export const CropGrid = memo(function CropGrid({ cms, dynamicCrops = [] }) {
             <h2 className="section-title">{cropTitle}</h2>
             <p className="section-subtitle">{cropSubtitle}</p>
           </div>
+          <Link to="/crops" className="btn btn-outline" id="viewAllCropsBtn">
+            View All Crops <i className="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          </Link>
         </div>
 
         <div className="bento-grid-4" id="cropCards">
-          {cropCards.map(card => (
+          {displayedCards.map(card => (
             <div
-              key={card.value}
+              key={card.id}
               className="bento-card crop-card"
               role="button"
               tabIndex={0}
+              aria-label={`View products for ${card.title}`}
               onClick={() => filterByCrop(card.value)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); filterByCrop(card.value) } }}
               style={{ cursor: 'pointer' }}

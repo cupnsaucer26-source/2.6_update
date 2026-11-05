@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import axios from 'axios'
+import { dedupeCropLabels } from '../utils/catalogUtils.js'
 
 const SECTION_CONTENT = {
   products: {
@@ -57,11 +58,14 @@ export default function StoreSection({ type }) {
   const section = SECTION_CONTENT[type] || SECTION_CONTENT.products
   const links = useMemo(() => {
     if (type === 'crops' && dynamicOptions?.crops?.length) {
-      return dynamicOptions.crops.map(crop => [
+      const cleanCrops = dedupeCropLabels(
+        dynamicOptions.crops.filter(c => c && c.toLowerCase() !== 'all' && c !== 'All Crops')
+      );
+      return cleanCrops.map(crop => [
         `/products?crop=${encodeURIComponent(crop)}`,
         crop,
         `Formulations and crop protection for ${crop}`
-      ])
+      ]);
     }
     if (type === 'categories' && dynamicOptions?.categories?.length) {
       return dynamicOptions.categories.map(cat => [

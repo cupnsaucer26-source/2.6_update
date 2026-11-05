@@ -13,6 +13,7 @@ import { packMrp, packPrice } from '../shared/packPricing'
 import { cacheWishlistIds, cacheWishlistItem, cachedWishlistIds, wishlistIdsFrom, wishlistVisitorId } from '../shared/wishlist'
 import { dedupeCropLabels, isSameCrop, matchesCrop, matchesCategory, matchesDisease, normalizeCrop, topSelling, sortProducts } from '../utils/catalogUtils'
 import { ALL_CROPS, cropList } from '../shared/profileFieldRules'
+import { findCanonicalCrop } from '../shared/cropTaxonomy.js'
 import { PRODUCT_FORMS, formCounts, matchesForm, productForm } from '../shared/productForm'
 import axios from 'axios'
 import {
@@ -386,13 +387,18 @@ export default function AllProducts() {
     const existing = new Set(CROPS_LIST.map(c => normalizeCrop(c.cropCode)))
     const customAdminItems = adminCrops
       .filter(crop => crop && crop !== 'all' && crop !== 'All Crops' && !existing.has(normalizeCrop(crop)))
-      .map(crop => ({
-        id: `admin-crop-${normalizeCrop(crop).replace(/\//g, '-')}`,
-        name: crop,
-        cropCode: crop,
-        image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=200&q=80',
-        popularIssues: 'Crop Protection & Health'
-      }))
+      .map(crop => {
+        const canonical = findCanonicalCrop(crop)
+        return {
+          id: canonical?.id || `admin-crop-${normalizeCrop(crop).replace(/\//g, '-')}`,
+          name: canonical?.title || crop,
+          cropCode: canonical?.filterValue || crop,
+          image: canonical?.image 
+            ? `https://images.unsplash.com/${canonical.image}?w=240&auto=format&fit=crop&q=80`
+            : 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=200&q=80',
+          popularIssues: canonical?.tag || 'Crop Protection & Health'
+        }
+      })
     // Drop the tiles that lead nowhere FIRST, then keep one tile per crop: the
     // built-in "Paddy" and the registry's "Paddy / Rice" are the same crop and
     // select the same products, and the built-in tile - the one with a real
