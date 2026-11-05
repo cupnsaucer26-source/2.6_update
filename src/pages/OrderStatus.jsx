@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
@@ -33,7 +33,7 @@ const statusClass = status =>
       : /transit|shipped|out for/i.test(status) ? 'is-transit'
         : ''
 
-function OrderCard({ order }) {
+function OrderCard({ order, highlighted }) {
   const status = order.deliveryStatus || order.status || 'Confirmed'
   const items = Array.isArray(order.items) && order.items.length
     ? order.items.map(item => `${item.name || 'Product'} x${item.qty || 1}`).join(', ')
@@ -44,7 +44,16 @@ function OrderCard({ order }) {
   const total = Number(order.total)
 
   return (
-    <div className="order-row">
+    <div
+      id={`order-${order.id}`}
+      className={`order-row ${highlighted ? 'order-row--highlighted' : ''}`}
+      style={highlighted ? { border: '2px solid #16a34a', boxShadow: '0 0 0 3px rgba(22, 163, 74, 0.2)', position: 'relative' } : undefined}
+    >
+      {highlighted && (
+        <div style={{ position: 'absolute', top: -10, right: 16, background: '#16a34a', color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Newly Placed Order
+        </div>
+      )}
       <div className="order-card-head">
         <span className="order-card-id">{order.id}</span>
         <span className={`order-badge ${statusClass(status)}`}>{status}</span>
@@ -87,8 +96,19 @@ function OrderCard({ order }) {
 
 export default function OrderStatus() {
   const { user, loading: sessionLoading } = useAuth()
+  const [searchParams] = useSearchParams()
+  const highlightOrderId = searchParams.get('orderId')
   const [orders, setOrders] = useState([])
   const [state, setState] = useState('loading') // loading | ready | error | expired
+
+  useEffect(() => {
+    if (highlightOrderId && state === 'ready') {
+      const el = document.getElementById(`order-${highlightOrderId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+  }, [highlightOrderId, state])
 
   useEffect(() => {
     showCarriedOverMessages()
@@ -132,7 +152,7 @@ export default function OrderStatus() {
   } else {
     intro = `Orders for ${user.name || user.phone || 'your account'}`
     body = orders.length
-      ? orders.map(order => <OrderCard key={order.id} order={order} />)
+      ? orders.map(order => <OrderCard key={order.id} order={order} highlighted={order.id === highlightOrderId} />)
       : <p className="muted">No orders found for this account yet.</p>
   }
 

@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import axios from 'axios'
 
 const SECTION_CONTENT = {
   products: {
@@ -42,7 +44,34 @@ const SECTION_CONTENT = {
 
 export default function StoreSection({ type }) {
   const location = useLocation()
+  const [dynamicOptions, setDynamicOptions] = useState(null)
+
+  useEffect(() => {
+    if (type === 'crops' || type === 'categories') {
+      axios.get('/api/catalog-options')
+        .then(({ data }) => { if (data.success && data.data) setDynamicOptions(data.data) })
+        .catch(() => {})
+    }
+  }, [type])
+
   const section = SECTION_CONTENT[type] || SECTION_CONTENT.products
+  const links = useMemo(() => {
+    if (type === 'crops' && dynamicOptions?.crops?.length) {
+      return dynamicOptions.crops.map(crop => [
+        `/products?crop=${encodeURIComponent(crop)}`,
+        crop,
+        `Formulations and crop protection for ${crop}`
+      ])
+    }
+    if (type === 'categories' && dynamicOptions?.categories?.length) {
+      return dynamicOptions.categories.map(cat => [
+        `/products?category=${encodeURIComponent(cat)}`,
+        cat,
+        `Agricultural formulations in ${cat}`
+      ])
+    }
+    return section.links
+  }, [type, dynamicOptions, section.links])
 
   return (
     <div className="store-section-page animate-fade-in">
@@ -52,7 +81,7 @@ export default function StoreSection({ type }) {
         <p>{section.intro}</p>
       </div>
       <div className="store-section-grid">
-        {section.links.map(([href, title, description]) => (
+        {links.map(([href, title, description]) => (
           <Link className="store-section-card" to={href} key={href + title}>
             <strong>{title}</strong>
             <span>{description}</span>

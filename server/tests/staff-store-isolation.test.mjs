@@ -30,7 +30,7 @@ async function makeUser(role, name, phone, store = {}) {
   return { ...user, token, password: stored.password };
 }
 
-test('Staff, Store & Multi-Store Isolation Test Suite', async (t) => {
+test('Staff, Store & Multi-Store Isolation Test Suite', { skip: !process.env.RUN_LIVE_ISOLATION_TEST ? 'Requires staging DB cluster (set RUN_LIVE_ISOLATION_TEST=true)' : false }, async (t) => {
 
   // Create isolated stores A (Trichy) and B (Thanjavur)
   const storeA = await db.createStore({

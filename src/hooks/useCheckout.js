@@ -151,9 +151,11 @@ export function CheckoutProvider({ enabled, children }) {
   const closingRef = useRef(null) // { then } while the pop-up closes
   const dismissPaymentNote = useRef(null) // "Payment not completed", gone once paying again or ordered
   const openerRef = useRef(null)
+  const orderRef = useRef(order)
+  orderRef.current = order
   // The latest values for the actions below, which never change identity.
   const live = useRef({})
-  live.current = { user, logout, location, navigate, step }
+  live.current = { user, logout, location, navigate, step, order }
 
   const actions = useMemo(() => {
     const setBusy = value => {
@@ -531,11 +533,20 @@ export function CheckoutProvider({ enabled, children }) {
       const items = cartRef.current
       const confirmed = {
         id: placed?.id || placed?._id || '',
+        items: items.map(item => ({
+          id: item.id || item._id,
+          name: item.name,
+          price: item.price,
+          qty: item.qty,
+          pack: item.selectedPack || ''
+        })),
         total: Number(placed?.total ?? cartTotals(items).total),
         paid: placed?.paymentStatus === 'Paid',
+        paymentMethod: placed?.paymentMethod || (placed?.paymentStatus === 'Paid' ? 'Online (UPI / Card)' : 'Cash on Delivery'),
         expectedDeliveryDate: placed?.expectedDeliveryDate || null,
         whatsapp: whatsapp === 'sent',
       }
+      orderRef.current = confirmed
       writeSession(ORDER_KEY, confirmed)
       setOrder(confirmed)
       clearBasket()
@@ -625,7 +636,12 @@ export function CheckoutProvider({ enabled, children }) {
       else placeCodOrder()
     }
 
-    const trackOrder = () => closeCheckout({ then: () => live.current.navigate('/orders') })
+    const trackOrder = () => {
+      const orderId = orderRef.current?.id || live.current.order?.id
+      modal.closeModal('checkout')
+      closingRef.current = null
+      live.current.navigate(orderId ? `/orders?orderId=${encodeURIComponent(orderId)}` : '/orders')
+    }
 
     const browseProducts = () => closeCheckout({
       then: () => {
@@ -743,9 +759,9 @@ export function CheckoutProvider({ enabled, children }) {
       if (!order) actions.closeCheckout()
       return
     }
-    // Back from the confirmation: the order is placed, so the pop-up closes.
+    // When an order is confirmed, ensure the user stays on the done confirmation step
     if (order) {
-      actions.closeCheckout()
+      if (step !== 'done') actions.showStep('done', { replace: true })
       return
     }
     if (step === 'basket') return

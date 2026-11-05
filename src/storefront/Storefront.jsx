@@ -307,7 +307,7 @@ export default function Storefront() {
         <TrustStrip t={t} cms={cms} />
         <StatsStrip cms={cms} />
         <CategoryGrid t={t} cms={cms} />
-        <CropGrid cms={cms} />
+        <CropGrid cms={cms} dynamicCrops={rawCatalogOptions?.crops} />
         {/* Farmer tools right after the crop picker: ask an expert, test the soil, track orders. */}
         <section className="section sb-home-services">
           <div className="container">

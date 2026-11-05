@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../StoreContext'
 import { cmsText } from '../../hooks/useCmsSettings'
@@ -67,10 +67,26 @@ export const CategoryGrid = memo(function CategoryGrid({ t, cms }) {
   )
 })
 
-export const CropGrid = memo(function CropGrid({ cms }) {
+export const CropGrid = memo(function CropGrid({ cms, dynamicCrops = [] }) {
   const { filterByCrop } = useStore()
   const cropTitle    = cmsText(cms, 'cropGridTitle',    'Shop by Crop')
   const cropSubtitle = cmsText(cms, 'cropGridSubtitle', 'Select your crop to get customized pesticide & nutrient recommendations')
+
+  const cropCards = useMemo(() => {
+    if (!dynamicCrops || !dynamicCrops.length) return CROP_CARDS
+    const knownValues = new Set(CROP_CARDS.map(c => c.value.toLowerCase()))
+    const extraCards = dynamicCrops
+      .filter(crop => crop && !knownValues.has(crop.toLowerCase()))
+      .map(crop => ({
+        value: crop,
+        image: 'photo-1500382017468-9049fed747ef',
+        alt: `${crop} Field`,
+        tag: 'Crop Protection',
+        title: crop
+      }))
+    return [...CROP_CARDS, ...extraCards]
+  }, [dynamicCrops])
+
   return (
     <section className="section" id="cropSection" style={{ background: 'var(--bg-section)', padding: '40px 0' }}>
       <div className="container">
@@ -82,7 +98,7 @@ export const CropGrid = memo(function CropGrid({ cms }) {
         </div>
 
         <div className="bento-grid-4" id="cropCards">
-          {CROP_CARDS.map(card => (
+          {cropCards.map(card => (
             <div
               key={card.value}
               className="bento-card crop-card"

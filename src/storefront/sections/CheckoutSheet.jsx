@@ -16,7 +16,7 @@ import { addressAt, currentPosition, locationSupported } from '../location'
 // keeps the basket card design ("7e").
 
 const STEP_LABELS = { basket: 'Basket', address: 'Address', payment: 'Payment', done: 'Done' }
-const STEP_TITLES = { basket: 'Your Basket', address: 'Delivery details', payment: 'Choose payment', done: 'Order confirmed' }
+const STEP_TITLES = { basket: 'Your Basket', address: 'Delivery details', payment: 'Choose payment', done: 'SUCCESSFUL ORDER PLACED!' }
 const STEP_ICONS = { basket: 'fa-bag-shopping', address: 'fa-location-dot', payment: 'fa-wallet', done: 'fa-circle-check' }
 const PROBLEM_TEXT = {
   required: 'This field is required.',
@@ -468,17 +468,84 @@ function DoneStep({ order }) {
   return (
     <div className="co-done">
       <div className="co-done-badge" aria-hidden="true"><i className="fa-solid fa-check"></i></div>
-      <p className="co-done-lead">Thank you! Your order has been placed.</p>
+      <h3 className="co-done-title" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#15803d', margin: '8px 0 4px', textAlign: 'center' }}>
+        SUCCESSFUL ORDER PLACED!
+      </h3>
+      <p className="co-done-lead" style={{ textAlign: 'center', color: '#4b5563', marginBottom: '16px' }}>
+        Your order has been successfully placed.
+      </p>
       <dl className="co-facts">
-        <div><dt>Order number</dt><dd className="notranslate">{order.id}</dd></div>
-        <div><dt>{order.paid ? 'Amount paid' : 'Amount to pay on delivery'}</dt><dd>{rupees(order.total)}</dd></div>
-        <div><dt>Payment</dt><dd>{order.paid ? 'Paid online' : 'Cash on Delivery'}</dd></div>
-        {date && <div><dt>Expected delivery</dt><dd className="notranslate">{date}</dd></div>}
+        <div>
+          <dt>Order ID</dt>
+          <dd className="notranslate" style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>{order.id}</span>
+            <button
+              type="button"
+              className="co-copy-btn"
+              title="Copy Order ID"
+              onClick={() => {
+                navigator.clipboard?.writeText?.(order.id)
+                showToast('Order ID copied to clipboard!', 'success')
+              }}
+              style={{ background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer', padding: '2px 4px' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </dd>
+        </div>
+        <div>
+          <dt>Total Amount</dt>
+          <dd style={{ fontWeight: 800, color: '#15803d' }}>{rupees(order.total)}</dd>
+        </div>
+        <div>
+          <dt>Payment Method</dt>
+          <dd>{order.paymentMethod || (order.paid ? 'Online (UPI / Card)' : 'Cash on Delivery')}</dd>
+        </div>
+        <div>
+          <dt>Payment Status</dt>
+          <dd>
+            <span style={{
+              display: 'inline-block',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              backgroundColor: order.paid ? '#dcfce7' : '#fef9c3',
+              color: order.paid ? '#15803d' : '#854d0e'
+            }}>
+              {order.paid ? 'Paid' : 'Pending (Cash on Delivery)'}
+            </span>
+          </dd>
+        </div>
+        {date && (
+          <div>
+            <dt>Expected Delivery</dt>
+            <dd className="notranslate">{date}</dd>
+          </div>
+        )}
       </dl>
+      {Array.isArray(order.items) && order.items.length > 0 && (
+        <div className="co-order-items-summary" style={{ marginTop: '12px', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '6px' }}>
+            Order Items ({order.items.length})
+          </div>
+          <div style={{ maxHeight: '100px', overflowY: 'auto', fontSize: '0.825rem' }}>
+            {order.items.map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', color: '#334155' }}>
+                <span className="notranslate">{item.name || 'Product'} {item.pack ? `(${item.pack})` : ''} × {item.qty || 1}</span>
+                <span style={{ fontWeight: 600 }}>{rupees((item.price || 0) * (item.qty || 1))}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {order.whatsapp && (
-        <p className="co-done-note">
-          <i className="fa-brands fa-whatsapp" aria-hidden="true"></i>
-          <span>We have sent the order and delivery details to your WhatsApp.</span>
+        <p className="co-done-note" style={{ marginTop: '14px' }}>
+          <i className="fa-brands fa-whatsapp" aria-hidden="true" style={{ color: '#25D366' }}></i>
+          <span>We have sent the order confirmation and tracking link to your WhatsApp.</span>
         </p>
       )}
     </div>
@@ -510,10 +577,10 @@ function SheetFooter({ step, checkout, actions }) {
   if (step === 'done') {
     return (
       <div className="cart-footer co-foot">
-        <button type="button" className="btn btn-primary co-main co-main--center" onClick={actions.trackOrder}>
-          <i className="fa-solid fa-truck-fast" aria-hidden="true"></i> Track order
+        <button type="button" className="btn btn-primary co-main co-main--center" id="trackOrderBtn" onClick={actions.trackOrder}>
+          <i className="fa-solid fa-truck-fast" aria-hidden="true"></i> TRACK YOUR ORDER
         </button>
-        <button type="button" className="btn btn-outline co-secondary" onClick={() => actions.closeCheckout()}>Continue shopping</button>
+        <button type="button" className="btn btn-outline co-secondary" onClick={() => actions.closeCheckout()}>Continue Shopping</button>
       </div>
     )
   }
