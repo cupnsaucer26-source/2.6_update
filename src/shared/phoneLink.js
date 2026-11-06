@@ -1,5 +1,5 @@
 // The shop's number when the CMS has none (admin CMS field "phone").
-export const SUPPORT_PHONE = '+91-8778613372'
+export const SUPPORT_PHONE = '+91 75508 75508'
 
 export const CALL_LABELS = {
   en: 'Call us:',

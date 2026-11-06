@@ -7,7 +7,7 @@
 // caller falls back to matching the district by name.
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
-const USER_AGENT = 'SathyamAgroMart/1.0 (support@sathyamagromart.com)';
+const USER_AGENT = 'SathyamAgroMart/1.0 (info@sathyamagromart.com)';
 const CACHE_PREFIX = 'geo:v1:';
 const MISS = 'none';
 

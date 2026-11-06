@@ -12,7 +12,7 @@ const PAGE_CONTENT = {
       ['Information we collect', 'We collect the details needed to process orders, provide crop advisory support, manage your account, and improve the store. This may include your name, phone number, email address, delivery address, order details, and messages sent to our support team.'],
       ['How we use information', 'Your information is used to fulfil purchases, send order updates, provide relevant agricultural support, prevent misuse, and improve our products and services. We do not sell your personal information.'],
       ['Payments and security', 'Payments are processed through trusted payment partners. We use reasonable technical and organisational safeguards to protect account and order information, but no online service can guarantee absolute security.'],
-      ['Your choices', 'You may ask us to review, update, or delete personal information where applicable. Contact support@sathyamagromart.com for privacy requests.'],
+      ['Your choices', 'You may ask us to review, update, or delete personal information where applicable. Contact info@sathyamagromart.com for privacy requests.'],
     ],
   },
   '/terms-of-sale': {
@@ -36,7 +36,7 @@ const PAGE_CONTENT = {
       ['When you can request help', 'Contact us within 48 hours of delivery for damaged, incorrect, missing, or visibly tampered items. Include your order number and clear photographs of the package and product.'],
       ['Review process', 'Our team reviews the order and delivery evidence before approving a replacement, refund, or other resolution. Opened or used products may require additional review for safety and compliance reasons.'],
       ['Refund timing', 'Approved refunds are sent to the original payment method. Bank and payment-provider processing times can vary, so the amount may take several business days to appear.'],
-      ['How to contact us', `Email support@sathyamagromart.com or call ${SUPPORT_PHONE} with your order number so we can resolve the issue quickly.`],
+      ['How to contact us', `Email info@sathyamagromart.com or call ${SUPPORT_PHONE} with your order number so we can resolve the issue quickly.`],
     ],
   },
   '/about-us': {
@@ -94,7 +94,7 @@ export default function InformationPage({ path }) {
             <aside className="information-contact-card">
               <h2>{text('contactCardTitle', 'Reach our team')}</h2>
               <a href={telHref(text('phone', SUPPORT_PHONE))}><Phone size={18} aria-hidden="true" /> {text('phone', SUPPORT_PHONE)}</a>
-              <a href={`mailto:${text('email', 'support@sathyamagromart.com')}`}><Mail size={18} aria-hidden="true" /> {text('email', 'support@sathyamagromart.com')}</a>
+              <a href={`mailto:${text('email', 'info@sathyamagromart.com')}`}><Mail size={18} aria-hidden="true" /> {text('email', 'info@sathyamagromart.com')}</a>
               <p><MapPin size={18} aria-hidden="true" /> {text('address', 'Sathyam Agro Mart, Hyderabad, India')}</p>
             </aside>
           )}

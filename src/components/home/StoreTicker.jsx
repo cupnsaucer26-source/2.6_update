@@ -14,8 +14,8 @@ import { useCms, cmsTickerLines } from '../../context/CmsContext'
 // Keep these to plain facts - no offers, awards or product claims.
 const ITEMS = [
   ['fa-solid fa-leaf', '#6ee7b7', 'Grow More. Protect Better. Farm Smarter.'],
-  ['fa-brands fa-whatsapp', '#25d366', 'WhatsApp us at +91 87786 13372 for crop advisory in your language'],
-  ['fa-solid fa-phone-volume', '#34d399', <>Call to order: <strong>+91 87786 13372</strong></>],
+  ['fa-brands fa-whatsapp', '#25d366', 'WhatsApp us at +91 75508 75508 for crop advisory in your language'],
+  ['fa-solid fa-phone-volume', '#34d399', <>Call to order: <strong>+91 75508 75508</strong></>],
 ]
 
 const renderItems = (items, copy, fromCms) => items.map(([icon, color, text], index) => (

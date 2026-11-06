@@ -107,7 +107,7 @@ export default function Footer() {
   const brandLine = cmsText(cms, 'footerBrand', "India's leading digital platform for high-efficacy bio-pesticides, crop protection chemicals, and soil health fertilizers.")
   const brandMore = cmsText(cms, 'footerBrandMore', 'Providing 100% bio-certified products with fast express dispatch to 15,000+ farmers across India.')
   const phone = cmsText(cms, 'phone', SUPPORT_PHONE)
-  const email = cmsText(cms, 'email', 'support@sathyamagromart.com')
+  const email = cmsText(cms, 'email', 'info@sathyamagromart.com')
   const address = cmsText(cms, 'address', 'Sathyam Agro Mart, Hyderabad, India')
   const dial = `tel:${phone.replace(/[^\d+]/g, '')}`
   const map = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
@@ -144,8 +144,8 @@ export default function Footer() {
         <div className="public-footer-support">
           <h4 className="public-footer-support-title">Customer Support</h4>
           <ul className="public-footer-contact">
-            <ContactCard Icon={Phone} label="Toll Free" value={phone} href={dial} />
-            <ContactCard Icon={Mail} label="Email" value={email} href={`mailto:${email}`} />
+            <ContactCard Icon={Phone} label="Official Phone" value={phone} href={dial} />
+            <ContactCard Icon={Mail} label="Official Email" value={email} href={`mailto:${email}`} />
             <ContactCard Icon={MapPin} label="Address" value={address} href={map} external />
           </ul>
         </div>

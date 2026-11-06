@@ -18,6 +18,8 @@ test('formatPhoneDisplay formats Indian numbers with readable spacing', () => {
   assert.equal(formatPhoneDisplay('+918778613372'), '+91 87786 13372')
   assert.equal(formatPhoneDisplay('+91-8778613372'), '+91 87786 13372')
   assert.equal(formatPhoneDisplay('+91 87786 13372'), '+91 87786 13372')
+  assert.equal(formatPhoneDisplay('+917550875508'), '+91 75508 75508')
+  assert.equal(formatPhoneDisplay('+91 75508 75508'), '+91 75508 75508')
   assert.equal(formatPhoneDisplay('1800-425-9999'), '1800 425 9999')
   assert.equal(formatPhoneDisplay(''), '')
 })
