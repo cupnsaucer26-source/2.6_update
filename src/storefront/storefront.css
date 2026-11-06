@@ -1428,7 +1428,7 @@ body.sb-home-active .sb-home .sb-home-services .farmer-services {
 }
 :is(body.sb-home-active .sb-home, .sb-portal) .product-img-box {
   height: 200px;
-  background: #FAF9F6;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9901,7 +9901,7 @@ html.sb-loc-lock {
     aspect-ratio: 4 / 3;
     height: auto;
     padding: var(--space-3);
-    background: var(--bg-section);
+    background: #ffffff;
   }
   :is(body.sb-home-active .sb-home, .sb-portal) .product-img-box img {
     max-height: 100%;
@@ -13898,19 +13898,18 @@ body.poster-open .sb-portal .call-fab {
     aspect-ratio: 1 / 0.86;
     height: auto;
     margin: 0;
-    padding: 22px;
+    padding: 16px;
     border-radius: 0;
-    background: #F3F6F2;
+    background: #ffffff;
     overflow: hidden;
   }
   :is(body.sb-home-active .sb-home, .sb-portal) :is(#catalog, #relatedProductsSection) .product-card .product-img-box img,
   .all-products-page .agro-product-card .card-image-box img {
-    max-width: 82%;
+    max-width: 90%;
     max-height: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 12px 16px rgba(20, 35, 28, 0.16));
-    /* Pack shots carry their own pale backdrop; multiply melts it into the well. */
-    mix-blend-mode: multiply;
+    filter: none;
+    mix-blend-mode: normal;
     transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
   }
   :is(body.sb-home-active .sb-home, .sb-portal) :is(#catalog, #relatedProductsSection) .product-card:hover .product-img-box img,
