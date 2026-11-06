@@ -209,7 +209,7 @@ export default function BlogDetail() {
           <section className="sb-article-section">
             <div className="sb-article-section-head">
               <h2><Sprout size={20} color="#16a34a" aria-hidden="true" />Products Mentioned in This Guide</h2>
-              <Link to="/products">View All <ExternalLink size={13} aria-hidden="true" /></Link>
+              <Link to="/#catalog">View All <ExternalLink size={13} aria-hidden="true" /></Link>
             </div>
             <div className="sb-article-products">
               {relatedProducts.map(product => (

@@ -101,16 +101,11 @@ export default function Blog() {
               <span>Admin: Write New Blog</span>
               <ArrowRight size={16} aria-hidden="true" />
             </Link>
-          ) : blogs.length === 0 ? (
-            <Link to="/products" className="sb-blog-btn">
-              <span>Shop Now</span>
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-          ) : (
+          ) : blogs.length > 0 ? (
             <button type="button" className="sb-blog-btn sb-blog-btn--ghost" onClick={() => { setSearchQuery(''); setSelectedCategory('All') }}>
               Reset Filters
             </button>
-          )}
+          ) : null}
         </div>
       )}
 
