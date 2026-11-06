@@ -58,7 +58,7 @@ export const CategoryGrid = memo(function CategoryGrid({ t, cms }) {
 })
 
 export const CropGrid = memo(function CropGrid({ cms, dynamicCrops = [] }) {
-  const { filterByCrop } = useStore()
+  const { filterByCrop, scrollToCatalog } = useStore()
   const cropTitle    = cmsText(cms, 'cropGridTitle',    'Shop by Crop')
   const cropSubtitle = cmsText(cms, 'cropGridSubtitle', 'Select your crop to get customized pesticide & nutrient recommendations')
 
@@ -74,9 +74,21 @@ export const CropGrid = memo(function CropGrid({ cms, dynamicCrops = [] }) {
             <h2 className="section-title">{cropTitle}</h2>
             <p className="section-subtitle">{cropSubtitle}</p>
           </div>
-          <Link to="/crops" className="btn btn-outline" id="viewAllCropsBtn">
-            View All Crops <i className="fa-solid fa-arrow-right" aria-hidden="true"></i>
-          </Link>
+          <button
+            type="button"
+            className="btn btn-outline"
+            id="showMoreCropsBtn"
+            onClick={(e) => {
+              e.preventDefault();
+              if (typeof scrollToCatalog === 'function') {
+                scrollToCatalog();
+              } else {
+                document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+          >
+            Show More Crops <i className="fa-solid fa-arrow-down" aria-hidden="true"></i>
+          </button>
         </div>
 
         <div className="bento-grid-4" id="cropCards">

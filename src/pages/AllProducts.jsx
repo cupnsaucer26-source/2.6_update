@@ -851,7 +851,7 @@ export default function AllProducts() {
                 <h2 className="section-title">Shop By Crop 🌾</h2>
                 <p className="section-subtitle">Get solutions customized for your crops.</p>
               </div>
-              <Link to="/crops" className="view-all-link">View All</Link>
+              <Link to="/#catalog" className="view-all-link">View All</Link>
             </div>
 
             <div className="crops-scroll-container" ref={cropsScrollRef}>

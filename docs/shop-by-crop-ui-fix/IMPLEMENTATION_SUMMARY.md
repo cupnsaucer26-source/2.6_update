@@ -33,18 +33,31 @@ This implementation permanently corrects the Homepage **Shop by Crop** section b
   // Homepage displays strictly two rows of crop cards (4 columns x 2 rows = 8 cards)
   const displayedCards = useMemo(() => cropCards.slice(0, 8), [cropCards])
   ```
-- **"View All Crops" Header Action**:
+- **"Show More Crops" Header Scroll Action**:
   ```jsx
   <div className="section-header-flex">
     <div>
       <h2 className="section-title">{cropTitle}</h2>
       <p className="section-subtitle">{cropSubtitle}</p>
     </div>
-    <Link to="/crops" className="btn btn-outline" id="viewAllCropsBtn">
-      View All Crops <i className="fa-solid fa-arrow-right" aria-hidden="true"></i>
-    </Link>
+    <button
+      type="button"
+      className="btn btn-outline"
+      id="showMoreCropsBtn"
+      onClick={(e) => {
+        e.preventDefault();
+        if (typeof scrollToCatalog === 'function') {
+          scrollToCatalog();
+        } else {
+          document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }}
+    >
+      Show More Crops <i className="fa-solid fa-arrow-down" aria-hidden="true"></i>
+    </button>
   </div>
   ```
+- **Homepage Smooth Scroll**: Clicking "Show More Crops" scrolls smoothly to the homepage products catalogue (`#catalog`) with zero navigation lag, eliminating unwanted external pages while keeping `/crops` redirecting to `/#catalog`.
 - **Accessibility & Action**: Added `aria-label={`View products for ${card.title}`}` and preserved `tabIndex={0}`, `role="button"`, and keyboard `Enter`/`Space` handlers.
 
 ### 2.3 [`src/pages/AllProducts.jsx`](file:///c:/Users/step1/OneDrive/Desktop/2.6-test_cases/2.6_update/src/pages/AllProducts.jsx) (Modified)

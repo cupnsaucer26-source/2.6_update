@@ -177,7 +177,7 @@ export default function App() {
           <Route path="/soil-test-report" element={<SoilTestReport />} />
           <Route path="/products" element={<AllProducts />} />
           <Route path="/categories" element={<Categories />} />
-          <Route path="/crops" element={<StoreSection type="crops" />} />
+          <Route path="/crops" element={<Navigate to="/#catalog" replace />} />
           <Route path="/brands" element={<StoreSection type="brands" />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:id" element={<BlogDetail />} />

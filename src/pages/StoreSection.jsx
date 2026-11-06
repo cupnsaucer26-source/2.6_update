@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import axios from 'axios'
-import { dedupeCropLabels } from '../utils/catalogUtils.js'
 
 const SECTION_CONTENT = {
   products: {
@@ -10,7 +9,7 @@ const SECTION_CONTENT = {
     links: [
       ['/products?category=Fungicide', 'Bio-Fungicides & Crop Care', 'Field-tested bio-protection solutions'],
       ['/categories', 'Shop by Category', 'Find products by agricultural formulation'],
-      ['/crops', 'Shop by Crop', 'Choose products customized for your crop']
+      ['/#cropSection', 'Shop by Crop', 'Choose products customized for your crop']
     ]
   },
   categories: {
@@ -21,16 +20,6 @@ const SECTION_CONTENT = {
       ['/products?category=Insecticide', 'Insecticides', 'Manage common field pests'],
       ['/products?category=Herbicide', 'Herbicides', 'Control weeds with confidence'],
       ['/products?category=Bio-Stimulant', 'Bio-Stimulants', 'Support healthier plant growth']
-    ]
-  },
-  crops: {
-    title: 'Shop by Crop',
-    intro: 'Explore crop-focused care plans and products.',
-    links: [
-      ['/products?crop=Paddy%20%2F%20Rice', 'Paddy / Rice', 'Seasonal protection for rice fields'],
-      ['/products?crop=Cotton', 'Cotton', 'Protection through the cotton cycle'],
-      ['/products?crop=Sugarcane', 'Sugarcane', 'Support strong, healthy cane'],
-      ['/products?crop=Vegetables', 'Vegetables', 'Practical protection for vegetables']
     ]
   },
   brands: {
@@ -48,7 +37,7 @@ export default function StoreSection({ type }) {
   const [dynamicOptions, setDynamicOptions] = useState(null)
 
   useEffect(() => {
-    if (type === 'crops' || type === 'categories') {
+    if (type === 'categories') {
       axios.get('/api/catalog-options')
         .then(({ data }) => { if (data.success && data.data) setDynamicOptions(data.data) })
         .catch(() => {})
@@ -57,16 +46,6 @@ export default function StoreSection({ type }) {
 
   const section = SECTION_CONTENT[type] || SECTION_CONTENT.products
   const links = useMemo(() => {
-    if (type === 'crops' && dynamicOptions?.crops?.length) {
-      const cleanCrops = dedupeCropLabels(
-        dynamicOptions.crops.filter(c => c && c.toLowerCase() !== 'all' && c !== 'All Crops')
-      );
-      return cleanCrops.map(crop => [
-        `/products?crop=${encodeURIComponent(crop)}`,
-        crop,
-        `Formulations and crop protection for ${crop}`
-      ]);
-    }
     if (type === 'categories' && dynamicOptions?.categories?.length) {
       return dynamicOptions.categories.map(cat => [
         `/products?category=${encodeURIComponent(cat)}`,
