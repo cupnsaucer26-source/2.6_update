@@ -8663,9 +8663,9 @@ html.sb-scroll-lock.sb-scroll-lock-gutter {
 body.overlay-open .sb-portal .enq-fab,
 body.menu-open .sb-portal .enq-fab,
 body.poster-open .sb-portal .enq-fab,
-body.overlay-open .sb-home .chatbot-trigger-btn,
-body.menu-open .sb-home .chatbot-trigger-btn,
-body.poster-open .sb-home .chatbot-trigger-btn {
+body.overlay-open :is(.sb-home, .sb-portal) .chatbot-trigger-btn,
+body.menu-open :is(.sb-home, .sb-portal) .chatbot-trigger-btn,
+body.poster-open :is(.sb-home, .sb-portal) .chatbot-trigger-btn {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -8791,12 +8791,23 @@ body.poster-open .sb-home .chatbot-trigger-btn {
   }
 }
 
-/* Phones (where the bottom nav and its Menu exist): no floating Enquiry
-   button; Menu → Enquiry opens the sheet (MobileBottomNav.jsx). Tablet and
-   desktop keep the button. */
+/* Phones (where the bottom nav exists): floating Enquiry FAB sits docked
+   on the bottom-left above the bottom bar without covering content. */
 @media (max-width: 767px) {
   :is(body.sb-home-active .sb-home, .sb-portal) .enq-fab {
-    display: none;
+    display: flex !important;
+    left: 14px;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    height: 46px;
+    width: 46px;
+    border-radius: 50%;
+    padding: 0;
+    justify-content: center;
+    align-items: center;
+    z-index: 1450;
+  }
+  body.buy-bar-open :is(body.sb-home-active .sb-home, .sb-portal) .enq-fab {
+    bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
@@ -15643,4 +15654,253 @@ body.poster-open .sb-portal .call-fab {
 :is(body.sb-home-active .sb-home, .sb-portal) .chatbot-header-btn:hover {
   background: rgba(255, 255, 255, 0.15);
   color: #FFFFFF;
+}
+
+
+/* ==========================================================================
+   ADDED TO CART MODAL / BOTTOM SHEET (POPUP BEFORE CART)
+   ========================================================================== */
+.added-cart-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 24, 17, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.added-cart-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.added-cart-card {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 48px rgba(10, 24, 17, 0.25);
+  border: 1px solid #E2E8F0;
+  overflow: hidden;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: addedCartPop 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes addedCartPop {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.added-cart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.added-cart-badge {
+  background: #DCFCE7;
+  color: #15803D;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.added-cart-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #F1F5F9;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: #64748B;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.added-cart-close:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.added-cart-product {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.added-cart-img-wrap {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  background: #FFFFFF;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.added-cart-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.added-cart-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.added-cart-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 4px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.added-cart-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #64748B;
+}
+
+.added-cart-pack {
+  background: #E2E8F0;
+  color: #334155;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.added-cart-qty {
+  font-weight: 600;
+  color: #475569;
+}
+
+.added-cart-price {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #15803D;
+  margin-top: 4px;
+}
+
+.added-cart-question {
+  font-size: 0.9rem;
+  color: #475569;
+  margin: 0;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.added-cart-actions {
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+}
+
+@media (min-width: 641px) {
+  .added-cart-actions {
+    flex-direction: row;
+  }
+}
+
+.btn-add-more {
+  flex: 1;
+  min-height: 48px;
+  background: #F0FDF4;
+  color: #15803D;
+  border: 1.5px solid #16A34A;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-add-more:hover {
+  background: #DCFCE7;
+  border-color: #15803D;
+}
+
+.btn-view-cart {
+  flex: 1;
+  min-height: 48px;
+  background: linear-gradient(135deg, #15803D, #166534);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-view-cart:hover {
+  background: linear-gradient(135deg, #166534, #14532D);
+  box-shadow: 0 6px 16px rgba(21, 128, 61, 0.35);
+}
+
+@media (max-width: 640px) {
+  .added-cart-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .added-cart-card {
+    border-radius: 22px 22px 0 0;
+    max-width: 100%;
+    padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+    animation: addedCartSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes addedCartSlideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
 }

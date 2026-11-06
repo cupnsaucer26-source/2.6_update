@@ -157,7 +157,6 @@ export default function Storefront() {
       checkout.addItem({ ...product, price: Number(price), originalPrice: Number(originalPrice), selectedPack, gstRate: product.gstRate, hsnCode: product.hsnCode }, customQty)
 
       showToast(`"${product.name}" added to basket!`, 'success')
-        checkout.openBasket()
     }
 
     const handleBasketClick = event => {

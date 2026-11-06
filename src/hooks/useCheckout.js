@@ -252,7 +252,23 @@ export function CheckoutProvider({ enabled, children }) {
       return promise
     }
 
-    const addItem = (line, quantity = 1) => saveCart(withItemAdded(cartRef.current, line, quantity))
+    const addItem = (line, quantity = 1, options = {}) => {
+      const res = saveCart(withItemAdded(cartRef.current, line, quantity))
+      if (!options?.silent && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sb:item-added-to-cart', {
+          detail: {
+            id: line.id || line._id,
+            name: line.name,
+            image: line.image || (Array.isArray(line.images) ? line.images[0] : null),
+            selectedPack: line.selectedPack,
+            qty: quantity,
+            price: Number(line.price) || 0,
+            originalPrice: Number(line.originalPrice) || 0
+          }
+        }))
+      }
+      return res
+    }
 
     const updateQty = (index, change) => {
       const current = cartRef.current

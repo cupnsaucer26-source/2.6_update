@@ -172,12 +172,12 @@ export default function ProductDetail() {
   const choosePack = pack => { setSelectedPack(pack); setCartAdded(false) }
   const changeQuantity = delta => { setQuantity(q => Math.max(1, q + delta)); setCartAdded(false) }
 
-  const addToCart = () => {
-    addItem({ ...product, id: product.id || product._id, price: selectedPrice, originalPrice: selectedOriginalPrice, selectedPack, gstRate: product.gstRate, hsnCode: product.hsnCode }, quantity)
+  const addToCart = (options = {}) => {
+    addItem({ ...product, id: product.id || product._id, price: selectedPrice, originalPrice: selectedOriginalPrice, selectedPack, gstRate: product.gstRate, hsnCode: product.hsnCode }, quantity, options)
     setCartAdded(true)
   }
   const proceedToCheckout = () => {
-    if (!cartAdded) addToCart()
+    if (!cartAdded) addToCart({ silent: true })
     startCheckout()
   }
   const toggleWishlist = async () => {

@@ -9,6 +9,7 @@ import axios from 'axios'
 import { showToast } from './toast'
 import CallFab from './sections/CallFab'
 import Chatbot from './sections/Chatbot'
+import AddedToCartModal from './sections/AddedToCartModal'
 import EnquirySheet from './sections/EnquirySheet'
 import GuestContactPrompt from './sections/GuestContactPrompt'
 import LocationPrompt from './sections/LocationPrompt'
@@ -112,6 +113,24 @@ export default function StorePopups() {
     lastSheetState.current = sheetState
   }, [sheetState, actions])
 
+  const [addedItem, setAddedItem] = useState(null)
+
+  useEffect(() => {
+    const onAdded = event => {
+      if (event?.detail) {
+        setAddedItem(event.detail)
+      }
+    }
+    window.addEventListener('sb:item-added-to-cart', onAdded)
+    return () => window.removeEventListener('sb:item-added-to-cart', onAdded)
+  }, [])
+
+  useEffect(() => {
+    if (authState || sheetState || step) {
+      setAddedItem(null)
+    }
+  }, [authState, sheetState, step])
+
   const live = useRef({})
   live.current = { authOpen: Boolean(authState), sheetOpen: Boolean(step), busy }
 
@@ -167,6 +186,15 @@ export default function StorePopups() {
         <Chatbot t={t} />
         <GuestContactPrompt t={t} />
         <LocationPrompt />
+        <AddedToCartModal
+          item={addedItem}
+          onClose={() => setAddedItem(null)}
+          onViewCart={() => {
+            setAddedItem(null)
+            actions.openBasket()
+          }}
+          lang={lang}
+        />
       </div>
     </StoreContext.Provider>
   )
