@@ -5,7 +5,10 @@ import { useCheckout, useCheckoutActions } from '../hooks/useCheckout'
 import { StoreContext } from './StoreContext'
 import { isLanguageReady, loadLanguagePack, translationFor } from './i18n'
 import { setBodyFlag } from './bodyFlags'
+import axios from 'axios'
+import { showToast } from './toast'
 import CallFab from './sections/CallFab'
+import Chatbot from './sections/Chatbot'
 import EnquirySheet from './sections/EnquirySheet'
 import GuestContactPrompt from './sections/GuestContactPrompt'
 import LocationPrompt from './sections/LocationPrompt'
@@ -73,6 +76,18 @@ export default function StorePopups() {
     signOut: actions.signOut,
     leaveSignInFor: actions.leaveSignInFor,
     closeModal: id => (id === 'authModal' ? actions.closeSignIn() : actions.closeCheckout()),
+    addToCart: async (productId, customPack, customQty = 1) => {
+      try {
+        const { data } = await axios.get('/api/products/' + productId)
+        const product = data?.data || data?.product || data
+        if (product && (product.id || product._id)) {
+          actions.addItem(product, customQty)
+          showToast('"' + product.name + '" added to basket!', 'success')
+        }
+      } catch (err) {
+        window.location.href = '/product/' + productId
+      }
+    }
   }), [actions])
 
   useEffect(() => {
@@ -149,6 +164,7 @@ export default function StorePopups() {
         <EnquirySheet />
         <WelcomeCelebration />
         <CallFab />
+        <Chatbot t={t} />
         <GuestContactPrompt t={t} />
         <LocationPrompt />
       </div>

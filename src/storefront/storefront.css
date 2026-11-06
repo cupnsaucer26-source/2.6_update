@@ -4338,7 +4338,7 @@ body.sb-home-active {
   /* The chat bubble would sit on top of the card. A body class set by
      syncOverlayState(), not body:has(...): :has() on body re-checked the whole
      page on every class change, including every popup opening. */
-  body.sb-home-active.poster-open .sb-home .chatbot-trigger-btn {
+  body.sb-home-active.poster-open :is(.sb-home, .sb-portal) .chatbot-trigger-btn {
     opacity: 0;
     pointer-events: none;
   }
@@ -12659,6 +12659,9 @@ body.poster-open .sb-portal .help-fab {
   transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background 0.2s ease;
 }
 @media (max-width: 768px) {
+  body.buy-bar-open :is(body.sb-home-active .sb-home, .sb-portal) .chatbot-trigger-btn {
+    bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+  }
   body.buy-bar-open .sb-portal .call-fab {
     bottom: calc(218px + env(safe-area-inset-bottom, 0px));
   }

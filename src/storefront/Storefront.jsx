@@ -26,7 +26,6 @@ import Footer from '../components/home/Footer'
 import ServicesBottomNav from '../components/common/ServicesBottomNav'
 import BackToTop from './sections/BackToTop'
 import PhotoScannerModal from './sections/PhotoScannerModal'
-import Chatbot from './sections/Chatbot'
 import { packMrp, packPrice } from '../shared/packPricing'
 import './storefront.css'
 
@@ -321,7 +320,6 @@ export default function Storefront() {
         <Certifications settings={cms} />
         <BackToTop />
         <PhotoScannerModal state={modals.photoScannerModal} t={t} />
-        <Chatbot t={t} />
       </div>
       {/* Outside .sb-home on purpose. The footer's styles live in index.css,
           which is inside @layer app, so anything unlayered in storefront.css
