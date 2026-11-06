@@ -15663,17 +15663,17 @@ body.poster-open .sb-portal .call-fab {
 .added-cart-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 24, 17, 0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(10, 24, 17, 0.7);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   z-index: 10050;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 20px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.22s ease;
 }
 
 .added-cart-overlay.active {
@@ -15685,15 +15685,16 @@ body.poster-open .sb-portal .call-fab {
   background: #ffffff;
   border-radius: 20px;
   width: 100%;
-  max-width: 440px;
-  box-shadow: 0 20px 48px rgba(10, 24, 17, 0.25);
+  max-width: 460px;
+  box-shadow: 0 24px 50px rgba(10, 24, 17, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.05);
   border: 1px solid #E2E8F0;
-  overflow: hidden;
-  padding: 22px 20px;
+  padding: 24px 24px 26px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  animation: addedCartPop 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+  box-sizing: border-box;
+  animation: addedCartPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
 }
 
 @keyframes addedCartPop {
@@ -15716,13 +15717,19 @@ body.poster-open .sb-portal .call-fab {
 .added-cart-badge {
   background: #DCFCE7;
   color: #15803D;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 999px;
   font-weight: 700;
   font-size: 0.85rem;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  border: 1px solid #BBF7D0;
+}
+
+.added-cart-badge i {
+  font-size: 14px;
+  color: #16A34A;
 }
 
 .added-cart-close {
@@ -15730,16 +15737,30 @@ body.poster-open .sb-portal .call-fab {
   height: 36px;
   border-radius: 50%;
   background: #F1F5F9;
-  border: none;
+  border: 1px solid #E2E8F0;
   cursor: pointer;
-  display: grid;
-  place-items: center;
-  color: #64748B;
-  transition: background 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  transition: all 0.18s ease;
+  padding: 0;
+}
+
+.added-cart-close i {
+  font-size: 15px;
+  color: #475569;
+  display: block;
+  line-height: 1;
 }
 
 .added-cart-close:hover {
   background: #E2E8F0;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+.added-cart-close:hover i {
   color: #0F172A;
 }
 
@@ -15754,14 +15775,15 @@ body.poster-open .sb-portal .call-fab {
 }
 
 .added-cart-img-wrap {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
   background: #FFFFFF;
   border-radius: 10px;
   border: 1px solid #E2E8F0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   padding: 4px;
 }
@@ -15778,11 +15800,11 @@ body.poster-open .sb-portal .call-fab {
 }
 
 .added-cart-name {
-  font-size: 0.95rem;
+  font-size: 0.96rem;
   font-weight: 700;
   color: #0F172A;
   margin: 0 0 4px;
-  line-height: 1.3;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -15811,34 +15833,30 @@ body.poster-open .sb-portal .call-fab {
 }
 
 .added-cart-price {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #15803D;
   margin-top: 4px;
 }
 
 .added-cart-question {
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  font-weight: 500;
   color: #475569;
-  margin: 0;
+  margin: 2px 0 0;
   line-height: 1.4;
   text-align: center;
 }
 
 .added-cart-actions {
-  display: flex;
-  gap: 10px;
-  flex-direction: column;
-}
-
-@media (min-width: 641px) {
-  .added-cart-actions {
-    flex-direction: row;
-  }
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+  width: 100%;
 }
 
 .btn-add-more {
-  flex: 1;
   min-height: 48px;
   background: #F0FDF4;
   color: #15803D;
@@ -15846,22 +15864,29 @@ body.poster-open .sb-portal .call-fab {
   border-radius: 12px;
   font-weight: 700;
   font-size: 0.92rem;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
+  padding: 10px 14px;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.btn-add-more i {
+  font-size: 14px;
 }
 
 .btn-add-more:hover {
   background: #DCFCE7;
   border-color: #15803D;
+  transform: translateY(-1px);
 }
 
 .btn-view-cart {
-  flex: 1;
   min-height: 48px;
   background: linear-gradient(135deg, #15803D, #166534);
   color: #FFFFFF;
@@ -15869,7 +15894,7 @@ body.poster-open .sb-portal .call-fab {
   border-radius: 12px;
   font-weight: 700;
   font-size: 0.92rem;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -15877,11 +15902,19 @@ body.poster-open .sb-portal .call-fab {
   box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
   transition: all 0.2s ease;
   font-family: inherit;
+  padding: 10px 14px;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.btn-view-cart i {
+  font-size: 14px;
 }
 
 .btn-view-cart:hover {
   background: linear-gradient(135deg, #166534, #14532D);
   box-shadow: 0 6px 16px rgba(21, 128, 61, 0.35);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 640px) {
@@ -15890,10 +15923,19 @@ body.poster-open .sb-portal .call-fab {
     padding: 0;
   }
   .added-cart-card {
-    border-radius: 22px 22px 0 0;
+    border-radius: 24px 24px 0 0;
     max-width: 100%;
-    padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+    padding: 22px 20px calc(24px + env(safe-area-inset-bottom, 16px));
     animation: addedCartSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .added-cart-actions {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .btn-add-more,
+  .btn-view-cart {
+    width: 100%;
+    min-height: 48px;
   }
   @keyframes addedCartSlideUp {
     from {

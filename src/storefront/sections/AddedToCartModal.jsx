@@ -1,5 +1,4 @@
 import { useEffect, memo } from 'react'
-import { ShoppingCart, Plus, X, CheckCircle2 } from 'lucide-react'
 import { rupees } from '../data'
 
 const I18N = {
@@ -7,55 +6,55 @@ const I18N = {
     addedBadge: 'Added to Basket',
     title: 'Item Added to Cart!',
     question: 'What would you like to do next?',
-    addMoreBtn: '+ Add More Products',
+    addMoreBtn: 'Add More Products',
     viewCartBtn: 'Go to Cart & Checkout',
-    closeAria: 'Close modal'
+    closeAria: 'Close'
   },
   ta: {
     addedBadge: 'கூடையில் சேர்க்கப்பட்டது',
     title: 'பொருள் கூடையில் சேர்க்கப்பட்டது!',
     question: 'அடுத்து என்ன செய்ய விரும்புகிறீர்கள்?',
-    addMoreBtn: '+ மேலும் வாங்க (Add More Products)',
-    viewCartBtn: 'கூடைக்குச் செல் (Go to Cart)',
+    addMoreBtn: 'மேலும் வாங்க',
+    viewCartBtn: 'கூடைக்குச் செல்',
     closeAria: 'மூடவும்'
   },
   te: {
     addedBadge: 'కార్ట్‌కు జోడించబడింది',
     title: 'వస్తువు కార్ట్‌కు జోడించబడింది!',
-    question: 'తరువాత మీరు ఏమి చేయాలనుకుంటున్నారు?',
-    addMoreBtn: '+ మరిన్ని ఉత్పత్తులను జోడించండి',
-    viewCartBtn: 'కార్ట్‌ను వీక్షించండి & చెక్అవుట్',
+    question: 'తరువాత ఏమి చేయాలనుకుంటున్నారు?',
+    addMoreBtn: 'మరిన్ని కొనండి',
+    viewCartBtn: 'కార్ట్‌కు వెళ్లండి',
     closeAria: 'మూసివేయి'
   },
   kn: {
-    addedBadge: 'ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಲಾಗಿದೆ',
-    title: 'ಉತ್ಪನ್ನವನ್ನು ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಲಾಗಿದೆ!',
-    question: 'ಮುಂದೆ ನೀವು ಏನು ಮಾಡಲು ಬಯಸುತ್ತೀರಿ?',
-    addMoreBtn: '+ ಇನ್ನಷ್ಟು ಉತ್ಪನ್ನಗಳನ್ನು ಸೇರಿಸಿ',
-    viewCartBtn: 'ಕಾರ್ಟ್ ನೋಡಿ & ಚೆಕ್‌ಔಟ್',
+    addedBadge: 'ಬುಟ್ಟಿಗೆ ಸೇರಿಸಲಾಗಿದೆ',
+    title: 'ಉತ್ಪನ್ನ ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಲಾಗಿದೆ!',
+    question: 'ಮುಂದೆ ಏನು ಮಾಡಲು ಬಯಸುತ್ತೀರಿ?',
+    addMoreBtn: 'ಇನ್ನಷ್ಟು ಖರೀದಿಸಿ',
+    viewCartBtn: 'ಕಾರ್ಟ್‌ಗೆ ಹೋಗಿ',
     closeAria: 'ಮುಚ್ಚಿ'
   },
   hi: {
     addedBadge: 'कार्ट में जोड़ा गया',
     title: 'सामान कार्ट में जोड़ा गया!',
     question: 'आगे आप क्या करना चाहते हैं?',
-    addMoreBtn: '+ और उत्पाद जोड़ें (Add More)',
-    viewCartBtn: 'कार्ट देखें और चेकआउट करें',
+    addMoreBtn: 'और उत्पाद खरीदें',
+    viewCartBtn: 'कार्ट पर जाएं',
     closeAria: 'बंद करें'
   },
   ml: {
     addedBadge: 'കാർട്ടിൽ ചേർത്തു',
     title: 'സാധനം കാർട്ടിൽ ചേർത്തു!',
-    question: 'അടുത്തതായി എന്താണ് ചെയ്യാൻ ആഗ്രഹിക്കുന്നത്?',
-    addMoreBtn: '+ കൂടുതൽ ഉൽപ്പന്നങ്ങൾ ചേർക്കുക',
-    viewCartBtn: 'കാർട്ട് കാണുക & ചെക്ക്ഔട്ട്',
+    question: 'അടുത്തതായി എന്ത് ചെയ്യണം?',
+    addMoreBtn: 'കൂടുതൽ വാങ്ങുക',
+    viewCartBtn: 'കാർട്ടിലേക്ക് പോകുക',
     closeAria: 'അടയ്ക്കുക'
   },
   tulu: {
     addedBadge: 'ಕಾರ್ಟ್‌ಗ್ ಸೇರ್ಪಾವಾಯ್ಂಡ್',
     title: 'ಸಾಮಾನು ಕಾರ್ಟ್‌ಗ್ ಸೇರ್ಪಾವಾಯ್ಂಡ್!',
-    question: 'ದುಂಬು ಈರ್ ದಾದ ಮಲ್ಪೆರೆ ಇಷ್ಟ ಪಡ್ಪರ್?',
-    addMoreBtn: '+ ಕುಡೊಂಜಿ ಸಾಮಾನು ಸೇರ್ಪಾಲೆ',
+    question: 'ದುಂಬು ದಾದ ಮಲ್ಪೆರೆ ಉಂಡು?',
+    addMoreBtn: 'ಕುಡೊಂಜಿ ದೆತೊನ್ಲೆ',
     viewCartBtn: 'ಕಾರ್ಟ್‌ಗ್ ಪೋಲೆ',
     closeAria: 'ಮುಚ್ಚಿ'
   }
@@ -94,7 +93,7 @@ export default memo(function AddedToCartModal({ item, onClose, onViewCart, lang 
         {/* Header */}
         <div className="added-cart-header">
           <div className="added-cart-badge">
-            <CheckCircle2 size={16} strokeWidth={2.5} />
+            <i className="fa-solid fa-circle-check" aria-hidden="true"></i>
             <span>{loc.addedBadge}</span>
           </div>
           <button
@@ -103,7 +102,7 @@ export default memo(function AddedToCartModal({ item, onClose, onViewCart, lang 
             onClick={onClose}
             aria-label={loc.closeAria}
           >
-            <X size={18} />
+            <i className="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
         </div>
 
@@ -146,7 +145,7 @@ export default memo(function AddedToCartModal({ item, onClose, onViewCart, lang 
             onClick={onClose}
             autoFocus
           >
-            <Plus size={18} strokeWidth={2.2} />
+            <i className="fa-solid fa-plus" aria-hidden="true"></i>
             <span>{loc.addMoreBtn}</span>
           </button>
 
@@ -155,7 +154,7 @@ export default memo(function AddedToCartModal({ item, onClose, onViewCart, lang 
             className="btn-view-cart"
             onClick={onViewCart}
           >
-            <ShoppingCart size={18} strokeWidth={2.2} />
+            <i className="fa-solid fa-cart-shopping" aria-hidden="true"></i>
             <span>{loc.viewCartBtn}</span>
           </button>
         </div>

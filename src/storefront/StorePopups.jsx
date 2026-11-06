@@ -83,7 +83,6 @@ export default function StorePopups() {
         const product = data?.data || data?.product || data
         if (product && (product.id || product._id)) {
           actions.addItem(product, customQty)
-          showToast('"' + product.name + '" added to basket!', 'success')
         }
       } catch (err) {
         window.location.href = '/product/' + productId
