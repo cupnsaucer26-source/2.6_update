@@ -13417,13 +13417,14 @@ body.poster-open .sb-portal .call-fab {
   height: 240px;
 }
 @media (min-width: 769px) {
-  :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .section-header-flex {
+  :is(body.sb-home-active .sb-home, .sb-portal) :is(#categoriesSection, #cropSection) .section-header-flex {
     align-items: flex-end;
     margin-bottom: 28px;
   }
-  :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .section-header-flex .btn-outline {
+  :is(body.sb-home-active .sb-home, .sb-portal) :is(#categoriesSection, #cropSection) .section-header-flex .btn-outline {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     height: 46px;
     padding: 0 22px;
@@ -13432,17 +13433,21 @@ body.poster-open .sb-portal .call-fab {
     color: var(--primary-dark);
     background: #ffffff;
     font: 700 0.92rem/1 'Plus Jakarta Sans', var(--script-font, sans-serif), sans-serif;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: none;
+    outline: none;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-  :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .section-header-flex .btn-outline i {
+  :is(body.sb-home-active .sb-home, .sb-portal) :is(#categoriesSection, #cropSection) .section-header-flex .btn-outline i {
     transition: transform 0.2s ease;
   }
-  :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .section-header-flex .btn-outline:hover {
+  :is(body.sb-home-active .sb-home, .sb-portal) :is(#categoriesSection, #cropSection) .section-header-flex .btn-outline:hover {
     color: #ffffff;
     background: var(--primary);
     border-color: var(--primary);
   }
-  :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .section-header-flex .btn-outline:hover i {
+  :is(body.sb-home-active .sb-home, .sb-portal) :is(#categoriesSection, #cropSection) .section-header-flex .btn-outline:hover i {
     transform: translateX(3px);
   }
 
@@ -15040,7 +15045,7 @@ body.poster-open .sb-portal .call-fab {
   :is(body.sb-home-active .sb-home, .sb-portal) section#categoriesSection > .container {
     margin-block: -16px;
   }
-  :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .section-header-flex {
+  :is(body.sb-home-active .sb-home, .sb-portal) :is(#categoriesSection, #cropSection) .section-header-flex {
     flex-direction: row;
     align-items: center;
     margin-bottom: 12px;
@@ -15051,13 +15056,15 @@ body.poster-open .sb-portal .call-fab {
   :is(body.sb-home-active .sb-home, .sb-portal) section#cropSection > .container {
     margin-block: -16px;
   }
-  :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .section-header-flex .btn-outline {
+  :is(body.sb-home-active .sb-home, .sb-portal) :is(#categoriesSection, #cropSection) .section-header-flex .btn-outline {
     flex-shrink: 0;
     padding: 6px 12px;
     border: 0;
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--primary);
+    background: transparent;
+    cursor: pointer;
   }
   :is(body.sb-home-active .sb-home, .sb-portal) #categoriesSection .bento-grid-3 {
     gap: 6px;

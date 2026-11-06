@@ -87,7 +87,7 @@ export const CropGrid = memo(function CropGrid({ cms, dynamicCrops = [] }) {
               }
             }}
           >
-            Show More Crops <i className="fa-solid fa-arrow-down" aria-hidden="true"></i>
+            Show More Crops <i className="fa-solid fa-arrow-right" aria-hidden="true"></i>
           </button>
         </div>
 
