@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { useCheckout, useCheckoutActions } from '../hooks/useCheckout'
+import { packMrp, packPrice } from '../shared/packPricing'
 import { StoreContext } from './StoreContext'
 import { isLanguageReady, loadLanguagePack, translationFor } from './i18n'
 import { setBodyFlag } from './bodyFlags'
@@ -82,7 +83,17 @@ export default function StorePopups() {
         const { data } = await axios.get('/api/products/' + productId)
         const product = data?.data || data?.product || data
         if (product && (product.id || product._id)) {
-          actions.addItem(product, customQty)
+          const packSizes = Array.isArray(product.packSizes) && product.packSizes.length > 0 ? product.packSizes : ['Standard']
+          const defaultPack = typeof packSizes[0] === 'object' ? packSizes[0].size : packSizes[0]
+          const chosenPack = customPack || product.selectedPack || defaultPack
+          const price = packPrice(product, chosenPack, defaultPack)
+          const mrp = packMrp(product, chosenPack, price)
+          actions.addItem({
+            ...product,
+            selectedPack: chosenPack,
+            price,
+            originalPrice: mrp
+          }, customQty)
         }
       } catch (err) {
         window.location.href = '/product/' + productId

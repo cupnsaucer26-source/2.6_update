@@ -8,6 +8,7 @@ import { hasPrice } from '../../shared/comingSoon'
 import { packMrp, packPrice } from '../../shared/packPricing'
 import { productText } from '../../shared/productText'
 import { useLanguage } from '../../context/LanguageContext'
+import { useBasket, useCheckoutActions } from '../../hooks/useCheckout'
 
 // The phone chips and the category dropdown list the categories the live
 // products are in (liveCategories); these emoji lead the chips we know.
@@ -32,6 +33,10 @@ export const ProductSkeleton = memo(function ProductSkeleton() {
 const ProductCard = memo(function ProductCard({ product: p, user, t, variant }) {
   const { lang } = useLanguage()
   const { addToCart, openProductPage } = useStore()
+  const basket = useBasket()
+  const checkoutActions = useCheckoutActions()
+  const cart = basket?.cart || []
+  const updateQty = checkoutActions?.updateQty
   const catalog = variant === 'catalog'
 
   const packs = Array.isArray(p.packSizes) && p.packSizes.length
@@ -141,17 +146,55 @@ const ProductCard = memo(function ProductCard({ product: p, user, t, variant }) 
           ))}
         </div>}
 
-        <div className="card-btn-row">
-          {priced ? (
-            <button className={`btn btn-primary ${catalog ? 'add-to-cart-btn' : 'trending-add-btn'}`} data-id={p.id} style={{ flex: 1 }} onClick={() => addToCart(p.id, selectedPack)}>
-              <i className="fa-solid fa-cart-shopping"></i> {t('add_to_cart')}
-            </button>
-          ) : (
-            <button className={`btn btn-primary ${catalog ? 'add-to-cart-btn' : 'trending-add-btn'}`} style={{ flex: 1 }} onClick={() => openProductPage(p.id)}>
-              <i className="fa-solid fa-circle-info"></i> View details
-            </button>
-          )}
-        </div>
+        {(() => {
+          const cartItemIndex = cart.findIndex(item => String(item.id || item._id) === String(p.id) && (item.selectedPack || '') === (selectedPack || ''))
+          const cartItem = cartItemIndex > -1 ? cart[cartItemIndex] : null
+          const lineQty = cartItem ? cartItem.qty : 0
+
+          return (
+            <div className="card-btn-row">
+              {priced ? (
+                lineQty > 0 ? (
+                  <div className="card-qty-stepper" role="group" aria-label={`Quantity for ${p.name}`}>
+                    <button
+                      type="button"
+                      className="card-qty-btn card-qty-btn--minus"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateQty(cartItemIndex, -1)
+                      }}
+                      aria-label="Decrease quantity"
+                    >
+                      <i className="fa-solid fa-minus" aria-hidden="true"></i>
+                    </button>
+                    <span className="card-qty-val" aria-live="polite">
+                      {lineQty} in Basket
+                    </span>
+                    <button
+                      type="button"
+                      className="card-qty-btn card-qty-btn--plus"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        updateQty(cartItemIndex, 1)
+                      }}
+                      aria-label="Increase quantity"
+                    >
+                      <i className="fa-solid fa-plus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                ) : (
+                  <button className={`btn btn-primary ${catalog ? 'add-to-cart-btn' : 'trending-add-btn'}`} data-id={p.id} style={{ flex: 1 }} onClick={() => addToCart(p.id, selectedPack)}>
+                    <i className="fa-solid fa-cart-shopping"></i> {t('add_to_cart')}
+                  </button>
+                )
+              ) : (
+                <button className={`btn btn-primary ${catalog ? 'add-to-cart-btn' : 'trending-add-btn'}`} style={{ flex: 1 }} onClick={() => openProductPage(p.id)}>
+                  <i className="fa-solid fa-circle-info"></i> View details
+                </button>
+              )}
+            </div>
+          )
+        })()}
       </div>
     </div>
   )

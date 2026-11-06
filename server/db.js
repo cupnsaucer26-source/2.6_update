@@ -1873,17 +1873,18 @@ class DatabaseManager {
         await connectDB();
         const taken = [];
         for (const line of lines) {
+            const reqQty = Math.max(1, Math.floor(Number(line.qty)) || 1);
             // One update: the stock leaves and the sale is counted together,
             // so `unitsSold` can never drift from what was actually sold.
             const result = await Product.updateOne(
-                { _id: line.id, stock: { $gte: line.qty } },
-                { $inc: { stock: -line.qty, unitsSold: line.qty }, $set: { updatedAt: new Date().toISOString() } }
+                { _id: String(line.id), stock: { $gte: reqQty } },
+                { $inc: { stock: -reqQty, unitsSold: reqQty }, $set: { updatedAt: new Date().toISOString() } }
             );
             if (!result.modifiedCount) {
                 await this.releaseStock(taken);
                 return { ok: false, productId: line.id };
             }
-            taken.push(line);
+            taken.push({ ...line, qty: reqQty });
         }
         invalidateProductCache();
         return { ok: true };
@@ -1892,9 +1893,10 @@ class DatabaseManager {
   async releaseStock(lines) {
         await connectDB();
         for (const line of lines) {
+            const relQty = Math.max(1, Math.floor(Number(line.qty)) || 1);
             // Reverses reserveStock exactly: an order that never happened is
             // not a sale.
-            await Product.updateOne({ _id: line.id }, { $inc: { stock: line.qty, unitsSold: -line.qty } });
+            await Product.updateOne({ _id: String(line.id) }, { $inc: { stock: relQty, unitsSold: -relQty } });
         }
         invalidateProductCache();
   }

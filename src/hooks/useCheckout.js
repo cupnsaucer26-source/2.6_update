@@ -277,6 +277,14 @@ export function CheckoutProvider({ enabled, children }) {
       saveCart(qty <= 0 ? current.filter((_, i) => i !== index) : current.map((item, i) => (i === index ? { ...item, qty } : item)))
     }
 
+    const updateItemQty = (productId, selectedPack, delta) => {
+      const current = cartRef.current
+      const index = current.findIndex(item => String(item.id || item._id) === String(productId) && (!selectedPack || (item.selectedPack || '') === selectedPack))
+      if (index > -1) {
+        updateQty(index, delta)
+      }
+    }
+
     const removeLine = index => saveCart(cartRef.current.filter((_, i) => i !== index))
 
     const clearBasket = () => {
@@ -578,7 +586,8 @@ export function CheckoutProvider({ enabled, children }) {
       if (!details) return
       setBusy('cod')
       try {
-        const { data } = await axios.post('/api/orders', { ...details, items: cartRef.current.map(orderLine), usePoints: draftRef.current.usePoints === true })
+        const idempotencyKey = 'idemp-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9)
+        const { data } = await axios.post('/api/orders', { ...details, items: cartRef.current.map(orderLine), usePoints: draftRef.current.usePoints === true, idempotencyKey })
         if (!data?.success) throw new Error(data?.message)
         finishOrder(data.data, data.whatsapp)
       } catch (err) {
@@ -689,7 +698,7 @@ export function CheckoutProvider({ enabled, children }) {
     }
 
     return {
-      loadCart, showGuestCart, addItem, updateQty, removeLine,
+      loadCart, showGuestCart, addItem, updateQty, updateItemQty, removeLine,
       showStep, openBasket, startCheckout, back, closeCheckout, dropStepHash, trackOrder, browseProducts, restoreFocus,
       openSignIn, openAccount, showAccount, closeSignIn, leaveSignInFor, requireSignIn, afterSignIn, signOut,
       loadAddresses, resetForUser, chooseAddress, addNewAddress, editAddress, setField, setSaveAddress, setPayment, setUsePoints,
@@ -818,8 +827,12 @@ export function CheckoutProvider({ enabled, children }) {
     return () => { current = false }
   }, [step, user, cart, usePoints])
 
+  const getItemQty = useMemo(() => (productId, selectedPack) => {
+    const item = cart.find(i => String(i.id || i._id) === String(productId) && (!selectedPack || (i.selectedPack || '') === selectedPack))
+    return item ? item.qty : 0
+  }, [cart])
   const totals = useMemo(() => cartTotals(cart), [cart])
-  const basket = useMemo(() => ({ cart, cartReady, count, totals }), [cart, cartReady, count, totals])
+  const basket = useMemo(() => ({ cart, cartReady, count, totals, getItemQty }), [cart, cartReady, count, totals, getItemQty])
   const state = {
     ...basket, step, shown: view.shown, direction: view.direction, modals, authNotice, loginRequest,
     user, addresses, draft, errors, busy, order, rewards,

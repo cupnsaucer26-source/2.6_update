@@ -58,6 +58,60 @@ const matchesNutrientFilter = (product, nutrient) => {
     || product.name.toLowerCase().includes('humic')
 }
 
+function CardCartAction({ prod, activeSize, onAdd, cart, updateQty }) {
+  const currentSize = activeSize?.size || prod.selectedSize || prod.selectedPack || (Array.isArray(prod.packSizes) ? prod.packSizes[0] : 'Standard');
+  const cartItemIndex = (cart || []).findIndex(item => String(item.id || item._id) === String(prod.id) && (item.selectedPack || '') === (currentSize || ''));
+  const cartItem = cartItemIndex > -1 ? cart[cartItemIndex] : null;
+  const lineQty = cartItem ? cartItem.qty : 0;
+
+  if (!hasPrice(prod)) {
+    return (
+      <button type="button" className="card-add-to-cart-btn" onClick={() => onAdd(prod, currentSize)}>
+        <span>View details</span>
+      </button>
+    );
+  }
+
+  if (lineQty > 0) {
+    return (
+      <div className="card-qty-stepper" role="group" aria-label={`Quantity for ${prod.name}`}>
+        <button
+          type="button"
+          className="card-qty-btn card-qty-btn--minus"
+          onClick={(e) => {
+            e.stopPropagation();
+            updateQty(cartItemIndex, -1);
+          }}
+          aria-label="Decrease quantity"
+        >
+          <i className="fa-solid fa-minus" aria-hidden="true"></i>
+        </button>
+        <span className="card-qty-val" aria-live="polite">
+          {lineQty} in Basket
+        </span>
+        <button
+          type="button"
+          className="card-qty-btn card-qty-btn--plus"
+          onClick={(e) => {
+            e.stopPropagation();
+            updateQty(cartItemIndex, 1);
+          }}
+          aria-label="Increase quantity"
+        >
+          <i className="fa-solid fa-plus" aria-hidden="true"></i>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button type="button" className="card-add-to-cart-btn" onClick={() => onAdd(prod, currentSize)}>
+      <ShoppingCart size={16} />
+      <span>Add to Cart</span>
+    </button>
+  );
+}
+
 export default function AllProducts() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -139,8 +193,8 @@ export default function AllProducts() {
 
   // The store's one basket (hooks/useCheckout.js): shared with every page and
   // opened as the floating checkout.
-  const { count: cartCount } = useBasket()
-  const { addItem, openBasket } = useCheckoutActions()
+  const { count: cartCount, cart = [] } = useBasket() || {}
+  const { addItem, openBasket, updateQty } = useCheckoutActions() || {}
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState('')
@@ -239,7 +293,6 @@ export default function AllProducts() {
       gstRate: product.gstRate,
       hsnCode: product.hsnCode,
     })
-    showToast(`Added ${product.name.slice(0, 24)}... (${currentSize}) to Basket! 🛒`)
   }
 
   // "Top 10 Picks by Farmers" is now what farmers actually bought most, rather
@@ -989,14 +1042,13 @@ export default function AllProducts() {
                     </div>
 
                     {/* Add to Basket button */}
-                    <button 
-                      type="button" 
-                      className="card-add-to-cart-btn"
-                      onClick={() => handleAddToCart(prod, activeSize.size)}
-                    >
-                      {hasPrice(prod) && <ShoppingCart size={16} />}
-                      <span>{hasPrice(prod) ? 'Add to Cart' : 'View details'}</span>
-                    </button>
+                    <CardCartAction
+                      prod={prod}
+                      activeSize={activeSize}
+                      onAdd={handleAddToCart}
+                      cart={cart}
+                      updateQty={updateQty}
+                    />
                   </div>
                 )
               })}
@@ -1169,14 +1221,13 @@ export default function AllProducts() {
                       </select>
                     </div>
 
-                    <button 
-                      type="button" 
-                      className="card-add-to-cart-btn"
-                      onClick={() => handleAddToCart(prod, activeSize.size)}
-                    >
-                      {hasPrice(prod) && <ShoppingCart size={16} />}
-                      <span>{hasPrice(prod) ? 'Add to Cart' : 'View details'}</span>
-                    </button>
+                    <CardCartAction
+                      prod={prod}
+                      activeSize={activeSize}
+                      onAdd={handleAddToCart}
+                      cart={cart}
+                      updateQty={updateQty}
+                    />
                   </div>
                 )
               })}
@@ -1552,14 +1603,13 @@ export default function AllProducts() {
                       </select>
                     </div>
 
-                    <button 
-                      type="button" 
-                      className="card-add-to-cart-btn"
-                      onClick={() => handleAddToCart(prod, activeSize.size)}
-                    >
-                      {hasPrice(prod) && <ShoppingCart size={16} />}
-                      <span>{hasPrice(prod) ? 'Add to Cart' : 'View details'}</span>
-                    </button>
+                    <CardCartAction
+                      prod={prod}
+                      activeSize={activeSize}
+                      onAdd={handleAddToCart}
+                      cart={cart}
+                      updateQty={updateQty}
+                    />
                   </div>
                 )
               })}

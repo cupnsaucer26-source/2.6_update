@@ -2162,6 +2162,16 @@ app.post('/api/orders', requireAuth(), async (req, res) => {
     if (wait) return tooManyRequests(res, wait, 'Too many orders from this connection. Please try again later.');
 
     const user = req.user;
+    const idempotencyKey = String(req.headers['idempotency-key'] || req.body?.idempotencyKey || '').trim();
+    if (idempotencyKey) {
+      const existingId = await db.kvGet('idemp-order:' + user.id + ':' + idempotencyKey);
+      if (existingId) {
+        const existingOrder = await db.getOrderById(existingId);
+        if (existingOrder) {
+          return res.json({ success: true, data: existingOrder, whatsapp: 'sent', idempotent: true });
+        }
+      }
+    }
     const customer = readCustomerDetails(req.body);
     const priced = await priceCart(req.body?.items);
     const quote = await quoteRewards(user, priced, req.body?.usePoints === true);
@@ -2197,6 +2207,10 @@ app.post('/api/orders', requireAuth(), async (req, res) => {
       throw err;
     }
     await bindClaim(quote, claim.token, order.id);
+
+    if (idempotencyKey) {
+      await db.kvSet('idemp-order:' + user.id + ':' + idempotencyKey, order.id, 24 * HOUR_MS);
+    }
 
     if (user) await db.saveCart(user.id, []);
     const whatsapp = await sendOrderConfirmation(order);
