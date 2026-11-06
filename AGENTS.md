@@ -2,16 +2,24 @@
 ## Permanent Workspace Operating Instructions
 
 ### 1. Verified Architecture & Boundaries
-- **Frontend**: React 18, Vite 5, Tailwind CSS, Lucide React, Axios, React Router 6.
+- **Frontend**: React 18, Vite 5, Tailwind CSS, Lucide React, FontAwesome 6, Axios, React Router 6.
 - **Backend**: Express 4 running on native Node.js ESM (`"type": "module"` in `package.json`). Dual-hosting design: standalone on Hostinger Linux VPS (serving API and static `dist/`) or serverless on Vercel.
 - **Database**: MongoDB Atlas (`sathyambio` replica set) via Mongoose 8. Permissive schemas (`strict: false`) with human-readable string IDs (`sb-XXXX`, `rcpt-XXXX`, etc.).
 - **Payment Gateway**: Razorpay Standard Web Checkout. Live mode active for **SATHYAM AGRO CLINIC** (`rzp_live_TrKx8Jv1RFFOOx`). Webhook enabled at `https://www.sathyamagromart.com/api/payments/webhook`.
 - **Git Remote & Release**: Active development tracks `rensog/main` (`https://github.com/Rensog878/testcase.git`). Official upstream release remote is `origin/main` (`https://github.com/cupnsaucer26-source/2.6_update.git`).
 
-### 2. Design & UI Guidelines
-- Agricultural green theme (`#15803d` / `green-700`), high-contrast rural mobile readability.
-- Touch targets must be at least 40px in height for buttons, inputs, and selects.
-- Verify layouts across mobile (360px–414px), tablet, and desktop. Prevent cumulative layout shifts (CLS).
+### 2. Master UI/UX Design System & Frontend Quality Rules
+Follow `docs/design-system/SATHYAM_AGROMART_DESIGN_SYSTEM.md` and `.agents/rules/01-ui-and-design-quality.md`:
+- **Core Philosophy**: Visual hierarchy before decoration, consistency before creativity, usability before unnecessary animations.
+- **Color Tokens**: Agricultural green theme (`#15803d` / `green-700`), high-contrast rural mobile readability (`#0f172a` text on `#ffffff` / `#f8fafc`).
+- **Strict 4px Spacing**: Use `space-1` (4px) to `space-16` (64px) tokens. No arbitrary or random margins/paddings.
+- **Touch Targets**: Minimum 44px height for interactive targets on mobile devices.
+- **Dialog & Modal Standards**:
+  - Balanced width (440-520px for confirmation modals).
+  - Proper padding (20-24px desktop, bottom sheet on mobile with safe-area insets).
+  - No clipped buttons or awkward text wraps.
+  - No duplicate notifications (never show modal + toast simultaneously).
+- **Responsive Verification**: Verified across small mobile (320px–390px), tablet (768px), and desktop (1280px–1440px). Prevent cumulative layout shifts (CLS).
 
 ### 3. API & Security Contracts
 - Server-side pricing enforcement: Line items and totals are strictly re-calculated from catalog database prices during order creation. Never trust client-submitted amounts.
@@ -23,5 +31,5 @@
 Before completing any task:
 1. `node --check server/server.js` (backend syntax check passes).
 2. `npm run build` (Vite build passes with zero errors).
-3. Live/test verification using real requests or Chrome DevTools.
+3. Live/test verification using real requests or Chrome DevTools (mobile, tablet, desktop).
 4. Clean commit pushed to `rensog/main`.

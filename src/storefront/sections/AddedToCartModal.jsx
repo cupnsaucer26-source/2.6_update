@@ -8,7 +8,8 @@ const I18N = {
     question: 'What would you like to do next?',
     addMoreBtn: 'Add More Products',
     viewCartBtn: 'Go to Cart & Checkout',
-    closeAria: 'Close'
+    closeAria: 'Close',
+    qtyLabel: 'Qty'
   },
   ta: {
     addedBadge: 'கூடையில் சேர்க்கப்பட்டது',
@@ -16,7 +17,8 @@ const I18N = {
     question: 'அடுத்து என்ன செய்ய விரும்புகிறீர்கள்?',
     addMoreBtn: 'மேலும் வாங்க',
     viewCartBtn: 'கூடைக்குச் செல்',
-    closeAria: 'மூடவும்'
+    closeAria: 'மூடவும்',
+    qtyLabel: 'அளவு'
   },
   te: {
     addedBadge: 'కార్ట్‌కు జోడించబడింది',
@@ -24,7 +26,8 @@ const I18N = {
     question: 'తరువాత ఏమి చేయాలనుకుంటున్నారు?',
     addMoreBtn: 'మరిన్ని కొనండి',
     viewCartBtn: 'కార్ట్‌కు వెళ్లండి',
-    closeAria: 'మూసివేయి'
+    closeAria: 'మూసివేయి',
+    qtyLabel: 'పరిమాణం'
   },
   kn: {
     addedBadge: 'ಬುಟ್ಟಿಗೆ ಸೇರಿಸಲಾಗಿದೆ',
@@ -32,7 +35,8 @@ const I18N = {
     question: 'ಮುಂದೆ ಏನು ಮಾಡಲು ಬಯಸುತ್ತೀರಿ?',
     addMoreBtn: 'ಇನ್ನಷ್ಟು ಖರೀದಿಸಿ',
     viewCartBtn: 'ಕಾರ್ಟ್‌ಗೆ ಹೋಗಿ',
-    closeAria: 'ಮುಚ್ಚಿ'
+    closeAria: 'ಮುಚ್ಚಿ',
+    qtyLabel: 'ಪ್ರಮಾಣ'
   },
   hi: {
     addedBadge: 'कार्ट में जोड़ा गया',
@@ -40,7 +44,8 @@ const I18N = {
     question: 'आगे आप क्या करना चाहते हैं?',
     addMoreBtn: 'और उत्पाद खरीदें',
     viewCartBtn: 'कार्ट पर जाएं',
-    closeAria: 'बंद करें'
+    closeAria: 'बंद करें',
+    qtyLabel: 'मात्रा'
   },
   ml: {
     addedBadge: 'കാർട്ടിൽ ചേർത്തു',
@@ -48,7 +53,8 @@ const I18N = {
     question: 'അടുത്തതായി എന്ത് ചെയ്യണം?',
     addMoreBtn: 'കൂടുതൽ വാങ്ങുക',
     viewCartBtn: 'കാർട്ടിലേക്ക് പോകുക',
-    closeAria: 'അടയ്ക്കുക'
+    closeAria: 'അടയ്ക്കുക',
+    qtyLabel: 'അളവ്'
   },
   tulu: {
     addedBadge: 'ಕಾರ್ಟ್‌ಗ್ ಸೇರ್ಪಾವಾಯ್ಂಡ್',
@@ -56,7 +62,8 @@ const I18N = {
     question: 'ದುಂಬು ದಾದ ಮಲ್ಪೆರೆ ಉಂಡು?',
     addMoreBtn: 'ಕುಡೊಂಜಿ ದೆತೊನ್ಲೆ',
     viewCartBtn: 'ಕಾರ್ಟ್‌ಗ್ ಪೋಲೆ',
-    closeAria: 'ಮುಚ್ಚಿ'
+    closeAria: 'ಮುಚ್ಚಿ',
+    qtyLabel: 'ಪ್ರಮಾಣ'
   }
 }
 
@@ -75,7 +82,13 @@ export default memo(function AddedToCartModal({ item, onClose, onViewCart, lang 
 
   if (!item) return null
 
-  const displayPrice = item.price ? rupees(item.price * (item.qty || 1)) : ''
+  const qty = Number(item.qty) || 1
+  const price = Number(item.price) || 0
+  const originalPrice = Number(item.originalPrice) || 0
+  const displayPrice = price ? rupees(price * qty) : ''
+  const displayOriginalPrice = originalPrice && originalPrice > price ? rupees(originalPrice * qty) : ''
+  const hasSavings = Boolean(displayOriginalPrice)
+  const discountPercent = hasSavings ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0
   const imgSrc = item.image || (item.product && item.product.image) || '/assets/brand/logo-mark.png'
 
   return (
@@ -90,7 +103,7 @@ export default memo(function AddedToCartModal({ item, onClose, onViewCart, lang 
       }}
     >
       <div className="added-cart-card">
-        {/* Header */}
+        {/* Header: Status Badge & Close Button */}
         <div className="added-cart-header">
           <div className="added-cart-badge">
             <i className="fa-solid fa-circle-check" aria-hidden="true"></i>
@@ -114,6 +127,10 @@ export default memo(function AddedToCartModal({ item, onClose, onViewCart, lang 
               alt={item.name || 'Product'}
               className="added-cart-img"
               loading="lazy"
+              onError={e => {
+                e.currentTarget.onerror = null
+                e.currentTarget.src = '/assets/brand/logo-mark.png'
+              }}
             />
           </div>
           <div className="added-cart-info">
@@ -124,17 +141,25 @@ export default memo(function AddedToCartModal({ item, onClose, onViewCart, lang 
               {item.selectedPack && (
                 <span className="added-cart-pack">{item.selectedPack}</span>
               )}
-              {item.qty && item.qty > 1 && (
-                <span className="added-cart-qty">× {item.qty}</span>
+              <span className="added-cart-qty">
+                {loc.qtyLabel}: {qty}
+              </span>
+            </div>
+            <div className="added-cart-price-row">
+              {displayPrice && (
+                <span className="added-cart-price">{displayPrice}</span>
+              )}
+              {hasSavings && (
+                <>
+                  <span className="added-cart-mrp">{displayOriginalPrice}</span>
+                  <span className="added-cart-discount">{discountPercent}% OFF</span>
+                </>
               )}
             </div>
-            {displayPrice && (
-              <div className="added-cart-price">{displayPrice}</div>
-            )}
           </div>
         </div>
 
-        {/* Prompt question */}
+        {/* Question Prompt */}
         <p className="added-cart-question">{loc.question}</p>
 
         {/* Action Buttons */}
