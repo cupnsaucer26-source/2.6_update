@@ -83,3 +83,22 @@ test('Guest cart to user cart merge preserves variant quantities idempotently', 
   const reMerged = mergeCarts(merged, []);
   assert.deepEqual(reMerged, merged);
 });
+
+test('Quantity selector source files contain only numerical quantity and zero "in Basket" text', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const catalogSrc = fs.readFileSync(path.resolve('src/storefront/sections/Catalog.jsx'), 'utf8');
+  const allProdSrc = fs.readFileSync(path.resolve('src/pages/AllProducts.jsx'), 'utf8');
+  const cssSrc = fs.readFileSync(path.resolve('src/components/common/inlineFeedback.css'), 'utf8');
+
+  assert.equal(catalogSrc.includes('in Basket'), false, 'Catalog.jsx must not contain "in Basket"');
+  assert.equal(allProdSrc.includes('in Basket'), false, 'AllProducts.jsx must not contain "in Basket"');
+  assert.equal(catalogSrc.includes('{lineQty}'), true, 'Catalog.jsx must display numerical quantity');
+  assert.equal(allProdSrc.includes('{lineQty}'), true, 'AllProducts.jsx must display numerical quantity');
+
+  // Verify design tokens in css
+  assert.equal(cssSrc.includes('#E1E8E3'), true, 'CSS must use #E1E8E3 outer border');
+  assert.equal(cssSrc.includes('#078447'), true, 'CSS must use #078447 primary green');
+  assert.equal(cssSrc.includes('#173D2D'), true, 'CSS must use #173D2D quantity text');
+  assert.equal(cssSrc.includes('border-radius: 9px'), true, 'CSS must use 9px border radius');
+});

@@ -87,7 +87,7 @@ function CardCartAction({ prod, activeSize, onAdd, cart, updateQty }) {
           <i className="fa-solid fa-minus" aria-hidden="true"></i>
         </button>
         <span className="card-qty-val" aria-live="polite">
-          {lineQty} in Basket
+          {lineQty}
         </span>
         <button
           type="button"
@@ -1368,14 +1368,13 @@ export default function AllProducts() {
                     </select>
                   </div>
 
-                  <button 
-                    type="button" 
-                    className="card-add-to-cart-btn"
-                    onClick={() => handleAddToCart(prod, activeSize.size)}
-                  >
-                    {hasPrice(prod) && <ShoppingCart size={16} />}
-                    <span>{hasPrice(prod) ? 'Add to Cart' : 'View details'}</span>
-                  </button>
+                  <CardCartAction
+                    prod={prod}
+                    activeSize={activeSize}
+                    onAdd={handleAddToCart}
+                    cart={cart}
+                    updateQty={updateQty}
+                  />
                 </div>
               )
             })}

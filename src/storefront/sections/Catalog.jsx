@@ -168,7 +168,7 @@ const ProductCard = memo(function ProductCard({ product: p, user, t, variant }) 
                       <i className="fa-solid fa-minus" aria-hidden="true"></i>
                     </button>
                     <span className="card-qty-val" aria-live="polite">
-                      {lineQty} in Basket
+                      {lineQty}
                     </span>
                     <button
                       type="button"
