@@ -33,3 +33,8 @@ Before completing any task:
 2. `npm run build` (Vite build passes with zero errors).
 3. Live/test verification using real requests or Chrome DevTools (mobile, tablet, desktop).
 4. Clean commit pushed to `rensog/main`.
+
+### 5. Permanent ChatGPT Co-Worker & Evidence-Proof Protocol
+- **Pre-Execution Peer Review (`https://chatgpt.com/`)**: Before executing major architecture, VPS/infrastructure setup, deployment, database, or multi-module plans, deeply inspect the codebase/runtime first, share complete sanitized project context with ChatGPT in the built-in browser (authorized autonomously — never paste raw `.env` secrets, API keys, or customer PII), and discuss step-by-step like senior co-workers.
+- **Conflict Resolution Over Blind Agreement**: Actively flag codebase/runtime conflicts before execution. Verify every ChatGPT suggestion against actual code/configs/versions; if ChatGPT proposes something conflicting or inaccurate, push back immediately with verified code evidence until both agree on a zero-conflict, 100%-confidence plan.
+- **Evidence-Proof Delivery**: Verify every step with real command outputs, builds, tests, HTTP/DB checks, and inspected screenshots. Never claim success without observed proof.

@@ -2074,6 +2074,21 @@ app.post('/api/payments/webhook', async (req, res) => {
 
   const event = req.body?.event;
   const payment = req.body?.payload?.payment?.entity;
+  const eventId = String(req.headers['x-razorpay-event-id'] || '').trim();
+  const payloadHash = crypto.createHash('sha256').update(body).digest('hex');
+
+  let claimedEvent = null;
+  if (eventId) {
+    try {
+      const claim = await db.claimWebhookEvent(eventId, { eventType: String(event || ''), payloadHash });
+      if (claim.status === 'duplicate' || claim.status === 'in_progress') {
+        return res.json({ success: true, deduplicated: true });
+      }
+      claimedEvent = eventId;
+    } catch (claimErr) {
+      return sendError(res, claimErr, 'Razorpay webhook claim');
+    }
+  }
 
   try {
     if ((event === 'payment.captured' || event === 'order.paid') && payment?.order_id && payment?.id) {
@@ -2083,13 +2098,22 @@ app.post('/api/payments/webhook', async (req, res) => {
       await sendOrderConfirmation(order);
       await sendStaffOrderAlert(order).catch(() => {});
     }
+    if (claimedEvent) {
+      await db.completeWebhookEvent(claimedEvent, 'processed').catch(() => {});
+    }
     return res.json({ success: true });
   } catch (err) {
     if (err instanceof HttpError) {
       // Not a checkout this server started (or already expired): acknowledge so
       // Razorpay stops retrying, but leave a trail.
       console.warn(`⚠️ Webhook for ${payment?.order_id}: ${err.message}`);
+      if (claimedEvent) {
+        await db.completeWebhookEvent(claimedEvent, 'processed').catch(() => {});
+      }
       return res.json({ success: true });
+    }
+    if (claimedEvent) {
+      await db.completeWebhookEvent(claimedEvent, 'failed', { lastError: err?.message }).catch(() => {});
     }
     // Anything else is worth a retry from Razorpay.
     return sendError(res, err, 'Razorpay webhook');
@@ -2510,8 +2534,10 @@ const ALLOWED_UPLOAD_TYPES = [
 ];
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;      // 10MB for images
 const MAX_VIDEO_BYTES = 150 * 1024 * 1024;     // 150MB for videos (stored on disk, no MongoDB limit)
+let activeLargeUploads = 0;
 
 app.post('/api/upload', requireAuth('admin'), requireModule(['cms', 'products', 'blogs', 'videos', 'users']), async (req, res) => {
+  let holdingLargeSlot = false;
   try {
     const { filename, contentType } = req.body || {};
     // Accept either a bare base64 string or a data: URL from FileReader.
@@ -2533,6 +2559,14 @@ app.post('/api/upload', requireAuth('admin'), requireModule(['cms', 'products', 
       return res.status(413).json({ success: false, message: `${isVideo ? 'Video' : 'Image'} is larger than ${Math.round(limit / (1024 * 1024))}MB. Please use a smaller file.` });
     }
 
+    if (size > MAX_IMAGE_BYTES) {
+      if (activeLargeUploads >= 1) {
+        return res.status(429).json({ success: false, message: 'Another large file upload is currently finishing. Please retry in a few seconds.' });
+      }
+      activeLargeUploads += 1;
+      holdingLargeSlot = true;
+    }
+
     // Determine file extension from contentType
     const EXT_MAP = {
       'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png',
@@ -2545,14 +2579,21 @@ app.post('/api/upload', requireAuth('admin'), requireModule(['cms', 'products', 
     const diskFile = `${id}.${ext}`;
     const diskPath = path.join(UPLOADS_DIR, diskFile);
 
-    // Write to disk — works for any file size
+    // Write to disk atomically via temp file + rename to avoid blocking event loop or partial reads
     if (!uploadsDiskReady) {
       return res.status(503).json({
         success: false,
         message: 'File uploads are not available on this server: it has no writable uploads directory. Set UPLOADS_DIR to a writable path, or use a URL instead of a file.',
       });
     }
-    fs.writeFileSync(diskPath, buf);
+    const tempPath = path.join(UPLOADS_DIR, `.tmp-${diskFile}`);
+    try {
+      await fs.promises.writeFile(tempPath, buf);
+      await fs.promises.rename(tempPath, diskPath);
+    } catch (writeErr) {
+      await fs.promises.unlink(tempPath).catch(() => {});
+      throw writeErr;
+    }
 
     // Store lightweight metadata in MongoDB (no binary data)
     const user = await getAuthenticatedUser(req);
@@ -2568,6 +2609,8 @@ app.post('/api/upload', requireAuth('admin'), requireModule(['cms', 'products', 
     res.json({ success: true, url: `/uploads/${diskFile}`, id, size, isVideo });
   } catch (err) {
     sendError(res, err, 'Upload');
+  } finally {
+    if (holdingLargeSlot) activeLargeUploads = Math.max(0, activeLargeUploads - 1);
   }
 });
 
@@ -4386,11 +4429,14 @@ app.use((err, req, res, _next) => {
 // ============================================================
 
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Sathyam Agro Mart Engine running with persistent DB on port ${PORT}`);
+  const HOST = String(process.env.HOST || '').trim();
+  const onListening = () => {
+    console.log(`🚀 Sathyam Agro Mart Engine running with persistent DB on ${HOST || 'default interface'}:${PORT}`);
     console.log(`📱 WhatsApp OTP system enabled`);
     if (OTP_LIMITS_OFF) console.log('⚠️  hourly OTP caps OFF (OTP_RATE_LIMITS=off) — local testing only; the 30-60s resend wait still applies');
-  });
+  };
+  if (HOST) app.listen(PORT, HOST, onListening);
+  else app.listen(PORT, onListening);
 }
 
 // ============================================================

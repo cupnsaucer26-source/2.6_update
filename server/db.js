@@ -186,6 +186,10 @@ export const ActivityLog = mongoose.models.ActivityLog || mongoose.model('Activi
 const staffProfileSchema = new mongoose.Schema({ _id: String }, permissive);
 export const StaffProfile = mongoose.models.StaffProfile || mongoose.model('StaffProfile', staffProfileSchema);
 
+// Durable payment webhook deduplication log (prevents concurrent/duplicate event replay).
+const webhookEventSchema = new mongoose.Schema({ _id: String }, permissive);
+const WebhookEvent = mongoose.models.WebhookEvent || mongoose.model('WebhookEvent', webhookEventSchema);
+
 export const USER_ROLES = ['superadmin', 'farmer', 'admin', 'employee', 'delivery', 'billing'];
 // Every role except farmer: the accounts that sign in with a password at /login.
 export const STAFF_ROLES = USER_ROLES.filter(role => role !== 'farmer');
@@ -2755,6 +2759,75 @@ class DatabaseManager {
             { returnDocument: 'after', lean: true }
         );
         return doc ? doc.value : null;
+  }
+
+  // ================= WEBHOOK EVENT DEDUPLICATION =================
+
+  async claimWebhookEvent(eventId, { eventType = '', payloadHash = '' } = {}) {
+        await connectDB();
+        const id = String(eventId || '').trim();
+        if (!id) return { status: 'claimed', record: null };
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const staleBefore = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
+
+        try {
+            const doc = await WebhookEvent.create({
+                _id: id,
+                eventId: id,
+                eventType,
+                payloadHash,
+                status: 'processing',
+                attempts: 1,
+                receivedAt: nowIso,
+                updatedAt: nowIso,
+            });
+            return { status: 'claimed', record: serialize(doc.toObject()) };
+        } catch (err) {
+            if (err?.code !== 11000) throw err;
+        }
+
+        const retryDoc = await WebhookEvent.findOneAndUpdate(
+            {
+                _id: id,
+                $or: [
+                    { status: 'failed' },
+                    { status: 'processing', updatedAt: { $lt: staleBefore } },
+                ],
+            },
+            {
+                $set: { status: 'processing', updatedAt: nowIso, eventType, payloadHash },
+                $inc: { attempts: 1 },
+            },
+            { returnDocument: 'after', lean: true }
+        );
+        if (retryDoc) return { status: 'claimed', record: serialize(retryDoc) };
+
+        const existing = await WebhookEvent.findById(id).lean();
+        if (existing?.status === 'processed') {
+            return { status: 'duplicate', record: serialize(existing) };
+        }
+        return { status: 'in_progress', record: existing ? serialize(existing) : null };
+  }
+
+  async completeWebhookEvent(eventId, status, { lastError = '' } = {}) {
+        await connectDB();
+        const id = String(eventId || '').trim();
+        if (!id) return null;
+        const nowIso = new Date().toISOString();
+        const set = { status, updatedAt: nowIso };
+        if (status === 'processed') {
+            set.processedAt = nowIso;
+            set.lastError = '';
+        } else if (lastError) {
+            set.lastError = String(lastError).slice(0, 500);
+        }
+        const doc = await WebhookEvent.findByIdAndUpdate(
+            id,
+            { $set: set },
+            { returnDocument: 'after', lean: true }
+        );
+        return doc ? serialize(doc) : null;
   }
 
   // ================= BILLING INVOICES =================
