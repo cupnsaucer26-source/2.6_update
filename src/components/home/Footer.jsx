@@ -1,96 +1,168 @@
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram } from 'lucide-react'
+import { Mail, Phone, MapPin, Facebook, Instagram, MessageCircle, Youtube, ShieldCheck, Truck, LockKeyhole, Headphones, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import FooterColumn from '../FooterColumn'
+import HomeLogoLink from './HomeLogoLink'
+import { socialLinksFrom } from '../../shared/socialLinks'
+import { useCms } from '../../context/CmsContext'
+import { cmsText } from '../../hooks/useCmsSettings'
+import { SUPPORT_PHONE } from '../../shared/phoneLink'
+
+// THE footer. One copy, on every store page including the home page, mounted
+// outside .sb-home (see Storefront.jsx). Contact details come from the CMS so
+// an admin's edits appear everywhere.
+//
+// Top to bottom: a band of four promises, then the brand, three link groups
+// and the contact cards, then payment methods and the copyright line.
+// Phones fold the link groups into tap-to-open rows (FooterColumn); the
+// contact cards stay open there because calling is what farmers come for.
+// Styles: storefront.css, "Footer 2026".
+
+const ICONS = { WhatsApp: MessageCircle, Facebook, YouTube: Youtube, Instagram }
+
+const PROMISES = [
+  { Icon: ShieldCheck, title: 'Genuine Products', text: '100% bio-certified' },
+  { Icon: Truck, title: 'Express Delivery', text: 'Fast dispatch across India' },
+  { Icon: LockKeyhole, title: 'Secure Payment', text: 'UPI, Cards, NetBanking, COD' },
+  { Icon: Headphones, title: '24/7 Support', text: 'Call, WhatsApp or email us' },
+]
+
+const CATEGORIES = [
+  ['Bio-Fungicides', '/categories?category=Fungicide'],
+  ['Insecticides', '/categories?category=Insecticide'],
+  ['Herbicides', '/categories?category=Herbicide'],
+  ['Bio-Stimulants', '/categories?category=Bio-Stimulant'],
+  ['Nematicides', '/categories?category=Nematicide'],
+  ['All Products', '/products'],
+]
+
+const CROPS = [
+  ['Paddy / Rice Care', '/crops?crop=Paddy%20%2F%20Rice'],
+  ['Cotton Protection', '/crops?crop=Cotton'],
+  ['Tomato & Vegetables', '/crops?crop=Vegetables'],
+  ['Sugarcane Care', '/crops?crop=Sugarcane'],
+  ['Horticulture & Fruits', '/crops?crop=Horticulture'],
+]
+
+const HELP = [
+  ['About Us', '/about-us'],
+  ['Contact Us', '/contact-us'],
+  ['My Orders', '/orders'],
+  ['Support Tickets', '/support-tickets'],
+  ['Agronomy Experts', '/agronomy-experts'],
+  ['Soil Test Report', '/soil-test-report'],
+  ['Blog', '/blog'],
+  ['Privacy Policy', '/privacy-policy'],
+  ['Terms of Sale', '/terms-of-sale'],
+  ['Refund Policy', '/refund-policy'],
+]
+
+const PAYMENTS = ['UPI', 'Cards', 'NetBanking', 'Cash on Delivery']
+
+function LinkGroup({ title, links }) {
+  return (
+    <FooterColumn base="public-footer-col" title={title}>
+      <ul className="public-footer-col-body">
+        {links.map(([label, to]) => (
+          <li key={to}><Link to={to}>{label}</Link></li>
+        ))}
+      </ul>
+    </FooterColumn>
+  )
+}
+
+function SocialLinks() {
+  const { cms } = useCms()
+  return (
+    <div className="public-social-links">
+      {socialLinksFrom(cms).map(({ name, href }) => {
+        const Icon = ICONS[name]
+        return (
+          <a key={name} href={href} target="_blank" rel="noopener noreferrer" aria-label={`Sathyam Agro Mart on ${name} (opens in a new tab)`}>
+            <Icon size={18} aria-hidden="true" />
+          </a>
+        )
+      })}
+    </div>
+  )
+}
+
+// A contact row that is also the action: dial, write, or open the map.
+function ContactCard({ Icon, label, value, href, external }) {
+  return (
+    <li>
+      <a className="public-footer-contact-card" href={href} {...(external && { target: '_blank', rel: 'noopener noreferrer' })}>
+        <span className="public-footer-contact-icon" aria-hidden="true"><Icon size={18} /></span>
+        <span className="public-footer-contact-text">
+          <span className="public-footer-contact-label">{label}</span>
+          <span className="public-footer-contact-value">{value}</span>
+        </span>
+        <ArrowUpRight className="public-footer-contact-go" size={16} aria-hidden="true" />
+      </a>
+    </li>
+  )
+}
 
 export default function Footer() {
+  const { cms } = useCms()
+  const brandLine = cmsText(cms, 'footerBrand', "India's leading digital platform for high-efficacy bio-pesticides, crop protection chemicals, and soil health fertilizers.")
+  const brandMore = cmsText(cms, 'footerBrandMore', 'Providing 100% bio-certified products with fast express dispatch to 15,000+ farmers across India.')
+  const phone = cmsText(cms, 'phone', SUPPORT_PHONE)
+  const email = cmsText(cms, 'email', 'info@sathyamagromart.com')
+  const address = cmsText(cms, 'address', 'Sathyam Agro Mart, Hyderabad, India')
+  const dial = `tel:${phone.replace(/[^\d+]/g, '')}`
+  const map = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
   return (
     <footer className="public-site-footer">
-      {/* Main Footer */}
+      <ul className="public-footer-promises">
+        {PROMISES.map(({ Icon, title, text }) => (
+          <li key={title}>
+            <span className="public-footer-promise-icon" aria-hidden="true"><Icon size={22} strokeWidth={1.8} /></span>
+            <span>
+              <strong>{title}</strong>
+              <span>{text}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+
       <div className="public-footer-grid">
-          {/* Brand */}
-          <div>
-            <h3>SATHYA <span>BIO</span></h3>
-            <p>
-              India's leading digital platform for high-efficacy bio-pesticides, crop protection chemicals, and soil health fertilizers.
-            </p>
-            <p>
-              Providing 100% bio-certified products with fast express dispatch to 15,000+ farmers across India.
-            </p>
-          </div>
-
-          {/* Store Categories */}
-          <div><h4>Store Categories</h4><ul>
-              <li><Link to="/categories?category=Fungicide">Bio-Fungicides</Link></li><li><Link to="/categories?category=Insecticide">Insecticides</Link></li><li><Link to="/categories?category=Herbicide">Herbicides</Link></li><li><Link to="/categories?category=Bio-Stimulant">Bio-Stimulants</Link></li><li><Link to="/categories?category=Nematicide">Nematicides</Link></li>
-            </ul>
-          </div>
-
-          {/* Top Crops */}
-          <div><h4>Top Crops</h4><ul>
-              <li><Link to="/crops?crop=Paddy%20%2F%20Rice">Paddy / Rice Care</Link></li>
-              <li><Link to="/crops?crop=Cotton">Cotton Protection</Link></li>
-              <li><Link to="/crops?crop=Vegetables">Tomato & Vegetables</Link></li>
-              <li><Link to="/crops?crop=Sugarcane">Sugarcane Care</Link></li>
-              <li><Link to="/crops?crop=Horticulture">Horticulture & Fruits</Link></li>
-            </ul>
-          </div>
-
-          {/* Customer Support */}
-          <div><h4>Customer Support</h4><ul>
-              <li className="flex items-center space-x-2">
-                <Phone size={16} />
-                <div>
-                  <p>Toll Free</p>
-                  <p>1800-425-9999</p>
-                </div>
-              </li>
-              <li className="flex items-center space-x-2">
-                <Mail size={16} />
-                <div>
-                  <p>Email</p>
-                  <p>support@sathyabio.com</p>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <MapPin size={16} />
-                <div>
-                  <p>Address</p>
-                  <p>Sathya Bio Tech Park<br />Hyderabad, India</p>
-                </div>
-              </li>
-            </ul>
-          </div>
+        <div className="public-footer-brand">
+          <HomeLogoLink className="public-footer-logo">
+            <img className="public-footer-logo-mark" src="/assets/brand/logo-mark.png" alt="" width="512" height="512" />
+            <img className="public-footer-logo-wordmark" src="/assets/brand/logo-wordmark.png" alt="Sathyam Agro Mart" width="1200" height="254" />
+          </HomeLogoLink>
+          <p>{brandLine}</p>
+          <p className="public-footer-brand-more">{brandMore}</p>
+          <p className="public-footer-follow">Follow us</p>
+          <SocialLinks />
         </div>
 
-        <hr />
+        <LinkGroup title="Store Categories" links={CATEGORIES} />
+        <LinkGroup title="Top Crops" links={CROPS} />
+        <LinkGroup title="Help & Info" links={HELP} />
 
-        {/* Bottom Footer */}
-        <div className="public-footer-bottom">
-          <div>
-            <p>© 2026 Sathya Bio Agro Tech Ltd. All rights reserved.</p>
-          </div>
-
-          <div>
-            <a href="#" className="hover:text-green-400 transition">Privacy Policy</a>
-            <a href="#" className="hover:text-green-400 transition">Terms of Sale</a>
-            <a href="#" className="hover:text-green-400 transition">Refund Policy</a>
-          </div>
-
-          <div className="public-social-links">
-            <a href="#" className="text-gray-500 hover:text-green-400 transition">
-              <Facebook size={20} />
-            </a>
-            <a href="#" className="text-gray-500 hover:text-green-400 transition">
-              <Twitter size={20} />
-            </a>
-            <a href="#" className="text-gray-500 hover:text-green-400 transition">
-              <Instagram size={20} />
-            </a>
-          </div>
+        <div className="public-footer-support">
+          <h4 className="public-footer-support-title">Customer Support</h4>
+          <ul className="public-footer-contact">
+            <ContactCard Icon={Phone} label="Official Phone" value={phone} href={dial} />
+            <ContactCard Icon={Mail} label="Official Email" value={email} href={`mailto:${email}`} />
+            <ContactCard Icon={MapPin} label="Address" value={address} href={map} external />
+          </ul>
         </div>
+      </div>
 
-      {/* Payment Methods */}
-      <div className="public-payment-strip">
-          <p>✓ 100% Secure Payment (UPI, COD, NetBanking) | ✓ Express Delivery | ✓ 24/7 Support</p>
+      <div className="public-footer-bottom">
+        <div className="public-footer-pay">
+          <span className="public-footer-pay-label">We accept</span>
+          <ul>
+            {PAYMENTS.map(method => <li key={method}>{method}</li>)}
+          </ul>
         </div>
+        <p className="public-footer-copy">© 2026 Sathyam Agro Mart. All rights reserved.</p>
+        <p className="public-footer-credit">
+          Designed by cupnsaucer
+        </p>
+      </div>
     </footer>
   )
 }

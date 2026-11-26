@@ -1,16 +1,19 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 
+// Same order as the storefront's language menu (src/storefront/i18n.js LANGUAGES).
 export const LANGUAGES = [
   { code: 'en', label: 'English', native: 'English', flag: '🇬🇧' },
   { code: 'ta', label: 'Tamil',   native: 'தமிழ்',   flag: '🇮🇳' },
-  { code: 'hi', label: 'Hindi',   native: 'हिन्दी',  flag: '🇮🇳' },
-  { code: 'te', label: 'Telugu',  native: 'తెలుగు',  flag: '🇮🇳' },
   { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ',  flag: '🇮🇳' },
+  { code: 'te', label: 'Telugu',  native: 'తెలుగు',  flag: '🇮🇳' },
+  { code: 'hi', label: 'Hindi',   native: 'हिन्दी',  flag: '🇮🇳' },
+  { code: 'ml', label: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' },
+  { code: 'tulu', label: 'Tulu', native: 'ತುಳು', flag: '🇮🇳' },
 ]
 
 export const TRANSLATIONS = {
   en: {
-    brand: 'Sathya Bio',
+    brand: 'Sathyam Agro Mart',
     tagline: 'Agricultural ERP & E-Commerce Platform',
     shopProducts: 'Shop Products',
     myCart: 'My Cart',
@@ -55,7 +58,7 @@ export const TRANSLATIONS = {
     changeLanguage: 'Language',
   },
   ta: {
-    brand: 'சத்யா பயோ',
+    brand: 'சத்யம் பயோ',
     tagline: 'விவசாய ஈ-காமர்ஸ் & ஈஆர்பி தளம்',
     shopProducts: 'மருந்துகள் வாங்க',
     myCart: 'எனது கூடை',
@@ -92,7 +95,7 @@ export const TRANSLATIONS = {
     gst: 'ஜிஎஸ்டி (18%)',
     total: 'மொத்தம்',
     freeDelivery: 'இலவச டெலிவரி',
-    addToCart: 'கூடையில் சேர்க்க',
+    addToCart: 'கூடையில் சேர்',
     inStock: 'இருப்பில் உள்ளது',
     outOfStock: 'இருப்பு இல்லை',
     searchPlaceholder: 'மருந்துகள், பயிர்களைத் தேட...',
@@ -100,7 +103,7 @@ export const TRANSLATIONS = {
     changeLanguage: 'மொழி',
   },
   hi: {
-    brand: 'सत्या बायो',
+    brand: 'सत्यम बायो',
     tagline: 'कृषि ई-कॉमर्स और ईआरपी प्लेटफॉर्म',
     shopProducts: 'उत्पाद खरीदें',
     myCart: 'मेरी गाड़ी',
@@ -145,7 +148,7 @@ export const TRANSLATIONS = {
     changeLanguage: 'भाषा',
   },
   te: {
-    brand: 'సత్య బయో',
+    brand: 'సత్యం బయో',
     tagline: 'వ్యవసాయ ఈ-కామర్స్ & ఈఆర్‌పీ వేదిక',
     shopProducts: 'ఉత్పత్తులు కొనండి',
     myCart: 'నా కార్ట్',
@@ -190,7 +193,7 @@ export const TRANSLATIONS = {
     changeLanguage: 'భాష',
   },
   kn: {
-    brand: 'ಸತ್ಯ ಬಯೋ',
+    brand: 'ಸತ್ಯಂ ಬಯೋ',
     tagline: 'ಕೃಷಿ ಇ-ಕಾಮರ್ಸ್ ಮತ್ತು ಇಆರ್‌ಪಿ ವೇದಿಕೆ',
     shopProducts: 'ಉತ್ಪನ್ನಗಳನ್ನು ಖರೀದಿಸಿ',
     myCart: 'ನನ್ನ ಕಾರ್ಟ್',
@@ -233,18 +236,144 @@ export const TRANSLATIONS = {
     searchPlaceholder: 'ಉತ್ಪನ್ನಗಳು, ಬೆಳೆಗಳನ್ನು ಹುಡುಕಿ...',
     allCategories: 'ಎಲ್ಲಾ ವಿಭಾಗಗಳು',
     changeLanguage: 'ಭಾಷೆ',
-  }
+  },
+  ml: {
+    "brand": "സത്യം ബയോ",
+    "tagline": "കാർഷിക ഇ-കൊമേഴ്‌സ് & ഇആർപി പ്ലാറ്റ്‌ഫോം",
+    "shopProducts": "ഉൽപ്പന്നങ്ങൾ വാങ്ങുക",
+    "myCart": "എന്റെ കാർട്ട്",
+    "myOrders": "എന്റെ ഓർഡറുകൾ",
+    "cropAdvisory": "വിള ഉപദേശം",
+    "dashboard": "ഡാഷ്‌ബോർഡ്",
+    "overview": "അവലോകനം",
+    "analytics": "വിശകലനം",
+    "cmsEditor": "തത്സമയ സിഎംഎസ് എഡിറ്റർ",
+    "productsMaster": "ഉൽപ്പന്നങ്ങളുടെ മാസ്റ്റർ",
+    "orderManagement": "ഓർഡർ മാനേജ്‌മെന്റ്",
+    "subscribers": "അഡ്വൈസറി വരിക്കാർ",
+    "tickets": "ഫീൽഡ് ടിക്കറ്റുകൾ",
+    "chatRecords": "ചാറ്റ് റെക്കോർഡുകൾ",
+    "posBilling": "പിഒഎസ് ബില്ലിംഗ് കൗണ്ടർ",
+    "myDeliveries": "എന്റെ ഡെലിവറികൾ",
+    "logout": "ലോഗ് ഔട്ട്",
+    "welcome": "നമസ്കാരം",
+    "itemsInCart": "കാർട്ടിലുള്ള ഇനങ്ങൾ",
+    "activeOrders": "സജീവ ഓർഡറുകൾ",
+    "acresRegistered": "രജിസ്റ്റർ ചെയ്ത ഏക്കറുകൾ",
+    "openTickets": "തുറന്ന ടിക്കറ്റുകൾ",
+    "quickActions": "ദ്രുത പ്രവർത്തനങ്ങൾ",
+    "advisoryTitle": "പ്രതിവാര വിള & കീടനാശിനി ശുപാർശകൾ നേടുക",
+    "advisorySubtitle": "സൗജന്യ സീസണൽ ഉപദേശങ്ങൾ ലഭിക്കുന്ന 15,000+ കർഷകർക്കൊപ്പം ചേരൂ.",
+    "farmerName": "കർഷകന്റെ പേര്",
+    "whatsappNumber": "വാട്ട്‌സ്ആപ്പ് നമ്പർ",
+    "cropType": "വിള ഇനം",
+    "season": "സീസൺ",
+    "farmSize": "കൃഷിഭൂമിയുടെ വലിപ്പം (ഏക്കർ)",
+    "getAdvisory": "തൽക്ഷണ ഉപദേശം നേടുക",
+    "payWithRazorpay": "റേസർപേ വഴി പണമടയ്ക്കുക",
+    "subtotal": "ഉപതുക",
+    "gst": "ജിഎസ്ടി (18%)",
+    "total": "ആകെ",
+    "freeDelivery": "സൗജന്യ ഡെലിവറി",
+    "addToCart": "കാർട്ടിലേക്ക് ചേർക്കുക",
+    "inStock": "സ്റ്റോക്കിൽ ഉണ്ട്",
+    "outOfStock": "സ്റ്റോക്ക് തീർന്നു",
+    "searchPlaceholder": "ഉൽപ്പന്നങ്ങൾ, വിളകൾ, കീടങ്ങൾ തിരയുക...",
+    "allCategories": "എല്ലാ വിഭാഗങ്ങളും",
+    "changeLanguage": "ഭാഷ"
+},
+  tulu: {
+    "brand": "ಸತ್ಯಂ ಬಯೋ",
+    "tagline": "ಕೃಷಿ ಇ-ಕಾಮರ್ಸ್ & ಇಆರ್‌ಪಿ ವೇದಿಕೆ",
+    "shopProducts": "ಉತ್ಪನ್ನಲೆನ್ ದೆತೊಣ್ಲೆ",
+    "myCart": "ಎನ್ನ ಕಾರ್ಟ್",
+    "myOrders": "ಎನ್ನ ಆರ್ಡರ್‌ಲು",
+    "cropAdvisory": "ಬುಳೆ ಸಲಹೆ",
+    "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "overview": "ಅವಲೋಕನ",
+    "analytics": "ವಿಶ್ಲೇಷಣೆ",
+    "cmsEditor": "ಲೈವ್ ಸಿಎಂಎಸ್ ಸಂಪಾದಕೆ",
+    "productsMaster": "ಉತ್ಪನ್ನಲೆ ಮಾಸ್ಟರ್",
+    "orderManagement": "ಆರ್ಡರ್ ನಿರ್ವಹಣೆ",
+    "subscribers": "ಸಲಹೆ ಚಂದಾದಾರೆರ್",
+    "tickets": "ಕ್ಷೇತ್ರ ಟಿಕೆಟ್‌ಲು",
+    "chatRecords": "ಚಾಟ್ ದಾಖಲೆಲು",
+    "posBilling": "ಪಿಒಎಸ್ ಬಿಲ್ಲಿಂಗ್ ಕೌಂಟರ್",
+    "myDeliveries": "ಎನ್ನ ಡೆಲಿವರಿಲು",
+    "logout": "ಲಾಗ್ ಔಟ್",
+    "welcome": "ನಮಸ್ಕಾರ",
+    "itemsInCart": "ಕಾರ್ಟ್‌ಡ್ ಉಪ್ಪುನ ವಸ್ತುಲು",
+    "activeOrders": "ಚಾಲ್ತಿಡ್ ಉಪ್ಪುನ ಆರ್ಡರ್‌ಲು",
+    "acresRegistered": "ದಾಖಲಾತಿನ ಎಕರೆಲು",
+    "openTickets": "ಉಲಾಯಿ ಉಪ್ಪುನ ಟಿಕೆಟ್‌ಲು",
+    "quickActions": "ಬೇಗ ಮನ್ಪುನ ಕೆಲಸೊಲು",
+    "advisoryTitle": "ವಾರದ ಬುಳೆ ಬೊಕ್ಕ ಕ್ರಿಮಿನಾಶಕ ಸಲಹೆಲೆನ್ ದೆತೊಣ್ಲೆ",
+    "advisorySubtitle": "ಉಚಿತ ಋತುಮಾನದ ಸಲಹೆಲೆನ್ ದೆತೊನುನ 15,000+ ಕೃಷಿಕೆರೆ ಒಟ್ಟುಗು ಸೇರ್ಲೆ.",
+    "farmerName": "ಕೃಷಿಕೆರೆ ಪುದರ್",
+    "whatsappNumber": "ವಾಟ್ಸಾಪ್ ನಂಬರ್",
+    "cropType": "ಬುಳೆತ ಬಗೆ",
+    "season": "ಋತು / ಕಾಲ",
+    "farmSize": "ಕಂಡದ ವಿಸ್ತೀರ್ಣ (ಎಕರೆ)",
+    "getAdvisory": "ತಕ್ಷಣ ಸಲಹೆ ದೆತೊಣ್ಲೆ",
+    "payWithRazorpay": "ರೇಜರ್‌ಪೇ ಮುಖಾಂತರ ಪಾವತಿ ಮನ್ಪುಲೆ",
+    "subtotal": "ಉಪಮೊತ್ತ",
+    "gst": "ಜಿಎಸ್‌ಟಿ (18%)",
+    "total": "ಒಟ್ಟು",
+    "freeDelivery": "ಉಚಿತ ಡೆಲಿವರಿ",
+    "addToCart": "ಕಾರ್ಟ್‌ಗ್ ಸೇರ್ಪಾಲೆ",
+    "inStock": "ಸ್ಟಾಕ್‌ಡ್ ಉಂಡು",
+    "outOfStock": "ಸ್ಟಾಕ್ ಮುಗಿದ್ಂಡ್",
+    "searchPlaceholder": "ಉತ್ಪನ್ನಲು, ಬುಳೆಕುಲು, ಕೀಟೊಲೆನ್ ನಾಡ್ಲೆ...",
+    "allCategories": "ಮಾತಾ ವರ್ಗೊಲು",
+    "changeLanguage": "ಭಾಷೆ"
+}
 }
 
 const LanguageContext = createContext(null)
 
+// The storefront (src/storefront) saves the visitor's choice under
+// sathya_bio_lang. Reading it first means a farmer who picked Tamil on the
+// storefront gets Tamil here too; sathya_lang is this app's older key.
+const SHARED_LANG_KEY = 'sathya_bio_lang'
+const APP_LANG_KEY = 'sathya_lang'
+
+function readSavedLanguage() {
+  try {
+    for (const key of [SHARED_LANG_KEY, APP_LANG_KEY]) {
+      const saved = localStorage.getItem(key)
+      if (TRANSLATIONS[saved]) return saved
+    }
+  } catch {
+    // Storage blocked: fall through to English.
+  }
+  return 'en'
+}
+
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem('sathya_lang') || 'en')
+  const [lang, setLang] = useState(readSavedLanguage)
 
   useEffect(() => {
-    localStorage.setItem('sathya_lang', lang)
-    document.documentElement.lang = lang
+    try {
+      localStorage.setItem(SHARED_LANG_KEY, lang)
+      localStorage.setItem(APP_LANG_KEY, lang)
+    } catch {
+      // Storage blocked: the choice lasts for this page only.
+    }
+    // <html lang> is set by PageTranslator, not here. It is the piece that
+    // knows whether this page is actually being translated: the staff portals
+    // are English whatever the store is set to, and this effect - a parent's,
+    // so it runs after the translator's - used to overwrite the attribute
+    // with the store's language and leave English text tagged as Tamil.
   }, [lang])
+
+  // A language change in another tab (storefront or app) applies here as well.
+  useEffect(() => {
+    const onStorage = event => {
+      if (event.key === SHARED_LANG_KEY && TRANSLATIONS[event.newValue]) setLang(event.newValue)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const t = (key) => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key] || key

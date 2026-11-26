@@ -1,7 +1,7 @@
 /* Sathya Bio - E-Commerce Data Store & Product Catalog */
 
 export const CROPS = [
-  { id: 'all', name: 'All Crops', icon: 'fa-wheat-field' },
+  { id: 'all', name: 'All Crops', icon: 'fa-wheat-awn' },
   { id: 'Paddy/Rice', name: 'Paddy / Rice', icon: 'fa-seedling' },
   { id: 'Wheat', name: 'Wheat', icon: 'fa-wheat-awn' },
   { id: 'Cotton', name: 'Cotton', icon: 'fa-cloud' },

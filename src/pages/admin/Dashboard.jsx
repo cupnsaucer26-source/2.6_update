@@ -2,30 +2,42 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../../context/AuthContext'
+import { Banknote, Package, Leaf, Mail, Heart, Ticket, Truck, Pencil, Video, BarChart3, LifeBuoy, ChartNoAxesCombined } from 'lucide-react'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [wishlistTotal, setWishlistTotal] = useState(0)
-  useEffect(() => { axios.get('/api/admin/wishlist-summary').then(({ data }) => setWishlistTotal(data.total || 0)).catch(() => {}) }, [])
+  const [stats, setStats] = useState(null)
+  const [statsError, setStatsError] = useState(false)
+  useEffect(() => {
+    axios.get('/api/admin/stats')
+      .then(({ data }) => setStats(data.data))
+      .catch(() => setStatsError(true))
+  }, [])
 
-  const stats = [
-    { label: 'Total Revenue', value: '₹0', change: 'No sales yet', color: 'green', icon: '💰' },
-    { label: 'Orders Today', value: '0', change: 'No orders yet', color: 'blue', icon: '📦' },
-    { label: 'Active Products', value: '0', change: 'Catalog is empty', color: 'yellow', icon: '🌿' },
-    { label: 'Subscribers', value: '0', change: 'No subscribers yet', color: 'orange', icon: '📩' },
-    { label: 'Wishlist Saves', value: String(wishlistTotal), change: 'Customer interest', color: 'purple', icon: '❤️' },
-    { label: 'Open Tickets', value: '0', change: 'Nothing needs attention', color: 'red', icon: '🎫' },
-    { label: 'Pending Deliveries', value: '0', change: 'No deliveries yet', color: 'teal', icon: '🚚' },
+  const show = value => (stats ? String(value ?? 0) : statsError ? '—' : '…')
+  const note = text => (stats ? text : statsError ? 'Could not load' : 'Loading')
+  // A store-scoped admin (assigned to one branch) has no online figures to
+  // show - the website is one storefront, not one per branch - so their
+  // revenue is their counter's alone, not "omnichannel".
+  const storeScoped = stats?.scope === 'store'
+  const statCards = [
+    { label: storeScoped ? 'Store Revenue' : 'Total Omnichannel Revenue', value: stats ? `₹${Number(stats.totalRevenue || 0).toLocaleString('en-IN')}` : show(), change: note(storeScoped ? `${stats?.offlineOrders ?? 0} counter bills` : (stats?.offlineRevenue ? `₹${Number(stats.onlineRevenue || 0).toLocaleString('en-IN')} web + ₹${Number(stats.offlineRevenue || 0).toLocaleString('en-IN')} counter` : `${stats?.paidOrders ?? 0} paid orders`)), color: 'green', icon: <Banknote size={22} /> },
+    { label: storeScoped ? 'Bills Today' : 'Orders & Bills Today', value: show(stats?.ordersToday), change: note(storeScoped ? `${stats?.totalOrders ?? 0} counter bills, this store` : `${stats?.totalOrders ?? 0} total (${stats?.onlineOrders ?? 0} web, ${stats?.offlineOrders ?? 0} counter)`), color: 'blue', icon: <Package size={22} /> },
+    { label: 'Active Products', value: show(stats?.activeProducts), change: note(storeScoped ? `${stats?.totalProducts ?? 0} in the shared catalog` : `${stats?.totalProducts ?? 0} in catalog, in stock`), color: 'yellow', icon: <Leaf size={22} /> },
+    { label: 'Subscribers', value: show(stats?.subscribers), change: note(storeScoped ? 'Site-wide, not per store' : 'Advisory sign-ups'), color: 'orange', icon: <Mail size={22} /> },
+    { label: 'Wishlist Saves', value: show(stats?.wishlistSaves), change: note(storeScoped ? 'Site-wide, not per store' : 'Customer interest'), color: 'purple', icon: <Heart size={22} /> },
+    { label: 'Open Tickets', value: show(stats?.openTickets), change: note(storeScoped ? 'Site-wide, not per store' : 'Awaiting a reply'), color: 'red', icon: <Ticket size={22} /> },
+    { label: 'Pending Deliveries', value: show(stats?.pendingDeliveries), change: note(storeScoped ? 'Online orders are not this store’s' : 'Not yet delivered'), color: 'teal', icon: <Truck size={22} /> },
   ]
 
   const quickLinks = [
-    { icon: '✏️', label: 'Edit Live Content', sub: 'Hero, banners, advisory text', to: '/admin/cms' },
-    { icon: '🌿', label: 'Manage Products', sub: 'Add, edit, toggle stock', to: '/admin/products' },
-    { icon: '📦', label: 'Fulfill Orders', sub: 'Update status, assign delivery', to: '/admin/orders' },
-    { icon: '📩', label: 'View Subscribers', sub: 'Advisory subscriber list', to: '/admin/subscribers' },
-    { icon: '📈', label: 'Analytics', sub: 'Revenue & sales reports', to: '/admin/analytics' },
-    { icon: '🎫', label: 'Support Tickets', sub: 'Field crop emergencies', to: '/admin/tickets' },
+    { icon: <Pencil size={18} />, label: 'Edit Live Content', sub: 'Hero, banners, advisory text', to: '/admin/cms' },
+    { icon: <Leaf size={18} />, label: 'Manage Products', sub: 'Add, edit, 3-way visibility', to: '/admin/products' },
+    { icon: <Video size={18} />, label: 'Video Demos', sub: 'Upload videos, embed in items & blogs', to: '/admin/videos' },
+    { icon: <Package size={18} />, label: 'Orders & Counter Bills', sub: 'Omnichannel sales & invoices', to: '/admin/orders' },
+    { icon: <ChartNoAxesCombined size={18} />, label: '3-Mode Analytics', sub: 'Online, Offline & Omnichannel', to: '/admin/analytics' },
+    { icon: <LifeBuoy size={18} />, label: 'Support Tickets', sub: 'Field crop emergencies', to: '/admin/tickets' },
   ]
 
   const summaryBars = [42, 62, 58, 80, 74, 96, 88]
@@ -42,28 +54,25 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in admin-overview">
       <div className="admin-hero">
         <div>
           <div className="eyebrow">Executive overview</div>
           <h1>Admin dashboard</h1>
-          <p>Welcome back, {user?.name}. Your workspace is ready for its first records.</p>
+          <p>Welcome back, {user?.name}.</p>
         </div>
         <div className="hero-badge-row">
-          <span className="badge badge-gray">No activity yet</span>
-          <span className="badge badge-blue">Awaiting records</span>
+          {stats && <span className="badge badge-blue">{stats.totalOrders ? `${stats.totalOrders} orders recorded` : 'No orders yet'}</span>}
         </div>
       </div>
 
       <div className="stat-grid">
-        {stats.map(s => (
+        {statCards.map(s => (
           <div key={s.label} className={`stat-card ${s.color}`}>
             <div className={`stat-icon ${s.color}`}>{s.icon}</div>
             <div className="stat-value">{s.value}</div>
             <div className="stat-label">{s.label}</div>
-            <div className={`stat-change ${s.change.startsWith('+') ? 'positive' : 'negative'}`}>
-              {s.change.startsWith('+') ? '↑' : '↓'} {s.change} this week
-            </div>
+            <div className="stat-change">{s.change}</div>
           </div>
         ))}
       </div>
@@ -74,7 +83,7 @@ export default function AdminDashboard() {
             <div className="card-title">Demand trend</div>
             <span className="badge badge-purple">7 days</span>
           </div>
-          <div className="empty-state" style={{ padding: '28px 12px' }}><div style={{ fontSize: '2rem' }}>📊</div><p>No demand data available yet</p></div>
+          <div className="empty-state" style={{ padding: '28px 12px' }}><BarChart3 size={32} /><p>No demand data available yet</p></div>
           <div className="mini-graph-labels">
             <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
           </div>
@@ -114,15 +123,15 @@ export default function AdminDashboard() {
 
       <div className="card">
         <div className="card-header"><div className="card-title">Quick Actions</div></div>
-        <div className="grid grid-3" style={{ gap: '12px' }}>
+        <div className="quick-actions">
           {quickLinks.map(q => (
-            <button key={q.to} onClick={() => navigate(q.to)} style={{ background: 'rgba(255,255,255,0.6)', border: '1.5px solid var(--surface-border-subtle)', borderRadius: 'var(--radius-lg)', padding: '18px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--brand-600)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--surface-border-subtle)'}
-            >
-              <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '8px' }}>{q.icon}</span>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '4px' }}>{q.label}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{q.sub}</div>
+            <button key={q.to} type="button" className="quick-action" onClick={() => navigate(q.to)}>
+              <span className="quick-action-icon" aria-hidden="true">{q.icon}</span>
+              <span className="quick-action-text">
+                <span className="quick-action-label">{q.label}</span>
+                <span className="quick-action-sub">{q.sub}</span>
+              </span>
+              <span className="quick-action-arrow" aria-hidden="true">›</span>
             </button>
           ))}
         </div>

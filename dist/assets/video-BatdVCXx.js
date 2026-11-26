@@ -1,0 +1,1 @@
+function a(t){if(!t)return null;const e=String(t).match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);return e?e[1]:null}function i(t){return t?t.startsWith("/api/upload")||t.startsWith("data:video")||/\.(mp4|webm|ogg|mov)(\?|$)/i.test(t):!1}export{a as g,i};

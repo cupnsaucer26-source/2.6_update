@@ -4,8 +4,11 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { LanguageProvider } from './context/LanguageContext.jsx'
-import { Toaster } from 'react-hot-toast'
-import './index.css'
+import './app.css'
+import { captureReferralFromUrl } from './shared/referralLink'
+
+// A friend's share link (?ref=CODE) on any page: kept for signup.
+captureReferralFromUrl()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -13,25 +16,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <LanguageProvider>
         <AuthProvider>
           <App />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: '#1a2e1a',
-                color: '#fff',
-                border: '1px solid #2d5a2d',
-                borderRadius: '12px',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '14px',
-              },
-              success: { iconTheme: { primary: '#4ade80', secondary: '#1a2e1a' } },
-              error: { iconTheme: { primary: '#f87171', secondary: '#1a2e1a' } },
-            }}
-          />
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>
   </React.StrictMode>
 )
-

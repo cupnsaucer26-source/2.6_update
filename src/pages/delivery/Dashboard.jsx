@@ -1,22 +1,34 @@
 import { useEffect, useState } from 'react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import axios from 'axios'
 import { useAuth } from '../../context/AuthContext'
+import { gpsMapsUrl } from '../../shared/osmAddress'
+import StatusBadge from '../../components/common/StatusBadge'
+import EmptyState from '../../components/common/EmptyState'
+import { formatCurrency } from '../../utils/formatters'
+import { Truck } from 'lucide-react'
 
-const ASSIGNED = [
-  { id: 'ORD-002', farmer: 'Suresh Pillai', phone: '9751234567', address: 'No.5, Nehru St, Thanjavur - 613001', items: 'RootVigor Gold x1, BioNeem x2', amount: 1670, payMode: 'Prepaid', otp: '7834', status: 'Out for Delivery' },
-  { id: 'ORD-005', farmer: 'Ganesan A',     phone: '9632145678', address: '23, Kalaignar Nagar, Tiruchirappalli - 620001', items: 'BlastShield 75 WP x2', amount: 960, payMode: 'COD', otp: '2591', status: 'Assigned' },
-]
+// API orders use the store's field names; the cards below were written for these.
+const toDeliveryCard = order => ({
+  ...order,
+  farmer: order.addressDetails?.name || order.farmer || order.customerName,
+  // The number saved with the delivery address reaches whoever is there.
+  phone: order.addressDetails?.phone || order.phone || order.customerPhone,
+  amount: Number(order.amount ?? order.total ?? 0),
+  payMode: order.payMode || (order.paymentStatus === 'Paid' ? 'Prepaid' : 'COD'),
+  items: Array.isArray(order.items) ? order.items.map(item => `${item.name || 'Product'} x${item.qty || 1}`).join(', ') : order.items,
+  status: order.deliveryStatus || order.status,
+})
 
 export default function DeliveryDashboard() {
   const { user } = useAuth()
-  const [orders, setOrders] = useState(ASSIGNED)
+  const [orders, setOrders] = useState([])
   const [otpInputs, setOtpInputs] = useState({})
 
   useEffect(() => {
-    axios.get('/api/delivery/assigned').then(({ data }) => {
-      if (data.data?.length) setOrders(data.data)
-    }).catch(() => {})
+    axios.get('/api/delivery/assigned')
+      .then(({ data }) => setOrders((data.data || []).map(toDeliveryCard)))
+      .catch(() => toast.error('Could not load your deliveries.'))
   }, [])
 
   // The server is the authority on the OTP — never accept a delivery on the
@@ -28,7 +40,7 @@ export default function DeliveryDashboard() {
       return
     }
     axios.post('/api/delivery/verify-otp', { orderId: order.id, otp: entered }).then(({ data }) => {
-      setOrders(o => o.map(x => x.id === order.id ? { ...x, ...data.order, status: 'Delivered', deliveryStatus: 'Delivered' } : x))
+      setOrders(o => o.map(x => x.id === order.id ? { ...x, ...toDeliveryCard(data.order), status: 'Delivered', deliveryStatus: 'Delivered' } : x))
       toast.success(`✅ OTP verified! Order ${order.id} marked Delivered`)
     }).catch(err => {
       const message = err?.response?.data?.message
@@ -41,21 +53,20 @@ export default function DeliveryDashboard() {
     axios.put(`/api/orders/${order.id}/status`, updates).catch(() => toast.error('Unable to save delivery update.'))
   }
 
+  // Every figure here is counted from the orders on this page.
+  const delivered = orders.filter(o => o.status === 'Delivered')
+  const pending = orders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled')
+  const codDue = pending.filter(o => o.payMode === 'COD').reduce((sum, o) => sum + o.amount, 0)
   const KPI = [
-    { label: 'Assigned', value: String(orders.length), change: '+4 today', color: 'blue', icon: '🚚' },
-    { label: 'Delivered', value: String(orders.filter(o => o.status === 'Delivered').length), change: '89% success', color: 'green', icon: '✅' },
-    { label: 'Pending', value: String(orders.filter(o => o.status !== 'Delivered').length), change: '3 route clusters', color: 'yellow', icon: '🧭' },
-  ]
-  const routeHealth = [
-    { label: 'On-time status', value: 92 },
-    { label: 'Avg route time', value: 68 },
-    { label: 'COD collection', value: 74 },
+    { label: 'Assigned', value: String(orders.length), change: `${orders.filter(o => o.assignedDeliveryBoy === 'Unassigned').length} not yet assigned to anyone`, color: 'blue', icon: '🚚' },
+    { label: 'Delivered', value: String(delivered.length), change: orders.length ? `${Math.round(delivered.length / orders.length * 100)}% of your orders` : '—', color: 'green', icon: '✅' },
+    { label: 'Pending', value: String(pending.length), change: `${formatCurrency(codDue)} cash to collect`, color: 'yellow', icon: '🧭' },
   ]
 
   return (
     <div className="animate-fade-in">
       <div className="page-header">
-        <div><h1>🚚 My deliveries</h1><p>Welcome, {user?.name}. {orders.length} deliveries assigned today.</p></div>
+        <div><h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Truck size={28} /> My deliveries</h1><p>Welcome, {user?.name}. {orders.length} deliveries on your list.</p></div>
       </div>
 
       <div className="stat-grid" style={{ marginBottom: 24 }}>
@@ -69,52 +80,29 @@ export default function DeliveryDashboard() {
         ))}
       </div>
 
-      <div className="analytics-grid">
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Route coverage</div>
-            <span className="badge badge-orange">3 zones</span>
-          </div>
-          <div className="mini-graph">
-            {[34, 48, 72, 64, 81, 90, 78].map((value, index) => (
-              <span key={index} style={{ height: `${value}%` }} className={index === 5 ? 'active' : ''} />
-            ))}
-          </div>
-          <div className="mini-graph-labels">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Delivery health</div>
-          </div>
-          <div className="region-list">
-            {routeHealth.map(item => (
-              <div key={item.label} className="region-row">
-                <span>{item.label}</span>
-                <div className="mini-progress"><span style={{ width: `${item.value}%` }} /></div>
-                <strong>{item.value}%</strong>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px' }}>
-        {orders.map(order => (
+        {orders.length === 0 ? (
+          <div className="card" style={{ padding: '36px 16px' }}>
+            <EmptyState
+              icon={<Truck size={36} style={{ color: '#15803d' }} />}
+              title="No Delivery Orders Assigned"
+              description="You have no delivery assignments waiting in your queue at this moment."
+            />
+          </div>
+        ) : (
+          orders.map(order => (
           <div key={order.id} className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                   <strong style={{ color: 'var(--brand-400)', fontSize: '1rem' }}>{order.id}</strong>
-                  <span className={`badge ${order.status === 'Delivered' ? 'badge-green' : order.status === 'Out for Delivery' ? 'badge-orange' : 'badge-blue'}`}>{order.status}</span>
+                  <StatusBadge status={order.status} />
                 </div>
                 <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>{order.farmer}</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '4px' }}>📍 {order.address}</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '4px' }}>📍 {order.address}{gpsMapsUrl(order) && <StatusBadge status="active" color="green" label="GPS pin" style={{ marginLeft: 6, fontSize: '0.68rem' }} />}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 800, color: 'var(--brand-400)', fontSize: '1.1rem' }}>₹{order.amount.toLocaleString()}</div>
+                <div style={{ fontWeight: 800, color: 'var(--brand-400)', fontSize: '1.1rem' }}>{formatCurrency(order.amount)}</div>
                 <div style={{ fontSize: '0.75rem', color: order.payMode === 'COD' ? 'var(--yellow)' : 'var(--brand-400)', fontWeight: 600, marginTop: '4px' }}>{order.payMode}</div>
               </div>
             </div>
@@ -131,10 +119,13 @@ export default function DeliveryDashboard() {
             </div>}
 
             {order.status !== 'Delivered' && (
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <a href={`tel:+91${order.phone}`} className="btn btn-secondary btn-sm">📞 Call Farmer</a>
-                <a href={`https://maps.google.com/?q=${encodeURIComponent(order.address)}`} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">🗺️ Navigate</a>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' }}>
+              <div className="delivery-card-actions">
+                <div className="delivery-btn-group">
+                  <a href={`tel:+91${order.phone}`} className="btn btn-secondary btn-sm">📞 Call Farmer</a>
+                  {/* The customer's GPS pin when they shared it (exact), else the address text. */}
+                  <a href={gpsMapsUrl(order) || `https://maps.google.com/?q=${encodeURIComponent(order.address)}`} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">🗺️ Navigate</a>
+                </div>
+                <div className="delivery-otp-row">
                   <input
                     className="form-input"
                     style={{ width: 120, padding: '8px 12px', fontSize: '0.9rem', letterSpacing: 6, textAlign: 'center' }}
@@ -153,7 +144,8 @@ export default function DeliveryDashboard() {
               </div>
             )}
           </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   )

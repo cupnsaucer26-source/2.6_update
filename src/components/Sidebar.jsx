@@ -2,13 +2,19 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { LogOut } from 'lucide-react'
 
-export default function Sidebar({ items, roleName, roleEmoji, isOpen, onClose }) {
+export default function Sidebar({ items, roleName, roleIcon: RoleIcon, isOpen, onClose }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
+    // This sidebar is only ever mounted for signed-in staff (Admin, Employee,
+    // Delivery, Billing, Super Admin) - never for a farmer - so signing out
+    // of it always means back to the staff sign-in page, whichever role.
+    // '/#login' (the farmer sign-in modal on the storefront home page) was
+    // wrong for every role except admin, who happened to land on /admin's
+    // own inline sign-in instead.
     logout()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   return (
@@ -19,16 +25,16 @@ export default function Sidebar({ items, roleName, roleEmoji, isOpen, onClose })
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         {/* Logo */}
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">🌿</div>
+          <div className="sidebar-logo-icon has-brand-mark"><img className="brand-mark" src="/assets/brand/logo-mark.png" alt="" width="512" height="512" /></div>
           <div className="sidebar-logo-text">
-            <div className="brand-name">Sathya Bio</div>
+            <div className="brand-name">Sathyam Agro Mart</div>
             <div className="brand-tagline">AgriTech Platform</div>
           </div>
         </div>
 
         {/* Role Badge */}
         <div className="sidebar-role-badge">
-          <span className="role-icon">{roleEmoji}</span>
+          <span className="role-icon"><RoleIcon size={18} /></span>
           <div>
             <div className="role-name">{roleName} Portal</div>
             <div className="role-email">{user?.name}</div>
@@ -42,7 +48,7 @@ export default function Sidebar({ items, roleName, roleEmoji, isOpen, onClose })
               {section.title && <div className="sidebar-section-title">{section.title}</div>}
               {section.links.map(link => (
                 <NavLink
-                  key={link.to}
+                  key={`${link.to}|${link.label}`}
                   to={link.to}
                   end={link.end}
                   className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}

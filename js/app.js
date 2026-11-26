@@ -1,11 +1,8 @@
-/* ==========================================================================
-   SATHYA BIO - FULL ENTERPRISE E-COMMERCE, ERP, CMS & MULTI-ROLE ENGINE
-   MERN-Compatible Architecture with Razorpay, Live Advisory & Multilingual Engine
-   ========================================================================== */
+/* Sathya Bio - Complete Unified E-Commerce Engine (CORS & file:// Compatible) */
 
 // --- DATA STORE ---
 const CROPS = [
-  { id: 'all', name: 'All Crops', icon: 'fa-wheat-field' },
+  { id: 'all', name: 'All Crops', icon: 'fa-wheat-awn' },
   { id: 'Paddy/Rice', name: 'Paddy / Rice', icon: 'fa-seedling' },
   { id: 'Wheat', name: 'Wheat', icon: 'fa-wheat-awn' },
   { id: 'Cotton', name: 'Cotton', icon: 'fa-cloud' },
@@ -30,315 +27,592 @@ const DISEASES = [
   { id: 'Weeds', name: 'Broadleaf & Grass Weeds' }
 ];
 
-const CATEGORIES = ['All', 'Fungicide', 'Insecticide', 'Bio-Stimulant', 'Herbicide', 'Nematicide'];
+const CATEGORIES = [
+  'All',
+  'Fungicide',
+  'Insecticide',
+  'Bio-Stimulant',
+  'Herbicide',
+  'Nematicide'
+];
+
+// Product rows in the database still carry the original ./assets/pN.png paths,
+// which are 1024x1024 JPEGs of roughly 430KB each. The .webp copies beside them
+// are the same pictures at the size they are actually displayed, ~12KB. Map the
+// bundled defaults across as they are rendered so stored rows get the small
+// file without a data migration; anything else (a CMS upload, a remote URL) is
+// passed through untouched.
+const FALLBACK_PRODUCT_IMAGE = './assets/p1.webp';
+
+function productImage(product) {
+  let src = String((product && product.image) || '').trim();
+  // Uploads saved as an empty "data:image/png;base64," are not images.
+  if (!src || /^data:image\/[\w+.-]+;base64,?$/i.test(src)) src = FALLBACK_PRODUCT_IMAGE;
+  return src.replace(/\.\/assets\/(p[1-4])\.png$/, './assets/$1.webp');
+}
+
+// Any product/cart image that fails to load shows the placeholder instead of
+// broken-image alt text. Capture phase, because error events do not bubble.
+document.addEventListener('error', event => {
+  const img = event.target;
+  if (!(img instanceof HTMLImageElement) || img.dataset.fallbackApplied) return;
+  if (!img.closest('.product-img-box, .cart-item, .product-modal-hero, #productModalContent')) return;
+  img.dataset.fallbackApplied = '1';
+  img.src = FALLBACK_PRODUCT_IMAGE;
+}, true);
 
 const IMG = {
-  fungicide: './assets/p1.png',
-  insecticide: './assets/p2.png',
-  biostim: './assets/p3.png',
-  herbicide: './assets/p4.png',
+  fungicide: './assets/p1.webp',
+  insecticide: './assets/p2.webp',
+  biostim: './assets/p3.webp',
+  herbicide: './assets/p4.webp',
 };
 
-// Initial Catalog Data
+
+// --- DYNAMIC DATA STORE (Populated from Backend Database) ---
 let PESTICIDES = [
   {
-    id: 'sb-01', name: 'Sathya Bio BlastShield 75 WP',
+    id: 'sb-01',
+    name: 'Sathya Bio BlastShield 75 WP',
     tagline: 'Systemic Bio-Fungicide for Paddy Blast & Neck Rot',
     category: 'Fungicide',
     crops: ['Paddy/Rice', 'Wheat', 'Corn'],
     diseases: ['Blast', 'Rust', 'Downy Mildew'],
     activeIngredient: 'Tricyclazole 75% WP + Bio-Enzyme Fortifier',
-    dosage: '120g - 150g per Acre', packSizes: ['250g', '500g', '1kg'], selectedPack: '500g',
+    dosage: '120g - 150g per Acre',
+    packSizes: ['250g', '500g', '1kg'],
+    selectedPack: '500g',
     safetyRating: 'Class III (Eco Friendly)',
     description: 'Advanced systemic bio-fortified fungicide providing protective and curative control against Blast disease in Paddy, Leaf Rust in Wheat, and Neck Blast.',
-    detailedDescription: 'Sathya Bio BlastShield 75 WP is a highly specialized systemic fungicide tailored to combat the most stubborn fungal pathogens affecting grain crops.',
-    benefits: ['Rapid systemic action offering up to 15 days of protection.', 'Prevents secondary infections and reduces neck rot incidence.', 'Enhances grain quality and ensures higher milling yield.', 'Rainfast within 2 hours of application.'],
+    detailedDescription: 'Sathya Bio BlastShield 75 WP is a highly specialized systemic fungicide tailored to combat the most stubborn fungal pathogens affecting grain crops. It rapidly penetrates the plant tissue, establishing a protective barrier that stops fungal spore germination and mycelial growth.',
+    benefits: [
+      'Rapid systemic action offering up to 15 days of protection.',
+      'Prevents secondary infections and reduces neck rot incidence.',
+      'Enhances grain quality and ensures higher milling yield.',
+      'Rainfast within 2 hours of application.'
+    ],
     modeOfAction: 'Inhibits melanin biosynthesis in appressoria, preventing the fungus from penetrating the plant cuticle.',
     applicationInstructions: 'Foliar spray at early symptoms or initiation of tillering phase. Dissolve 120g in 150L water per acre.',
-    rating: 4.9, reviewsCount: 142, inStock: true, badge: 'Best Seller',
-    image: IMG.fungicide, price: 680, originalPrice: 850, discount: '20% OFF',
-    sku: 'SB-BLAST-75', batchNo: 'BATCH-2026-08A', hsn: '380899'
+    rating: 4.9,
+    reviewsCount: 142,
+    inStock: true,
+    badge: 'Best Seller',
+    image: IMG.fungicide,
+    price: 680,
+    originalPrice: 850,
+    discount: '20% OFF'
   },
+
   {
-    id: 'sb-02', name: 'Sathya Bio FlyKill Ultra',
+    id: 'sb-02',
+    name: 'Sathya Bio FlyKill Ultra',
     tagline: 'Multi-Action Insecticide for Whitefly & Aphids',
     category: 'Insecticide',
     crops: ['Cotton', 'Tomato', 'Citrus', 'Potato'],
     diseases: ['Whitefly', 'Aphids', 'Caterpillars'],
     activeIngredient: 'Diafenthiuron 50% WP + Botanical Neem Extract',
-    dosage: '250g per Acre', packSizes: ['250g', '500g'], selectedPack: '250g',
+    dosage: '250g per Acre',
+    packSizes: ['250g', '500g'],
+    selectedPack: '250g',
     safetyRating: 'Class II (Bee Safe)',
     description: 'Penetrates leaf cuticle rapidly to paralyze sucking pests like Whiteflies, Aphids, and Thrips. Prevents leaf curl virus spread.',
-    detailedDescription: 'FlyKill Ultra combines the fast knock-down power of modern chemistry with the sustained repellency of botanical neem extracts.',
-    benefits: ['Translaminar action kills pests hiding on underside of leaves.', 'Vapour action ensures broad coverage in dense crop canopies.', 'Safe for beneficial insects like ladybird beetles.'],
+    detailedDescription: 'FlyKill Ultra combines the fast knock-down power of modern chemistry with the sustained repellency of botanical neem extracts. It is highly effective against nymphs and adult stages of sucking pests.',
+    benefits: [
+      'Translaminar action kills pests hiding on the underside of leaves.',
+      'Vapour action ensures broad coverage in dense crop canopies.',
+      'Safe for beneficial insects like ladybird beetles.',
+      'Phytotonic effect leaves crop greener.'
+    ],
     modeOfAction: 'Inhibits mitochondrial respiration in insects, causing immediate paralysis.',
     applicationInstructions: 'Ensure thorough coverage of under-side of leaves. Spray early morning or post-sunset.',
-    rating: 4.8, reviewsCount: 98, inStock: true, badge: 'Top Rated',
-    image: IMG.insecticide, price: 840, originalPrice: 1050, discount: '20% OFF',
-    sku: 'SB-FLY-50', batchNo: 'BATCH-2026-07B', hsn: '380891'
+    rating: 4.8,
+    reviewsCount: 98,
+    inStock: true,
+    badge: 'Top Rated',
+    image: IMG.insecticide,
+    price: 840,
+    originalPrice: 1050,
+    discount: '20% OFF'
   },
+
   {
-    id: 'sb-03', name: 'Sathya Bio BlightStop Pro',
+    id: 'sb-03',
+    name: 'Sathya Bio BlightStop Pro',
     tagline: 'Dual Action Systemic Fungicide for Blight Control',
     category: 'Fungicide',
     crops: ['Tomato', 'Potato', 'Grapes', 'Citrus'],
     diseases: ['Blight', 'Downy Mildew'],
     activeIngredient: 'Mancozeb 64% + Metalaxyl 8% WP',
-    dosage: '500g per Acre', packSizes: ['500g', '1kg', '5kg'], selectedPack: '1kg',
+    dosage: '500g per Acre',
+    packSizes: ['500g', '1kg', '5kg'],
+    selectedPack: '1kg',
     safetyRating: 'Class III Low Toxicity',
     description: 'Gold standard dual-action fungicide specifically formulated for Late Blight in Potato/Tomato and Downy Mildew in Grapevines.',
-    detailedDescription: 'BlightStop Pro provides unparalleled protection through a two-pronged approach: Mancozeb forms a protective film while Metalaxyl is rapidly absorbed.',
-    benefits: ['Curative and protective action prevents disease outbreaks.', 'Excellent rainfastness and prolonged residual activity.'],
-    modeOfAction: 'Mancozeb acts as multi-site contact inhibitor, Metalaxyl inhibits fungal protein synthesis.',
+    detailedDescription: 'BlightStop Pro provides unparalleled protection through a two-pronged approach: Mancozeb forms a protective film on the plant surface to prevent spore germination, while Metalaxyl is rapidly absorbed.',
+    benefits: [
+      'Curative and protective action prevents disease outbreaks.',
+      'Excellent rainfastness and prolonged residual activity.',
+      'Provides essential Manganese and Zinc micronutrients.'
+    ],
+    modeOfAction: 'Mancozeb acts as a multi-site contact inhibitor, while Metalaxyl inhibits protein synthesis within fungal pathogens.',
     applicationInstructions: 'Spray before rains or high moisture periods. Safe for crop canopy when used as directed.',
-    rating: 4.9, reviewsCount: 215, inStock: true, badge: 'Expert Choice',
-    image: IMG.fungicide, price: 750, originalPrice: 900, discount: '17% OFF',
-    sku: 'SB-BLIGHT-PRO', batchNo: 'BATCH-2026-06C', hsn: '380899'
+    rating: 4.9,
+    reviewsCount: 215,
+    inStock: true,
+    badge: 'Expert Choice',
+    image: IMG.fungicide,
+    price: 750,
+    originalPrice: 900,
+    discount: '17% OFF'
   },
+
   {
-    id: 'sb-04', name: 'Sathya Bio RootVigor Gold',
+    id: 'sb-04',
+    name: 'Sathya Bio RootVigor Gold',
     tagline: '100% Organic Bio-Stimulant & Root Enhancer',
     category: 'Bio-Stimulant',
     crops: ['Paddy/Rice', 'Wheat', 'Cotton', 'Sugarcane', 'Corn', 'Tomato', 'Grapes'],
     diseases: [],
     activeIngredient: 'Humic Acid 18% + Seaweed Extract (Ascophyllum nodosum)',
-    dosage: '500ml per Acre', packSizes: ['500ml', '1 Litre', '5 Litres'], selectedPack: '1 Litre',
+    dosage: '500ml per Acre',
+    packSizes: ['500ml', '1 Litre', '5 Litres'],
+    selectedPack: '1 Litre',
     safetyRating: '100% Organic Certified',
     description: 'Accelerates root branching, enhances micro-nutrient absorption, and restores degraded soils. Boosts drought resilience.',
-    detailedDescription: 'RootVigor Gold stimulates white feeder root growth and increases soil cation exchange capacity (CEC).',
-    benefits: ['Enhances fertilizer utilization efficiency by 25-30%.', 'Increases white root biomass for better anchoring.', 'Improves drought tolerance.'],
+    detailedDescription: 'RootVigor Gold stimulates white feeder root growth and increases soil cation exchange capacity (CEC). It contains natural auxins, cytokinins, and trace minerals.',
+    benefits: [
+      'Enhances fertilizer utilization efficiency by 25-30%.',
+      'Increases white root biomass for better anchoring and nutrient uptake.',
+      'Improves drought and heat stress tolerance.'
+    ],
     modeOfAction: 'Stimulates root cell division and chelates bound soil nutrients into plant-absorbable forms.',
     applicationInstructions: 'Apply through drip irrigation or drench around crop root zone during early growth stages.',
-    rating: 4.9, reviewsCount: 310, inStock: true, badge: '100% Organic',
-    image: IMG.biostim, price: 990, originalPrice: 1250, discount: '21% OFF',
-    sku: 'SB-ROOT-GOLD', batchNo: 'BATCH-2026-08C', hsn: '310100'
+    rating: 4.9,
+    reviewsCount: 310,
+    inStock: true,
+    badge: '100% Organic',
+    image: IMG.biostim,
+    price: 990,
+    originalPrice: 1250,
+    discount: '21% OFF'
   },
+
   {
-    id: 'sb-26', name: 'Sathya Bio WeedClear 24-D',
+    id: 'sb-26',
+    name: 'Sathya Bio WeedClear 24-D',
     tagline: 'Systemic Broadleaf Herbicide',
     category: 'Herbicide',
     crops: ['Wheat', 'Corn', 'Sugarcane'],
     diseases: ['Weeds'],
     activeIngredient: '2,4-D Amine Salt 58% SL',
-    dosage: '400ml per Acre', packSizes: ['400ml', '1 Litre', '5 Litres'], selectedPack: '1 Litre',
+    dosage: '400ml per Acre',
+    packSizes: ['400ml', '1 Litre', '5 Litres'],
+    selectedPack: '1 Litre',
     safetyRating: 'Class II (Moderate)',
     description: 'Effective and economical post-emergence herbicide for the control of broadleaf weeds in cereals and sugarcane.',
-    detailedDescription: 'WeedClear 24-D mimics plant growth hormone auxin, causing uncontrolled growth in susceptible broadleaf weeds.',
-    benefits: ['Excellent control of tough broadleaf weeds.', 'Highly selective and safe for grass crops like wheat and sugarcane.'],
-    modeOfAction: 'Acts as a synthetic auxin, causing rapid cell division and weed collapse.',
-    applicationInstructions: 'Apply when weeds are in 2-4 leaf stage with optimal soil moisture.',
-    rating: 4.7, reviewsCount: 88, inStock: true, badge: 'Fast Action',
-    image: IMG.herbicide, price: 420, originalPrice: 520, discount: '19% OFF',
-    sku: 'SB-WEED-24D', batchNo: 'BATCH-2026-05A', hsn: '380893'
-  }
-];
-
-// Load persisted products if available
-try {
-  const savedProds = localStorage.getItem('sathya_bio_products');
-  if (savedProds) PESTICIDES = JSON.parse(savedProds);
-} catch (e) {}
-
-// --- LIVE CMS EDITABLE CONTENT STORE ---
-let CMS_CONTENT = {
-  heroTitle: "Protect Your Crops. Maximize Your Harvest Yield.",
-  heroSubtitle: "Order high-efficacy bio-fungicides, insecticides, and soil enhancers online. Fast express dispatch directly to your farm doorstep.",
-  announcementText: "🎉 KHARIF SPECIAL: Flat 20% OFF on Bio-Fungicides + Free Agronomist Hotline 1800-425-9999",
-  advisoryTitle: "Get Weekly Crop & Pesticide Recommendations",
-  advisoryDesc: "Join 15,000+ farmers receiving our free seasonal advisory newsletter. Kharif & Rabi crop schedules, disease alerts, and exclusive offers every week.",
-  phone: "1800-425-9999",
-  email: "support@sathyabio.com",
-  razorpayKeyId: "rzp_test_sathyaBioLiveKey102",
-  razorpaySecret: "rzp_secret_mock_live_9988",
-  razorpayMode: "test"
-};
-
-try {
-  const savedCms = localStorage.getItem('sathya_bio_cms');
-  if (savedCms) CMS_CONTENT = { ...CMS_CONTENT, ...JSON.parse(savedCms) };
-} catch (e) {}
-
-// --- ADVISORY SUBSCRIBERS STORE (From "Get Weekly Crop & Pesticide Recommendations") ---
-let ADVISORY_SUBSCRIBERS = [
-  {
-    id: "adv-101",
-    name: "Rameshwar Patel",
-    phone: "+91 98450 12345",
-    crop: "Paddy/Rice",
-    season: "Kharif",
-    acreage: 5,
-    date: "2026-08-25",
-    status: "Active",
-    lastSent: "BlastShield Dosage Schedule"
-  },
-  {
-    id: "adv-102",
-    name: "Muthuvel K.",
-    phone: "+91 94431 88990",
-    crop: "Cotton",
-    season: "Kharif",
-    acreage: 12,
-    date: "2026-08-27",
-    status: "Active",
-    lastSent: "FlyKill Ultra - Whitefly Alert"
-  },
-  {
-    id: "adv-103",
-    name: "Suresh Reddy",
-    phone: "+91 98842 55667",
-    crop: "Sugarcane",
-    season: "Rabi",
-    acreage: 8,
-    date: "2026-08-28",
-    status: "Active",
-    lastSent: "RootVigor Gold Drenching Guide"
-  }
-];
-
-try {
-  const savedSubs = localStorage.getItem('sathya_bio_subscribers');
-  if (savedSubs) ADVISORY_SUBSCRIBERS = JSON.parse(savedSubs);
-} catch (e) {}
-
-// --- ORDERS & DISPATCH STORE ---
-let ORDERS = [
-  {
-    id: "SB-ORD-8821",
-    customerName: "Rameshwar Patel",
-    customerPhone: "+91 98450 12345",
-    address: "Plot 42, Green Valley Farm, Tanjore, Tamil Nadu - 613001",
-    items: [
-      { id: "sb-01", name: "Sathya Bio BlastShield 75 WP", qty: 2, price: 680, packSize: "500g" },
-      { id: "sb-04", name: "Sathya Bio RootVigor Gold", qty: 1, price: 990, packSize: "1 Litre" }
+    detailedDescription: 'WeedClear 24-D is a highly systemic herbicide that mimics the action of plant growth hormone auxin, causing uncontrolled growth in susceptible broadleaf weeds.',
+    benefits: [
+      'Excellent control of tough broadleaf weeds.',
+      'Highly selective and safe for grass crops like wheat and sugarcane.',
+      'Systemic action ensures complete kill from leaves to roots.'
     ],
-    subtotal: 2350,
-    gst: 423,
-    total: 2773,
-    paymentMethod: "Razorpay (UPI / Cards)",
-    paymentStatus: "Paid",
-    deliveryStatus: "Out for Delivery",
-    assignedDeliveryBoy: "Karthik Raja",
-    deliveryBoyPhone: "+91 97890 11223",
-    otp: "4829",
-    createdAt: "2026-08-30T10:00:00.000Z"
+    modeOfAction: 'Acts as a synthetic auxin, causing rapid, uncontrolled cell division and growth.',
+    applicationInstructions: 'Apply as a foliar spray 30-35 days after sowing when weeds are in 2-4 leaf stage.',
+    rating: 4.6,
+    reviewsCount: 156,
+    inStock: true,
+    badge: 'Broadleaf Killer',
+    image: IMG.herbicide,
+    price: 340,
+    originalPrice: 400,
+    discount: '15% OFF'
   },
+
   {
-    id: "SB-ORD-8822",
-    customerName: "Gurpreet Singh",
-    customerPhone: "+91 98140 77889",
-    address: "Khasra 104, GT Road, Karnal, Haryana - 132001",
-    items: [
-      { id: "sb-02", name: "Sathya Bio FlyKill Ultra", qty: 3, price: 840, packSize: "250g" }
+    id: 'sb-27',
+    name: 'Sathya Bio AminoBoost Liquid',
+    tagline: 'Advanced Amino Acid Bio-Stimulant',
+    category: 'Bio-Stimulant',
+    crops: ['Tomato', 'Cotton', 'Grapes', 'Citrus', 'Paddy/Rice'],
+    diseases: [],
+    activeIngredient: 'L-Amino Acids 20% + Seaweed Extract',
+    dosage: '250ml per Acre',
+    packSizes: ['250ml', '500ml', '1 Litre'],
+    selectedPack: '500ml',
+    safetyRating: '100% Organic',
+    description: 'A powerful anti-stress bio-stimulant that helps crops recover from weather, transplant, and chemical stress.',
+    detailedDescription: 'AminoBoost provides plants with ready-made L-amino acids, saving the energy required for their synthesis. This energy is redirected towards growth and flowering.',
+    benefits: [
+      'Rapidly relieves plant stress from drought, heat, or phytotoxicity.',
+      'Enhances pollen germination and fruit set.',
+      'Improves efficacy of tank-mixed sprays.'
     ],
-    subtotal: 2520,
-    gst: 453.6,
-    total: 2973.6,
-    paymentMethod: "Cash on Delivery",
-    paymentStatus: "Pending",
-    deliveryStatus: "Dispatched",
-    assignedDeliveryBoy: "Aman Deep",
-    deliveryBoyPhone: "+91 98144 22334",
-    otp: "9152",
-    createdAt: "2026-08-30T12:30:00.000Z"
+    modeOfAction: 'Provides direct precursors for protein synthesis and regulates stomatal opening.',
+    applicationInstructions: 'Foliar spray during vegetative growth, pre-flowering, and fruit setting stages.',
+    rating: 4.9,
+    reviewsCount: 212,
+    inStock: true,
+    badge: 'Stress Reliever',
+    image: IMG.biostim,
+    price: 460,
+    originalPrice: 550,
+    discount: '16% OFF'
+  },
+
+  {
+    id: 'sb-28',
+    name: 'Sathya Bio NeemGuard 10000 PPM',
+    tagline: 'Pure Cold-Pressed Bio-Insecticide & Antifeedant',
+    category: 'Insecticide',
+    crops: ['Paddy/Rice', 'Cotton', 'Tomato', 'Grapes', 'Citrus'],
+    diseases: ['Aphids', 'Whitefly', 'Caterpillars'],
+    activeIngredient: 'Azadirachtin 1% (10000 PPM) EC',
+    dosage: '300ml per Acre',
+    packSizes: ['250ml', '500ml', '1 Litre'],
+    selectedPack: '500ml',
+    safetyRating: '100% Organic Certified',
+    description: 'High-potency botanical neem formulation disrupting insect lifecycle, feeding, and egglaying without chemical residues.',
+    detailedDescription: 'Sathya Bio NeemGuard 10000 PPM is extracted using high-grade cold-press technology to preserve active Azadirachtin. It acts as an antifeedant, repellent, and insect growth regulator.',
+    benefits: [
+      'Zero pre-harvest interval - completely safe for organic & export crops.',
+      'Inhibits pest resistance development when mixed with chemical sprays.',
+      'Safe for beneficial insects.'
+    ],
+    modeOfAction: 'Disrupts ecdysone hormone systems, preventing molting and suppressing feeding.',
+    applicationInstructions: 'Foliar spray at 3ml per Litre water. Apply early morning or evening.',
+    rating: 4.9,
+    reviewsCount: 184,
+    inStock: true,
+    badge: '100% Organic',
+    image: IMG.insecticide,
+    price: 580,
+    originalPrice: 720,
+    discount: '19% OFF'
+  },
+
+  {
+    id: 'sb-29',
+    name: 'Sathya Bio CopperShield 50 WG',
+    tagline: 'Water Dispersible Bio-Bactericide & Contact Fungicide',
+    category: 'Fungicide',
+    crops: ['Tomato', 'Potato', 'Grapes', 'Citrus'],
+    diseases: ['Blight', 'Downy Mildew'],
+    activeIngredient: 'Copper Hydroxide 50% WG',
+    dosage: '400g per Acre',
+    packSizes: ['250g', '500g', '1kg'],
+    selectedPack: '500g',
+    safetyRating: 'Class III (Eco Friendly)',
+    description: 'Advanced WG formulation offering broad-spectrum protective defense against bacterial spot, late blight, and downy mildew.',
+    detailedDescription: 'CopperShield 50 WG releases micro-fine copper ions that stick tightly to plant foliage, preventing bacterial and fungal spore germination.',
+    benefits: [
+      'Disperses instantly in water without clogging nozzles.',
+      'Protects foliage against both bacterial spot and fungal blights.',
+      'High tenacity & superior rain-fast performance.'
+    ],
+    modeOfAction: 'Copper ions denature cellular proteins and enzymes in fungal spores and bacterial cell walls.',
+    applicationInstructions: 'Mix 2g per Litre water. Apply preventively when disease weather is forecast.',
+    rating: 4.7,
+    reviewsCount: 129,
+    inStock: true,
+    badge: 'Bactericide Guard',
+    image: IMG.fungicide,
+    price: 620,
+    originalPrice: 750,
+    discount: '17% OFF'
+  },
+
+  {
+    id: 'sb-30',
+    name: 'Sathya Bio SulphaStar 80 WDG',
+    tagline: 'Micronutrient Fortified Powdery Mildew & Mite Guard',
+    category: 'Fungicide',
+    crops: ['Grapes', 'Wheat', 'Sugarcane', 'Citrus'],
+    diseases: ['Downy Mildew', 'Rust'],
+    activeIngredient: 'Sulphur 80% WDG',
+    dosage: '1kg per Acre',
+    packSizes: ['1kg', '3kg', '5kg'],
+    selectedPack: '1kg',
+    safetyRating: 'Class III (Eco Safe)',
+    description: 'Dual-action micronutrient fertilizer and contact fungicide for controlling powdery mildew, rust, and red spider mites.',
+    detailedDescription: 'SulphaStar 80 WDG delivers elemental sulphur in instantly wettable micro-granules. It satisfies plant sulphur deficiency while creating a hostile environment for mildew spores.',
+    benefits: [
+      'Boosts chlorophyll formation, oil synthesis, and protein levels.',
+      'Controls powdery mildew & spider mites simultaneously.',
+      'Granular non-dusty WDG formulation.'
+    ],
+    modeOfAction: 'Vapour phase oxidation disrupts fungal respiratory chain and mite cell membranes.',
+    applicationInstructions: 'Dissolve 2.5g per Litre water. Spray at first sign of powdery mildew.',
+    rating: 4.8,
+    reviewsCount: 167,
+    inStock: true,
+    badge: 'Powdery Mildew Care',
+    image: IMG.fungicide,
+    price: 390,
+    originalPrice: 480,
+    discount: '18% OFF'
+  },
+
+  {
+    id: 'sb-31',
+    name: 'Sathya Bio StemKill 18.5 SC',
+    tagline: 'Broad Spectrum Stem Borer & Leaf Folder Specialist',
+    category: 'Insecticide',
+    crops: ['Paddy/Rice', 'Sugarcane', 'Corn'],
+    diseases: ['Stem Borer', 'Caterpillars'],
+    activeIngredient: 'Chlorantraniliprole 18.5% SC',
+    dosage: '60ml per Acre',
+    packSizes: ['60ml', '150ml'],
+    selectedPack: '60ml',
+    safetyRating: 'Class III Low Toxicity',
+    description: 'Ultra-concentrated systemic insecticide providing extended control of stem borer, leaf folder, and bollworms.',
+    detailedDescription: 'StemKill 18.5 SC is absorbed rapidly by plant tissue and translocated throughout stems and leaves to protect tillers.',
+    benefits: [
+      'Long duration protection - up to 21 days single application.',
+      'Prevents dead heart formation and white earheads in paddy.',
+      'Preserves beneficial spiders in fields.'
+    ],
+    modeOfAction: 'Activates insect ryanodine receptors, causing muscle contraction and feeding cessation.',
+    applicationInstructions: 'Apply 60ml per acre in 150L water at 20-30 days post transplanting.',
+    rating: 4.9,
+    reviewsCount: 280,
+    inStock: true,
+    badge: 'Top Seller',
+    image: IMG.insecticide,
+    price: 890,
+    originalPrice: 1100,
+    discount: '19% OFF'
+  },
+
+  {
+    id: 'sb-32',
+    name: 'Sathya Bio BloomMax Super',
+    tagline: 'Flower Booster & Fruit Drop Prevention Bio-Stimulant',
+    category: 'Bio-Stimulant',
+    crops: ['Tomato', 'Cotton', 'Grapes', 'Citrus'],
+    diseases: [],
+    activeIngredient: 'Nitrobenzene 20% + Boron & Zinc Chelates',
+    dosage: '250ml per Acre',
+    packSizes: ['250ml', '500ml', '1 Litre'],
+    selectedPack: '500ml',
+    safetyRating: '100% Non-Toxic',
+    description: 'Plant flowering stimulant engineered to trigger abundant flower initiation, prevent flower drop, and enlarge fruit size.',
+    detailedDescription: 'BloomMax Super regulates flower-inducing hormones and provides critical micronutrients like Boron and Zinc.',
+    benefits: [
+      'Increases flower cluster count by up to 35%.',
+      'Drastically reduces flower and young fruit drop under heat stress.',
+      'Improves fruit color and market price.'
+    ],
+    modeOfAction: 'Stimulates plant flowering hormones and enhances carbohydrate translocation.',
+    applicationInstructions: 'Foliar application at pre-flowering stage and repeat 15 days later.',
+    rating: 4.9,
+    reviewsCount: 195,
+    inStock: true,
+    badge: 'Yield Booster',
+    image: IMG.biostim,
+    price: 520,
+    originalPrice: 650,
+    discount: '20% OFF'
+  },
+
+  {
+    id: 'sb-33',
+    name: 'Sathya Bio GrassOut 10 EC',
+    tagline: 'Selective Post-Emergence Grass Weed Herbicide',
+    category: 'Herbicide',
+    crops: ['Cotton', 'Tomato', 'Potato', 'Sugarcane'],
+    diseases: ['Weeds'],
+    activeIngredient: 'Quizalofop-ethyl 10% EC',
+    dosage: '300ml per Acre',
+    packSizes: ['250ml', '500ml', '1 Litre'],
+    selectedPack: '500ml',
+    safetyRating: 'Class II (Selective)',
+    description: 'Systemic selective herbicide for complete control of annual and perennial grass weeds in broadleaf crops.',
+    detailedDescription: 'GrassOut 10 EC targets narrow-leaf grass weeds infesting cotton, tomato, and potato crops without damaging the main crop.',
+    benefits: [
+      'Highly selective - zero damage to broadleaf crops like cotton & tomato.',
+      'Kills tough perennial grasses like Cynodon dactylon.',
+      'Rain-fast within 1 hour.'
+    ],
+    modeOfAction: 'Inhibits acetyl-CoA carboxylase (ACCase) enzyme in grass weeds.',
+    applicationInstructions: 'Spray when grass weeds are at 2-4 leaf stage.',
+    rating: 4.7,
+    reviewsCount: 110,
+    inStock: true,
+    badge: 'Grass Eliminator',
+    image: IMG.herbicide,
+    price: 480,
+    originalPrice: 580,
+    discount: '17% OFF'
+  },
+
+  {
+    id: 'sb-34',
+    name: 'Sathya Bio Trichoderma Viride 1% WP',
+    tagline: 'Bio-Control Soil Fungicide for Root Rot & Wilt',
+    category: 'Fungicide',
+    crops: ['Paddy/Rice', 'Cotton', 'Tomato', 'Sugarcane', 'Grapes'],
+    diseases: ['Blight', 'Rust'],
+    activeIngredient: 'Trichoderma Viride (Min 2 x 10^8 CFU/g)',
+    dosage: '1kg per Acre',
+    packSizes: ['1kg', '5kg'],
+    selectedPack: '1kg',
+    safetyRating: '100% Organic Certified',
+    description: 'Antagonistic biological fungicide that parasitizes root rot, collar rot, and Fusarium wilt pathogens in soil.',
+    detailedDescription: 'Trichoderma Viride is a beneficial bio-fungal culture that colonizes root zones and destroys soil fungal pathogens.',
+    benefits: [
+      'Controls seed-borne and soil-borne fungal diseases organically.',
+      'Promotes dense root system.',
+      'Restores soil biological balance.'
+    ],
+    modeOfAction: 'Hyperparasitism, antibiosis, and competition around root surfaces.',
+    applicationInstructions: 'Mix 1kg with 100kg farmyard manure and incorporate into moist soil.',
+    rating: 4.9,
+    reviewsCount: 240,
+    inStock: true,
+    badge: 'Bio-Fungicide',
+    image: IMG.fungicide,
+    price: 290,
+    originalPrice: 380,
+    discount: '23% OFF'
+  },
+
+  {
+    id: 'sb-35',
+    name: 'Sathya Bio Pseudomonas 1% WP',
+    tagline: 'Bio-Bactericide & Systemic Induced Resistance Activator',
+    category: 'Fungicide',
+    crops: ['Paddy/Rice', 'Tomato', 'Potato', 'Citrus', 'Wheat'],
+    diseases: ['Blight', 'Blast'],
+    activeIngredient: 'Pseudomonas fluorescens (Min 2 x 10^8 CFU/g)',
+    dosage: '1kg per Acre',
+    packSizes: ['1kg', '5kg'],
+    selectedPack: '1kg',
+    safetyRating: '100% Organic Certified',
+    description: 'Potent bio-agent protecting crops against bacterial leaf blight, sheath rot, and damping off.',
+    detailedDescription: 'Pseudomonas fluorescens produces siderophores that starve soil pathogens of iron while inducing systemic plant resistance.',
+    benefits: [
+      'Dual action: bio-bactericide + plant growth promoting rhizobacteria.',
+      'Boosts crop vigor and suppresses leaf streak.',
+      'Safe for organic farming.'
+    ],
+    modeOfAction: 'Siderophore iron chelation and production of phenazine antibiotics.',
+    applicationInstructions: 'Foliar spray at 10g per Litre water or root drenching.',
+    rating: 4.8,
+    reviewsCount: 175,
+    inStock: true,
+    badge: 'Bacterial Guard',
+    image: IMG.fungicide,
+    price: 310,
+    originalPrice: 400,
+    discount: '22% OFF'
   }
 ];
 
-try {
-  const savedOrders = localStorage.getItem('sathya_bio_orders');
-  if (savedOrders) ORDERS = JSON.parse(savedOrders);
-} catch (e) {}
 
-// --- ERP INVENTORY & WAREHOUSE STORE ---
-let ERP_INVENTORY = [
-  { id: "INV-01", sku: "SB-BLAST-75", name: "BlastShield 75 WP (500g)", batchNo: "BATCH-2026-08A", warehouse: "Warehouse 1 (Coimbatore)", stockQty: 420, minThreshold: 100, expiryDate: "2028-08-01", costPrice: 420, sellingPrice: 680 },
-  { id: "INV-02", sku: "SB-FLY-50", name: "FlyKill Ultra (250g)", batchNo: "BATCH-2026-07B", warehouse: "Warehouse 1 (Coimbatore)", stockQty: 185, minThreshold: 50, expiryDate: "2028-07-15", costPrice: 530, sellingPrice: 840 },
-  { id: "INV-03", sku: "SB-BLIGHT-PRO", name: "BlightStop Pro (1kg)", batchNo: "BATCH-2026-06C", warehouse: "Warehouse 2 (Hyderabad)", stockQty: 65, minThreshold: 80, expiryDate: "2028-06-30", costPrice: 480, sellingPrice: 750 },
-  { id: "INV-04", sku: "SB-ROOT-GOLD", name: "RootVigor Gold (1L)", batchNo: "BATCH-2026-08C", warehouse: "Warehouse 3 (Pune)", stockQty: 310, minThreshold: 60, expiryDate: "2029-01-10", costPrice: 620, sellingPrice: 990 }
-];
-
-let ERP_MOVEMENTS = [
-  { time: "Today, 09:15 AM", type: "IN", sku: "SB-BLAST-75", name: "BlastShield 75 WP", qty: 200, ref: "Factory Delivery INV-771", staff: "Anand V." },
-  { time: "Today, 11:30 AM", type: "OUT", sku: "SB-FLY-50", name: "FlyKill Ultra", qty: 45, ref: "Dispatch to Hub #4", staff: "P. Rajesh" }
-];
-
-let ERP_TASKS = [
-  { id: "TSK-301", title: "Batch 2026-08A Quality Audit", assignedTo: "Dr. K. Senthil (Agronomist)", priority: "High", status: "In Progress", dueDate: "2026-08-31" },
-  { id: "TSK-302", title: "Restock Warehouse 2 BlightStop Pro", assignedTo: "Anand Verma (Logistics)", priority: "Urgent", status: "Pending", dueDate: "2026-09-01" },
-  { id: "TSK-303", title: "Weekly Kharif Advisory SMS Dispatch", assignedTo: "Pooja Sharma (Content Manager)", priority: "Medium", status: "Completed", dueDate: "2026-08-29" }
-];
-
-// --- SUPPORT TICKETS STORE ---
-let TICKETS = [
+const INITIAL_TICKETS = [
   {
-    id: 'TK-8709',
-    farmerName: 'K. Venkateswarlu',
-    phone: '+91 98450 12345',
-    subject: 'Severe Brown Leaf Spots & Neck Blast on 45-day Paddy',
+    id: 'TK-8942',
+    subject: 'Leaf Yellowing & Stunting in Paddy Field',
     category: 'Field Advisory',
     crop: 'Paddy/Rice',
-    severity: 'Urgent',
+    severity: 'High',
     status: 'In Progress',
-    date: '2026-08-28',
-    assignedExpert: 'Dr. V. K. Sathyanarayana',
+    date: '2026-08-25',
+    assignedExpert: 'Dr. Ramesh Agronomist',
     messages: [
-      { sender: 'Farmer', text: 'Spindle shaped brown lesions observed on flag leaf. Humid weather continues.', time: '09:30 AM' },
-      { sender: 'Dr. Sathyanarayana', text: 'Apply Sathya Bio BlastShield 75 WP @ 120g/acre immediately before sunset. Avoid nitrogen top-dressing until lesion growth halts.', time: '10:05 AM' }
-    ]
-  },
-  {
-    id: 'TK-8710',
-    farmerName: 'Ramesh Patil',
-    phone: '+91 94431 88990',
-    subject: 'Dosage query for Sathya Bio BlastShield on Cotton',
-    category: 'Product Dosage',
-    crop: 'Cotton',
-    severity: 'Medium',
-    status: 'Resolved',
-    date: '2026-08-22',
-    assignedExpert: 'Kavitha S. (Pesticide Specialist)',
-    messages: [
-      { sender: 'Farmer', text: 'Can I mix BlastShield with RootVigor Gold in a single tank spray?', time: '02:00 PM' },
-      { sender: 'Sathya Bio Expert', text: 'Yes, BlastShield WP and RootVigor Gold Liquid are fully tank-mix compatible. Maintain 150L water volume per acre.', time: '02:18 PM' }
+      {
+        sender: 'Farmer',
+        text: 'My 3-acre paddy field leaves are turning light yellow from tips after heavy rainfall.',
+        time: '10:15 AM'
+      },
+      {
+        sender: 'Sathya Bio Expert',
+        text: 'Hello! This indicates possible Nitrogen leaching or early sheath blight.',
+        time: '10:42 AM'
+      }
     ]
   }
 ];
 
-// --- LIVE CHAT RECORDS STORE ---
-let CHAT_RECORDS = [
+
+const EXPERTS = [
   {
-    sessionId: "CHAT-SESS-01",
-    farmerName: "Muthuvel K.",
-    farmerPhone: "+91 94431 88990",
-    channel: "Web Live Chat",
-    status: "Active",
-    updatedAt: "Today, 02:35 PM",
-    messages: [
-      { sender: "Farmer", text: "Hello, what is the best biological insecticide for cotton whitefly?", timestamp: "02:30 PM" },
-      { sender: "Sathya Bio Bot", text: "Hello Muthuvel ji! We recommend Sathya Bio FlyKill Ultra (Diafenthiuron 50% WP + Botanical Neem) @ 250g per acre.", timestamp: "02:30 PM" },
-      { sender: "Dr. Senthil (Agronomist)", text: "Ensure full spray on the underside of leaves during morning hours for best translaminar knock-down.", timestamp: "02:35 PM" }
-    ]
+    id: 'exp-1',
+    name: 'Dr. V. K. Sathyanarayana',
+    title: 'Chief Agronomist & Soil Pathology Lead',
+    experience: '22+ Years Exp',
+    specialties: [
+      'Soil Nutrient Balancing',
+      'Paddy & Wheat Diseases',
+      'Organic Bio-stimulants'
+    ],
+    availability: 'Available Today',
+    rating: '4.9 ★ (420+ Calls)',
+    avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=300&q=80'
   },
+
   {
-    sessionId: "CHAT-SESS-02",
-    farmerName: "Gurpreet Singh",
-    farmerPhone: "+91 98140 77889",
-    channel: "WhatsApp Bot",
-    status: "Resolved",
-    updatedAt: "Today, 11:20 AM",
-    messages: [
-      { sender: "Farmer", text: "When should I spray WeedClear 24-D on wheat?", timestamp: "11:15 AM" },
-      { sender: "Sathya Bio Bot", text: "Spray WeedClear 24-D at 30-35 days after sowing (DAS) when broadleaf weeds have 2-4 leaves.", timestamp: "11:16 AM" }
-    ]
+    id: 'exp-2',
+    name: 'Ananya Deshmukh',
+    title: 'Senior Crop Protection Specialist',
+    experience: '14+ Years Exp',
+    specialties: [
+      'Cotton Whitefly Control',
+      'Horticulture Pest Management'
+    ],
+    availability: 'Next Available: 2:30 PM',
+    rating: '4.8 ★ (315+ Calls)',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&q=80'
   }
 ];
 
-// --- POS BILLING COUNTER STATE ---
-let POS_CART = [
-  { id: "sb-01", name: "Sathya Bio BlastShield 75 WP (500g)", price: 680, qty: 2, discount: 0, hsn: "380899" },
-  { id: "sb-04", name: "Sathya Bio RootVigor Gold (1L)", price: 990, qty: 1, discount: 5, hsn: "310100" }
+
+const N8N_WORKFLOW_NODES = [
+  {
+    id: 1,
+    name: 'WhatsApp Webhook',
+    type: 'trigger',
+    status: 'Active',
+    desc: 'Receives farmer incoming message & photo'
+  },
+  {
+    id: 2,
+    name: 'AI Disease Parser',
+    type: 'action',
+    status: 'Success',
+    desc: 'Extracts crop type & symptoms'
+  },
+  {
+    id: 3,
+    name: 'Catalog Lookup DB',
+    type: 'search',
+    status: 'Success',
+    desc: 'Matches exact fungicide remedy'
+  },
+  {
+    id: 4,
+    name: 'WhatsApp Response',
+    type: 'response',
+    status: 'Ready',
+    desc: 'Sends instant dosage & order button'
+  }
 ];
 
-// --- MULTILINGUAL i18n ENGINE (8 LANGUAGES) ---
+
+const SAMPLE_DISEASE_DIAGNOSES = [
+  {
+    keyword: 'blight',
+    diseaseName: 'Early / Late Blight',
+    cropDetected: 'Tomato / Potato',
+    confidence: '96.4%',
+    symptoms: 'Dark brown concentric rings on lower leaves.',
+    recommendedProduct: 'Sathya Bio BlightStop Pro (500g/acre)',
+    productId: 'sb-03'
+  }
+];
+
+
+// --- MULTILINGUAL i18n ENGINE ---
 const TRANSLATIONS = {
   en: {
     topbar_shipping: 'FREE Shipping on Agro Orders over ₹999',
@@ -364,15 +638,25 @@ const TRANSLATIONS = {
     reset_filters: 'Reset All Filters',
     add_to_cart: 'Add to Cart',
     reviews: 'reviews',
-    advisory_sec_title: 'Get Weekly Crop & Pesticide Recommendations',
-    advisory_sec_desc: 'Join 15,000+ farmers receiving our free seasonal advisory newsletter. Kharif & Rabi crop schedules, disease alerts, and exclusive offers every week.',
-    adv_get_btn: 'Get Instant Crop & Pesticide Recommendation',
     soil_title: 'Soil Test Report Analyzer',
+    soil_desc: 'Upload your laboratory soil test document (PDF or image). Our AI engine parses N-P-K levels.',
+    soil_upload_btn: 'Upload Soil Report',
+    soil_dropzone: 'Drag & Drop Soil Document',
+    soil_formats: 'PDF, PNG, JPG supported',
     n8n_title: 'WhatsApp N8N Automation Agent',
+    n8n_subtitle: 'See how automated N8N workflows assist farmers via WhatsApp 24/7',
+    n8n_test_btn: 'Run N8N Test Flow',
     tickets_title: 'Supporting Ticket System',
+    tickets_subtitle: 'Technical field assistance & dosage queries',
+    ticket_new_btn: 'Submit Ticket',
     experts_title: 'Connect to a Plant Doctor Expert',
+    experts_subtitle: '1-on-1 consultation calls with senior agricultural scientists',
+    footer_nav: 'Store Categories',
+    footer_crops: 'Top Crops',
+    footer_help: 'Customer Support',
     footer_copyright: '© 2026 Sathya Bio Agro Tech Ltd. All rights reserved.',
     chatbot_title: 'Sathya Bio Chat Assistant',
+    chat_placeholder: 'Type crop question...',
     chat_welcome: '👋 Welcome to Sathya Bio Agro Support! How can I assist your crop today?',
     checkout_title: 'Complete Your Agro Order',
     field_name: 'Full Name',
@@ -380,1397 +664,1279 @@ const TRANSLATIONS = {
     field_address: 'Farm Delivery Address',
     field_payment: 'Payment Option',
     pay_cod: 'Cash on Delivery (COD) - Pay on Arrival',
-    pay_upi: 'Razorpay Online (UPI, Cards, NetBanking, GPay)',
+    pay_upi: 'UPI / Google Pay / PhonePe',
     pay_bank: 'Net Banking / KCC Card',
     place_order: 'Place Order Now',
     scan_title: 'AI Crop Disease Photo Scanner',
     scan_desc: 'AI will diagnose disease & recommend pesticide',
     advisory_label: 'Account',
-    lang_label: 'Language'
-  },
-  hi: {
-    topbar_shipping: '₹999 से अधिक के कृषि आर्डर पर मुफ़्त डिलीवरी',
-    logo_sub: 'कृषि कीटनाशक स्टोर',
-    search_placeholder: 'फसल, रोग या कीटनाशक खोजें जैसे धान झुलसा...',
-    search_btn: 'खोजें',
-    basket_label: 'टोकरी',
-    nav_all_products: 'सभी उत्पाद',
-    hero_title: 'अपनी फसल की सुरक्षा करें।\nअधिकतम पैदावार प्राप्त करें।',
-    hero_desc: '100% जैविक प्रमाणित फफूंदनाशक, कीटनाशक व जैविक खाद ऑनलाइन ऑर्डर करें।',
-    hero_shop_btn: 'उत्पाद कैटलॉग',
-    hero_soil_btn: 'मृदा रिपोर्ट अपलोड करें',
-    trust_certified: '100% प्रमाणित गुणवत्ता',
-    trust_dispatch: 'उसी दिन प्रेषण',
-    trust_whatsapp: 'व्हाट्सएप सहायता',
-    shop_by_category: 'श्रेणी के अनुसार खरीदें',
-    catalog_title: 'कृषि कीटनाशक स्टोर कैटलॉग',
-    catalog_subtitle: 'फसल, रोग अथवा उत्पाद श्रेणी अनुसार फ़िल्टर करें',
-    filter_title: 'फ़िल्टर',
-    filter_crop: 'फसल अनुसार',
-    filter_disease: 'रोग अनुसार',
-    filter_category: 'श्रेणी',
-    reset_filters: 'फ़िल्टर रीसेट करें',
-    add_to_cart: 'कार्ट में जोड़ें',
-    advisory_sec_title: 'साप्ताहिक फसल व कीटनाशक सलाह प्राप्त करें',
-    advisory_sec_desc: '15,000+ किसानों से जुड़ें और खरीफ व रबी फसल कार्यक्रम, रोग चेतावनियाँ और विशेष ऑफर हर सप्ताह मुफ़्त पाएं।',
-    adv_get_btn: 'तुरंत फसल व कीटनाशक सलाह प्राप्त करें',
-    chatbot_title: 'सत्य बायो चैट सहायक',
-    chat_welcome: '👋 सत्य बायो में आपका स्वागत है! आज आपकी फसल में हम क्या सहायता कर सकते हैं?',
-    checkout_title: 'अपना कृषि ऑर्डर पूरा करें',
-    pay_cod: 'कैश ऑन डिलीवरी (COD)',
-    pay_upi: 'रेज़रपे ऑनलाइन (UPI / GPay / PhonePe / कार्ड)',
-    place_order: 'ऑर्डर सबमिट करें'
-  },
-  ta: {
-    topbar_shipping: '₹999க்கு மேற்பட்ட ஆர்டர்களுக்கு இலவச டெலிவரி',
-    logo_sub: 'விவசாய பூச்சிக்கொல்லி கடை',
-    search_placeholder: 'பயிர், நோய் அல்லது மருந்து தேடுக...',
-    search_btn: 'தேடு',
-    basket_label: 'கூடை',
-    nav_all_products: 'அனைத்து பொருட்கள்',
-    hero_title: 'பயிர்களை பாதுகாப்போம்.\nவிளைச்சலை பெருக்குவோம்.',
-    hero_desc: 'சான்றளிக்கப்பட்ட பயோ-பூஞ்சாணக்கொல்லி மற்றும் உரங்களை ஆன்லைனில் ஆர்டர் செய்யுங்கள்.',
-    hero_shop_btn: 'பொருட்கள் பட்டியல்',
-    hero_soil_btn: 'மண் அறிக்கை பதிவேற்றவும்',
-    trust_certified: '100% சான்றளிக்கப்பட்ட தரம்',
-    trust_dispatch: 'அன்றைய தினமே அனுப்புதல்',
-    trust_whatsapp: 'வாட்ஸ்அப் உதவி',
-    shop_by_category: 'பிரிவு வாரியாக வாங்கவும்',
-    catalog_title: 'விவசாய பூச்சிக்கொல்லி கடை',
-    catalog_subtitle: 'பயிர் மற்றும் நோய் வாரியாக தேர்ந்தெடுக்கவும்',
-    filter_title: 'வடிகட்டிகள்',
-    filter_crop: 'பயிர் வாரியாக',
-    filter_disease: 'நோய் வாரியாக',
-    filter_category: 'பிரிவு',
-    reset_filters: 'அனைத்தையும் மீட்டமை',
-    add_to_cart: 'கூடையில் சேர்',
-    advisory_sec_title: 'வாராந்திர பயிர் & பூச்சிக்கொல்லி பரிந்துரைகளைப் பெறுங்கள்',
-    advisory_sec_desc: '15,000+ விவசாயிகளுடன் இணைந்து காரீஃப் & ரபி பயிர் அட்டவணை, நோய் எச்சரிக்கைகளை இலவசமாகப் பெறுங்கள்.',
-    adv_get_btn: 'உடனடி பயிர் & பூச்சிக்கொல்லி பரிந்துரை பெறுங்கள்',
-    chatbot_title: 'சத்யா பயோ சாட் உதவியாளர்',
-    chat_welcome: '👋 சத்யா பயோ கடைக்கு வரவேற்கிறோம்! உங்கள் பயிருக்கு உதவ நாங்கள் தயார்.',
-    checkout_title: 'ஆர்டரை முடிக்கவும்',
-    pay_cod: 'பொருள் கிடைத்தவுடன் பணம் (COD)',
-    pay_upi: 'ரேஸர்பே ஆன்லைன் (UPI / கார்டு / ஜிபே)',
-    place_order: 'ஆர்டரை உறுதிசெய்'
-  },
-  te: {
-    topbar_shipping: '₹999 పైబడిన ఆర్డర్లపై ఉచిత డెలివరీ',
-    logo_sub: 'వ్యవసాయ పురుగుమందుల స్టోర్',
-    search_placeholder: 'పంట, వ్యాధి లేదా రసాయనం వెతకండి...',
-    search_btn: 'వెతకండి',
-    basket_label: 'బాస్కెట్',
-    nav_all_products: 'అన్ని ఉత్పత్తులు',
-    hero_title: 'మీ పంటలను రక్షించండి.\nదిగుబడిని పెంచుకోండి.',
-    hero_desc: 'ధృవీకరించబడిన బయో-పురుగుమందులు మరియు పోషకాలను ఆన్‌లైన్‌లో ఆర్డర్ చేయండి.',
-    hero_shop_btn: 'షాప్ క్యాటలాగ్',
-    hero_soil_btn: 'నేల నివేదిక అప్‌లోడ్',
-    trust_certified: '100% సర్టిఫైడ్ నాణ్యత',
-    trust_dispatch: 'అదే రోజు డెలివరీ ప్రారంభం',
-    trust_whatsapp: 'వాట్సాప్ మద్దతు',
-    shop_by_category: 'వర్గం ప్రకారం కొనండి',
-    catalog_title: 'వ్యవసాయ పురుగుమందుల క్యాటలాగ్',
-    catalog_subtitle: 'పంట లేదా తెగులు ప్రకారం ఫిల్టర్ చేయండి',
-    filter_title: 'ఫిల్టర్లు',
-    filter_crop: 'పంట ప్రకారం',
-    filter_disease: 'వ్యాధి ప్రకారం',
-    filter_category: 'కేటగిరీ',
-    reset_filters: 'అన్నీ రీసెట్ చేయండి',
-    add_to_cart: 'కార్ట్‌కు జోడించు',
-    advisory_sec_title: 'వారపు పంట & పురుగుమందుల సలహాలను పొందండి',
-    advisory_sec_desc: '15,000+ రైతులతో చేరి ఖరీఫ్ & రబీ షెడ్యూల్స్, వ్యాధి హెచ్చరికలు ఉచితంగా పొందండి.',
-    adv_get_btn: 'తక్షణ పంట సలహాను పొందండి',
-    chatbot_title: 'సత్య బయో చాట్ సహాయకుడు',
-    chat_welcome: '👋 సత్య బయో స్టోర్‌కు స్వాగతం! మీ పంటకు ఎలా సహాయపడగలం?',
-    checkout_title: 'మీ ఆర్డర్ పూర్తి చేయండి',
-    pay_cod: 'క్యాష్ ఆన్ డెలివరీ (COD)',
-    pay_upi: 'రేజర్‌పే ఆన్‌లైన్ (UPI / కార్డ్)',
-    place_order: 'ఆర్డర్ చేయండి'
-  },
-  kn: {
-    topbar_shipping: '₹999 ಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಕೃಷಿ ಆರ್ಡರ್‌ಗಳಿಗೆ ಉಚಿತ ವಿತರಣೆ',
-    logo_sub: 'ಕೃಷಿ ಕೀಟನಾಶಕ ಮಳಿಗೆ',
-    search_placeholder: 'ಬೆಳೆ, ರೋಗ ಅಥವಾ ಕೀಟನಾಶಕ ಹುಡುಕಿ...',
-    search_btn: 'ಹುಡುಕಿ',
-    basket_label: 'ಬುಟ್ಟಿ',
-    nav_all_products: 'ಎಲ್ಲಾ ಉತ್ಪನ್ನಗಳು',
-    hero_title: 'ನಿಮ್ಮ ಬೆಳೆಗಳನ್ನು ರಕ್ಷಿಸಿ.\nಹೆಚ್ಚಿನ ಇಳುವರಿ ಪಡೆಯಿರಿ.',
-    hero_desc: 'ಪ್ರಮಾಣೀಕೃತ ಜೈವಿಕ ಕೀಟನಾಶಕಗಳು ಮತ್ತು ರಸಗೊಬ್ಬರಗಳನ್ನು ಆನ್‌ಲೈನ್‌ನಲ್ಲಿ ಆರ್ಡರ್ ಮಾಡಿ.',
-    hero_shop_btn: 'ಉತ್ಪನ್ನಗಳ ಪಟ್ಟಿ',
-    hero_soil_btn: 'ಮಣ್ಣಿನ ವರದಿ ಅಪ್‌ಲೋಡ್',
-    trust_certified: '100% ಪ್ರಮಾಣೀಕೃತ ಗುಣಮಟ್ಟ',
-    trust_dispatch: 'ಅದೇ ದಿನ ರವಾನೆ',
-    trust_whatsapp: 'ವಾಟ್ಸಾಪ್ ಬೆಂಬಲ',
-    catalog_title: 'ಕೃಷಿ ಕೀಟನಾಶಕಗಳ ಪಟ್ಟಿ',
-    catalog_subtitle: 'ಬೆಳೆ ಮತ್ತು ರೋಗದ ಪ್ರಕಾರ ಫಿಲ್ಟರ್ ಮಾಡಿ',
-    add_to_cart: 'ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಿ',
-    advisory_sec_title: 'ಸಾಪ್ತಾಹಿಕ ಬೆಳೆ ಮತ್ತು ಕೀಟನಾಶಕ ಶಿಫಾರಸುಗಳನ್ನು ಪಡೆಯಿರಿ',
-    advisory_sec_desc: '15,000+ ರೈತರೊಂದಿಗೆ ಸೇರಿ ಖಾರಿಫ್ ಮತ್ತು ರಬಿ ವೇಳಾಪಟ್ಟಿಗಳನ್ನು ಉಚಿತವಾಗಿ ಪಡೆಯಿರಿ.',
-    adv_get_btn: 'ತಕ್ಷಣದ ಬೆಳೆ ಶಿಫಾರಸು ಪಡೆಯಿರಿ',
-    chatbot_title: 'ಸತ್ಯ ಬಯೋ ಚಾಟ್ ಸಹಾಯಕ',
-    chat_welcome: '👋 ಸತ್ಯ ಬಯೋ ಅಂಗಡಿಗೆ ಸುಸ್ವಾಗತ! ನಿಮ್ಮ ಬೆಳೆಗೆ ನಾವು ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?',
-    checkout_title: 'ಆರ್ಡರ್ ಪೂರ್ಣಗೊಳಿಸಿ',
-    pay_cod: 'ಕ್ಯಾಶ್ ಆನ್ ಡೆಲಿವರಿ (COD)',
-    pay_upi: 'ರೇಜರ್‌ಪೇ ಆನ್‌ಲೈನ್ (UPI / ಕಾರ್ಡ್)',
-    place_order: 'ಈಗಲೇ ಆರ್ಡರ್ ಮಾಡಿ'
-  },
-  ml: {
-    topbar_shipping: '₹999 ന് മുകളിലുള്ള ഓർഡറുകൾക്ക് സൗജന്യ ഡെലിവറി',
-    logo_sub: 'കാർഷിക കീടനാശിനി സ്റ്റോർ',
-    search_placeholder: 'വിള അല്ലെങ്കിൽ കീടനാശിനി തിരയുക...',
-    search_btn: 'തിരയുക',
-    basket_label: 'ബാസ്കറ്റ്',
-    nav_all_products: 'എല്ലാ ഉൽപ്പന്നങ്ങളും',
-    hero_title: 'വിളകളെ സംരക്ഷിക്കുക.\nവിളവ് വർദ്ധിപ്പിക്കുക.',
-    hero_desc: 'ജൈവ കീടനാശിനികളും വളങ്ങളും ഓൺലൈനായി ഓർഡർ ചെയ്യുക.',
-    hero_shop_btn: 'ഉൽപ്പന്നങ്ങൾ കാണുക',
-    hero_soil_btn: 'മണ്ണ് റിപ്പോർട്ട് അപ്‌ലോഡ്',
-    add_to_cart: 'കാർട്ടിലേക്ക് ചേർക്കുക',
-    advisory_sec_title: 'പ്രതിവാര വിള & കീടനാശിനി നിർദ്ദേശങ്ങൾ നേടുക',
-    advisory_sec_desc: '15,000+ കർഷകർക്കൊപ്പം ചേരൂ, പ്രതിവാര നിർദ്ദേശങ്ങൾ സൗജന്യമായി നേടൂ.',
-    adv_get_btn: 'ഉടനടി നിർദ്ദേശം നേടുക',
-    chatbot_title: 'സത്യ ബയോ ചാറ്റ് അസിസ്റ്റന്റ്',
-    chat_welcome: '👋 സത്യ ബയോ സ്റ്റോറിലേക്ക് സ്വാഗതം! വിള പരിപാലനത്തിൽ സഹായം വേണോ?',
-    checkout_title: 'ഓർഡർ പൂർത്തിയാക്കുക',
-    pay_cod: 'ക്യാഷ് ഓൺ ഡെലിവറി (COD)',
-    pay_upi: 'റേസർപേ ഓൺലൈൻ (UPI / കാർഡ്)',
-    place_order: 'ഓർഡർ സമർപ്പിക്കുക'
-  },
-  mr: {
-    topbar_shipping: '₹999 वरील कृषी ऑर्डर्सवर मोफत डिलिव्हरी',
-    logo_sub: 'कृषी कीटकनाशक स्टोअर',
-    search_placeholder: 'पीक, रोग किंवा औषध शोधा...',
-    search_btn: 'शोधा',
-    basket_label: 'बास्केट',
-    nav_all_products: 'सर्व उत्पादने',
-    hero_title: 'आपल्या पिकांचे रक्षण करा.\nउत्पादन वाढवा.',
-    hero_desc: '100% जैविक प्रमाणित कीटकनाशके व खते ऑनलाइन खरेदी करा.',
-    hero_shop_btn: 'कॅटलॉग पहा',
-    hero_soil_btn: 'माती परीक्षण अहवाल',
-    add_to_cart: 'कार्टमध्ये जोडा',
-    advisory_sec_title: 'साप्ताहिक पीक व कीटकनाशक सल्ला मिळवा',
-    advisory_sec_desc: '15,000+ शेतकऱ्यांशी जोडा आणि खरीप व रब्बी हंगाम सल्ला मोफत मिळवा.',
-    adv_get_btn: 'त्वरित पीक सल्ला मिळवा',
-    chatbot_title: 'सत्य बायो चॅट सहाय्यक',
-    chat_welcome: '👋 सत्य बायो मध्ये आपले स्वागत आहे! आम्ही आपल्या पिकासाठी कशी मदत करू शकतो?',
-    checkout_title: 'आपली ऑर्डर पूर्ण करा',
-    pay_cod: 'कॅश ऑन डिलिव्हरी (COD)',
-    pay_upi: 'रेझरपे ऑनलाइन (UPI / कार्ड)',
-    place_order: 'ऑर्डर सबमिट करा'
-  },
-  bn: {
-    topbar_shipping: '₹৯৯৯ এর বেশি কৃষি অর্ডারে ফ্রি ডেলিভারি',
-    logo_sub: 'কৃষি কীটনাশক স্টোর',
-    search_placeholder: 'ফসল, রোগ বা কীটনাশক অনুসন্ধান করুন...',
-    search_btn: 'সন্ধান',
-    basket_label: 'ঝুড়ি',
-    nav_all_products: 'সমস্ত পণ্য',
-    hero_title: 'আপনার ফসল রক্ষা করুন।\nফলন বৃদ্ধি করুন।',
-    hero_desc: 'বায়ো-সার্টিফায়েড কীটনাশক এবং সার অনলাইনে অর্ডার করুন।',
-    hero_shop_btn: 'ক্যাটালগ দেখুন',
-    hero_soil_btn: 'মাটি রিপোর্ট আপলোড',
-    add_to_cart: 'কার্টে যোগ করুন',
-    advisory_sec_title: 'সাপ্তাহিক ফসল ও কীটনাশক পরামর্শ পান',
-    advisory_sec_desc: '১৫,০০০+ কৃষকের সাথে যোগ দিন এবং খরিফ ও রবি ফসলের সতর্কতা বিনামূল্যে পান।',
-    adv_get_btn: 'তাৎক্ষণিক ফসল পরামর্শ পান',
-    chatbot_title: 'সত্য বায়ো চ্যাট সহকারী',
-    chat_welcome: '👋 সত্য বায়োতে ​​আপনাকে স্বাগতম! আজ আপনার ফসলের জন্য কীভাবে সাহায্য করতে পারি?',
-    checkout_title: 'অর্ডার সম্পূর্ণ করুন',
-    pay_cod: 'ক্যাশ অন ডেলিভারি (COD)',
-    pay_upi: 'রেজারপে অনলাইন (UPI / কার্ড)',
-    place_order: 'অর্ডার কনফার্ম করুন'
+    lang_label: 'Language',
+    showing_products: 'Showing',
+    of_products: 'of',
+    products_label: 'products',
+    nav_ai_scanner: 'AI Leaf Doctor'
   }
 };
 
-let currentLang = localStorage.getItem('sathya_bio_lang') || 'en';
-window.currentRole = 'farmer';
+
+// Tamil ships in js/lang-ta.js. The other South Indian languages are listed
+// as "coming soon" until their packs exist.
+const TEXT_PACKS = {};
+if (window.SB_LANG_TA) {
+  TRANSLATIONS.ta = window.SB_LANG_TA.keys;
+  TEXT_PACKS.ta = window.SB_LANG_TA;
+}
+
+const LANGUAGES = [
+  { code: 'en', native: 'English', english: 'English', glyph: 'A' },
+  { code: 'ta', native: 'தமிழ்', english: 'Tamil', glyph: 'த' },
+  { code: 'te', native: 'తెలుగు', english: 'Telugu', glyph: 'తె' },
+  { code: 'kn', native: 'ಕನ್ನಡ', english: 'Kannada', glyph: 'ಕ' },
+  { code: 'ml', native: 'മലയാളം', english: 'Malayalam', glyph: 'മ' },
+  { code: 'tulu', native: 'ತುಳು', english: 'Tulu', glyph: 'ತು' },
+];
+const LANGUAGE_SELECT_IDS = ['langSelectTop', 'langSelectHeader', 'mobileMenuLang'];
+const isLanguageReady = code => Boolean(TRANSLATIONS[code]);
+
+let currentLang = (() => {
+  let saved = 'en';
+  try { saved = localStorage.getItem('sathya_bio_lang') || 'en'; } catch {}
+  return isLanguageReady(saved) ? saved : 'en';
+})();
+
+
+// The translation for key, or undefined when no dictionary has it.
+function translationFor(key) {
+  const dict =
+    TRANSLATIONS[currentLang] ||
+    TRANSLATIONS['en'];
+
+  return dict[key] || TRANSLATIONS['en'][key];
+}
+
 
 function t(key) {
-  const dict = TRANSLATIONS[currentLang] || TRANSLATIONS['en'];
-  return dict[key] || TRANSLATIONS['en'][key] || key;
+  return translationFor(key) || key;
 }
 
-window.handleLangChange = function(code) {
-  currentLang = code;
-  localStorage.setItem('sathya_bio_lang', code);
-  
-  const langTop = document.getElementById('langSelectTop');
-  const langTopHeader = document.getElementById('langSelectTopHeader');
-  const langHeader = document.getElementById('langSelectHeader');
 
-  if (langTop) langTop.value = code;
-  if (langTopHeader) langTopHeader.value = code;
-  if (langHeader) langHeader.value = code;
-
+function setLanguage(langCode) {
+  if (!isLanguageReady(langCode)) return;
+  currentLang = langCode;
+  try { localStorage.setItem('sathya_bio_lang', langCode); } catch {}
   applyTranslations();
-  renderProducts();
-};
-
-function applyTranslations() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    el.textContent = t(key);
-  });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const key = el.getAttribute('data-i18n-placeholder');
-    el.placeholder = t(key);
-  });
-
-  // Apply Live CMS Content
-  applyCmsToDom();
+  syncLanguageControls();
 }
 
-function applyCmsToDom() {
-  const heroTitleEl = document.querySelector('.hero-title');
-  if (heroTitleEl && CMS_CONTENT.heroTitle) heroTitleEl.innerHTML = CMS_CONTENT.heroTitle.replace('\n', '<br/>');
-
-  const heroDescEl = document.querySelector('.hero-desc');
-  if (heroDescEl && CMS_CONTENT.heroSubtitle) heroDescEl.textContent = CMS_CONTENT.heroSubtitle;
-
-  const advTitleEl = document.getElementById('cmsAdvisoryTitle');
-  if (advTitleEl && CMS_CONTENT.advisoryTitle) advTitleEl.textContent = CMS_CONTENT.advisoryTitle;
-
-  const advDescEl = document.getElementById('cmsAdvisoryDesc');
-  if (advDescEl && CMS_CONTENT.advisoryDesc) advDescEl.textContent = CMS_CONTENT.advisoryDesc;
-}
-
-// --- ROLE SWITCHER ENGINE ---
-window.switchSystemRole = function(role) {
-  window.currentRole = role;
-  const badge = document.getElementById('currentRoleBadge');
-  
-  document.querySelectorAll('.role-chip').forEach(btn => btn.classList.remove('active'));
-
-  if (role === 'farmer') {
-    document.getElementById('roleBtnFarmer')?.classList.add('active');
-    if (badge) badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Mode: Farmer';
-    closeAllModals();
-  } else if (role === 'admin') {
-    document.getElementById('roleBtnAdmin')?.classList.add('active');
-    if (badge) badge.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Mode: Admin CMS';
-    openAdminPanel();
-  } else if (role === 'employee') {
-    document.getElementById('roleBtnEmployee')?.classList.add('active');
-    if (badge) badge.innerHTML = '<i class="fa-solid fa-industry"></i> Mode: Employee ERP';
-    openEmployeePanel();
-  } else if (role === 'delivery') {
-    document.getElementById('roleBtnDelivery')?.classList.add('active');
-    if (badge) badge.innerHTML = '<i class="fa-solid fa-motorcycle"></i> Mode: Delivery Agent';
-    openDeliveryPanel();
-  } else if (role === 'billing') {
-    document.getElementById('roleBtnBilling')?.classList.add('active');
-    if (badge) badge.innerHTML = '<i class="fa-solid fa-file-invoice-dollar"></i> Mode: POS Billing';
-    openBillingPanel();
-  }
-};
-
-// --- MODAL UTILITIES ---
-window.openModal = function(id) {
-  const modal = document.getElementById(id);
-  if (modal) modal.classList.add('active');
-};
-
-window.closeModal = function(id) {
-  const modal = document.getElementById(id);
-  if (modal) modal.classList.remove('active');
-};
-
-function closeAllModals() {
-  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-}
-
-// --- PANEL OPENERS ---
-window.openAdminPanel = function() {
-  renderAdminProducts();
-  renderAdminOrders();
-  renderAdminSubscribers();
-  openModal('adminPanelModal');
-};
-
-window.openEmployeePanel = function() {
-  renderErpInventory();
-  renderErpMovements();
-  renderErpTasks();
-  openModal('employeePanelModal');
-};
-
-window.openDeliveryPanel = function() {
-  renderDeliveryOrders();
-  openModal('deliveryPanelModal');
-};
-
-window.openBillingPanel = function() {
-  initPosBilling();
-  openModal('billingPanelModal');
-};
-
-window.openTicketsListModal = function() {
-  renderTicketsList();
-  openModal('ticketsListModal');
-};
-
-window.openChatRecordsModal = function() {
-  renderChatRecords();
-  openModal('chatRecordsModal');
-};
-
-// --- TAB SWITCHERS ---
-window.switchAdminTab = function(tabId, btn) {
-  document.querySelectorAll('#adminPanelModal .panel-tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('#adminPanelModal .panel-tab-content').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(tabId)?.classList.add('active');
-};
-
-window.switchErpTab = function(tabId, btn) {
-  document.querySelectorAll('#employeePanelModal .panel-tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('#employeePanelModal .panel-tab-content').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(tabId)?.classList.add('active');
-};
-
-// --- ADMIN CMS: SAVE & PERSIST WEBSITE CHANGES ---
-window.saveCmsChanges = function() {
-  const heroTitle = document.getElementById('cmsInputHeroTitle')?.value;
-  const heroDesc = document.getElementById('cmsInputHeroDesc')?.value;
-  const announcement = document.getElementById('cmsInputAnnouncement')?.value;
-  const advTitle = document.getElementById('cmsInputAdvTitle')?.value;
-  const advDesc = document.getElementById('cmsInputAdvDesc')?.value;
-  const phone = document.getElementById('cmsInputPhone')?.value;
-
-  if (heroTitle) CMS_CONTENT.heroTitle = heroTitle;
-  if (heroDesc) CMS_CONTENT.heroSubtitle = heroDesc;
-  if (announcement) CMS_CONTENT.announcementText = announcement;
-  if (advTitle) CMS_CONTENT.advisoryTitle = advTitle;
-  if (advDesc) CMS_CONTENT.advisoryDesc = advDesc;
-  if (phone) CMS_CONTENT.phone = phone;
-
-  localStorage.setItem('sathya_bio_cms', JSON.stringify(CMS_CONTENT));
-  applyCmsToDom();
-
-  // Try sync with API server
-  fetch('http://localhost:5000/api/cms', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(CMS_CONTENT)
-  }).catch(() => {});
-
-  alert('✨ Success! Website content updated and published live by Admin CMS.');
-};
-
-window.saveRazorpaySettings = function() {
-  const mode = document.getElementById('cmsRazorpayMode')?.value;
-  const keyId = document.getElementById('cmsRazorpayKeyId')?.value;
-  const secret = document.getElementById('cmsRazorpaySecret')?.value;
-
-  CMS_CONTENT.razorpayMode = mode;
-  CMS_CONTENT.razorpayKeyId = keyId;
-  CMS_CONTENT.razorpaySecret = secret;
-
-  localStorage.setItem('sathya_bio_cms', JSON.stringify(CMS_CONTENT));
-  alert(`💳 Razorpay configuration saved in [${mode.toUpperCase()}] mode! Key: ${keyId}`);
-};
-
-// --- ADMIN: PRODUCTS MASTER ---
-function renderAdminProducts() {
-  const tbody = document.getElementById('adminProductsTableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = PESTICIDES.map((p, idx) => `
-    <tr>
-      <td>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <img src="${p.image}" style="width: 38px; height: 38px; object-fit: contain; background: #f1f5f9; border-radius: 6px; padding: 2px;" />
-          <div>
-            <strong style="font-size: 0.85rem; color: var(--primary-dark);">${p.name}</strong>
-            <div style="font-size: 0.72rem; color: var(--text-muted);">SKU: ${p.sku || p.id} | HSN: ${p.hsn || '380899'}</div>
-          </div>
-        </div>
-      </td>
-      <td><span class="status-pill green">${p.category}</span></td>
-      <td><strong>₹${p.price}</strong> <span style="font-size:0.7rem; color:#94a3b8; text-decoration:line-through;">₹${p.originalPrice}</span></td>
-      <td>
-        <span class="status-pill ${p.inStock ? 'green' : 'red'}">${p.inStock ? 'In Stock (420+)' : 'Out of Stock'}</span>
-      </td>
-      <td>${p.selectedPack || p.packSizes[0]}</td>
-      <td>
-        <div style="display: flex; gap: 6px;">
-          <button class="btn" style="padding: 4px 8px; font-size: 0.72rem; background: #e2e8f0;" onclick="adminEditPrice(${idx})"><i class="fa-solid fa-pen"></i> Price</button>
-          <button class="btn" style="padding: 4px 8px; font-size: 0.72rem; background: ${p.inStock ? '#fee2e2' : '#dcfce7'}; color: ${p.inStock ? '#b91c1c' : '#15803d'};" onclick="adminToggleStock(${idx})">${p.inStock ? 'Disable' : 'Enable'}</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-window.adminEditPrice = function(index) {
-  const p = PESTICIDES[index];
-  const newPrice = prompt(`Enter new selling price for ${p.name}:`, p.price);
-  if (newPrice && !isNaN(newPrice)) {
-    p.price = Number(newPrice);
-    localStorage.setItem('sathya_bio_products', JSON.stringify(PESTICIDES));
-    renderAdminProducts();
-    renderProducts();
-    alert(`Price updated to ₹${p.price}`);
-  }
-};
-
-window.adminToggleStock = function(index) {
-  PESTICIDES[index].inStock = !PESTICIDES[index].inStock;
-  localStorage.setItem('sathya_bio_products', JSON.stringify(PESTICIDES));
-  renderAdminProducts();
-  renderProducts();
-};
-
-window.openAddNewProductModal = function() {
-  const name = prompt("Enter Pesticide / Bio-Fertilizer Name:");
-  if (!name) return;
-  const category = prompt("Enter Category (Fungicide, Insecticide, Bio-Stimulant, Herbicide):", "Fungicide");
-  const price = prompt("Enter Selling Price in ₹:", "750");
-
-  const newProd = {
-    id: `sb-${Date.now().toString().slice(-4)}`,
-    name,
-    tagline: `High-efficacy ${category} formulated for Indian conditions`,
-    category: category || 'Fungicide',
-    crops: ['Paddy/Rice', 'Cotton', 'Wheat', 'Tomato'],
-    diseases: ['Blast', 'Blight'],
-    activeIngredient: 'Bio-Certified Active Formulation',
-    dosage: '250g - 500g per Acre',
-    packSizes: ['500g', '1kg'],
-    selectedPack: '500g',
-    safetyRating: 'Class III (Eco Friendly)',
-    description: `Professional agricultural ${category} providing instant protection and enhanced crop recovery.`,
-    benefits: ['Rapid systemic action.', 'Rainfast & eco safe.'],
-    rating: 5.0,
-    reviewsCount: 1,
-    inStock: true,
-    badge: 'New Launch',
-    image: category.toLowerCase().includes('insect') ? IMG.insecticide : (category.toLowerCase().includes('bio') ? IMG.biostim : IMG.fungicide),
-    price: Number(price) || 750,
-    originalPrice: (Number(price) || 750) * 1.25,
-    discount: '20% OFF',
-    sku: `SB-${category.toUpperCase().slice(0,4)}-${Math.floor(100 + Math.random()*900)}`,
-    hsn: '380899'
-  };
-
-  PESTICIDES.unshift(newProd);
-  localStorage.setItem('sathya_bio_products', JSON.stringify(PESTICIDES));
-  renderAdminProducts();
-  renderProducts();
-  alert(`✨ Product "${name}" added to catalog!`);
-};
-
-// --- ADMIN: ORDERS MASTER ---
-function renderAdminOrders() {
-  const tbody = document.getElementById('adminOrdersTableBody');
-  const countPill = document.getElementById('adminOrdersCountPill');
-  if (countPill) countPill.textContent = `Total Orders: ${ORDERS.length}`;
-  if (!tbody) return;
-
-  tbody.innerHTML = ORDERS.map((o, idx) => `
-    <tr>
-      <td><strong>${o.id}</strong><div style="font-size:0.7rem; color:#64748b;">${new Date(o.createdAt).toLocaleDateString()}</div></td>
-      <td>
-        <strong style="font-size: 0.82rem; color: var(--primary-dark);">${o.customerName}</strong>
-        <div style="font-size: 0.72rem; color: var(--text-muted);">${o.customerPhone}</div>
-      </td>
-      <td>
-        <span style="font-size: 0.8rem; font-weight: 700; color: #16a34a;">₹${o.total}</span>
-        <div style="font-size: 0.72rem; color: #64748b;">${o.items.length} items (${o.items[0]?.name.slice(0,18)}...)</div>
-      </td>
-      <td><span class="status-pill ${o.paymentStatus.includes('Paid') ? 'green' : 'amber'}">${o.paymentStatus}</span></td>
-      <td>
-        <select class="select-input" style="padding: 4px 8px; font-size: 0.75rem;" onchange="adminChangeOrderStatus(${idx}, this.value)">
-          <option value="Confirmed" ${o.deliveryStatus === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
-          <option value="Dispatched" ${o.deliveryStatus === 'Dispatched' ? 'selected' : ''}>Dispatched</option>
-          <option value="Out for Delivery" ${o.deliveryStatus === 'Out for Delivery' ? 'selected' : ''}>Out for Delivery</option>
-          <option value="Delivered" ${o.deliveryStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
-        </select>
-      </td>
-      <td>
-        <select class="select-input" style="padding: 4px 8px; font-size: 0.75rem;" onchange="adminAssignDeliveryBoy(${idx}, this.value)">
-          <option value="Karthik Raja" ${o.assignedDeliveryBoy === 'Karthik Raja' ? 'selected' : ''}>Karthik Raja</option>
-          <option value="Aman Deep" ${o.assignedDeliveryBoy === 'Aman Deep' ? 'selected' : ''}>Aman Deep</option>
-          <option value="Suresh Kumar" ${o.assignedDeliveryBoy === 'Suresh Kumar' ? 'selected' : ''}>Suresh Kumar</option>
-        </select>
-      </td>
-      <td>
-        <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.72rem;" onclick="viewOrderInvoice(${idx})"><i class="fa-solid fa-file-invoice"></i> Invoice</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-window.adminChangeOrderStatus = function(idx, status) {
-  ORDERS[idx].deliveryStatus = status;
-  localStorage.setItem('sathya_bio_orders', JSON.stringify(ORDERS));
-  renderAdminOrders();
-};
-
-window.adminAssignDeliveryBoy = function(idx, boy) {
-  ORDERS[idx].assignedDeliveryBoy = boy;
-  localStorage.setItem('sathya_bio_orders', JSON.stringify(ORDERS));
-  renderAdminOrders();
-  alert(`Order ${ORDERS[idx].id} assigned to ${boy}`);
-};
-
-// --- ADVISORY ENGINE (Get Weekly Crop & Pesticide Recommendations) ---
-window.submitWeeklyAdvisory = function(e) {
-  e.preventDefault();
-  const name = document.getElementById('advFarmerName')?.value || 'Farmer Partner';
-  const phone = document.getElementById('advFarmerPhone')?.value;
-  const crop = document.getElementById('advCropSelect')?.value || 'Paddy/Rice';
-  const season = document.getElementById('advSeasonSelect')?.value || 'Kharif';
-  const acreage = Number(document.getElementById('advAcreage')?.value) || 5;
-
-  if (!phone) {
-    alert('Please enter a valid 10-digit WhatsApp number.');
+// Every language control (header selects, Menu sheet, quick switch) goes
+// through here so they always agree.
+function changeLanguage(langCode) {
+  if (langCode === currentLang || !isLanguageReady(langCode)) {
+    syncLanguageControls();
     return;
   }
+  setLanguage(langCode);
+  // Product cards build some labels with t(), so they are drawn again.
+  renderProducts();
+  renderTrendingProducts();
+  showToast(langCode === 'ta' ? 'மொழி தமிழுக்கு மாற்றப்பட்டது' : 'Language changed to English', 'success', 2500);
+}
 
-  // Create new advisory subscriber record
-  const newSub = {
-    id: `adv-${Date.now().toString().slice(-4)}`,
-    name,
-    phone,
-    crop,
-    season,
-    acreage,
-    date: new Date().toISOString().split('T')[0],
-    status: 'Active',
-    lastSent: `Instant ${crop} (${season}) Recommendation Plan`
-  };
+function syncLanguageControls() {
+  LANGUAGE_SELECT_IDS.forEach(id => {
+    const select = document.getElementById(id);
+    if (select) select.value = currentLang;
+  });
+  const lang = LANGUAGES.find(l => l.code === currentLang) || LANGUAGES[0];
+  const code = document.getElementById('langQuickCode');
+  if (code) code.textContent = currentLang === 'en' ? 'EN' : lang.glyph;
+  document.getElementById('langQuickBtn')?.setAttribute('aria-label', `Language: ${lang.english}`);
+  document.querySelectorAll('.lang-quick-option').forEach(option => {
+    option.setAttribute('aria-checked', String(option.dataset.lang === currentLang));
+  });
+}
 
-  ADVISORY_SUBSCRIBERS.unshift(newSub);
-  localStorage.setItem('sathya_bio_subscribers', JSON.stringify(ADVISORY_SUBSCRIBERS));
+function initLanguageSelector() {
+  LANGUAGE_SELECT_IDS
+    .map(id => document.getElementById(id))
+    .filter(Boolean)
+    .forEach(select => {
+      [...select.options].forEach(option => {
+        if (!isLanguageReady(option.value)) {
+          option.disabled = true;
+          option.textContent = `${option.textContent} · soon`;
+        }
+      });
+      select.value = currentLang;
+      select.addEventListener('change', e => changeLanguage(e.target.value));
+    });
+}
 
-  // Compute customized recommendation schedule
-  const advice = generateCropAdvisoryPlan(crop, season, acreage);
+// Header "EN / த" pill on phones and tablets: a small menu of languages.
+function initLanguageQuickSwitch() {
+  const button = document.getElementById('langQuickBtn');
+  if (!button) return;
+  let menu = null;
+  let backdrop = null;
 
-  // Render modal result
-  const modalContent = document.getElementById('advisoryModalContent');
-  if (modalContent) {
-    modalContent.innerHTML = `
-      <div style="text-align: center; margin-bottom: 20px;">
-        <span class="advisory-badge-pill"><i class="fa-solid fa-seedling"></i> Personalized Farm Advisory Schedule</span>
-        <h3 style="color: var(--primary-dark); font-size: 1.4rem; margin-top: 8px;">Weekly Crop &amp; Pesticide Recommendation</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
-          Tailored for <strong>${name}</strong> (${phone}) | <strong>${acreage} Acres</strong> of <strong>${crop}</strong> in <strong>${season} Season</strong>
-        </p>
-      </div>
+  const options = () => [...menu.querySelectorAll('.lang-quick-option:not(:disabled)')];
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; padding: 16px;">
-          <h4 style="color: #166534; font-size: 0.95rem; margin-bottom: 8px;"><i class="fa-solid fa-triangle-exclamation"></i> Seasonal Disease Threat Alert</h4>
-          <p style="font-size: 0.82rem; color: #1e293b; line-height: 1.5;">${advice.threatAlert}</p>
-          <div style="margin-top: 10px; font-weight: 700; font-size: 0.8rem; color: #15803d;">
-            <i class="fa-solid fa-calendar-check"></i> Best Spray Window: ${advice.timing}
-          </div>
-        </div>
-
-        <div style="background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 14px; padding: 16px;">
-          <h4 style="color: #1e40af; font-size: 0.95rem; margin-bottom: 8px;"><i class="fa-solid fa-calculator"></i> Acreage Dosage Computation (${acreage} Acres)</h4>
-          <ul style="font-size: 0.82rem; color: #1e293b; line-height: 1.6; list-style: none; padding: 0;">
-            ${advice.items.map(it => `<li><strong>• ${it.name}:</strong> ${it.totalDose} (${it.ratePerAcre} / acre)</li>`).join('')}
-          </ul>
-          <div style="margin-top: 10px; font-weight: 700; font-size: 0.85rem; color: #1d4ed8;">
-            Estimated Spray Cost: ₹${advice.totalCost} (Save ₹${Math.round(advice.totalCost * 0.25)} with Sathya Bio Direct)
-          </div>
-        </div>
-      </div>
-
-      <div class="advisory-result-card">
-        <h4 style="color: var(--primary-dark); margin-bottom: 8px;"><i class="fa-solid fa-box-check"></i> Recommended Bio-Protection Kit</h4>
-        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Add this tested bio-certified combo directly to your basket with 1-click:</p>
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div>
-            <strong style="font-size: 1rem; color: var(--primary-dark);">${advice.recommendedKitName}</strong>
-            <div style="font-size: 0.8rem; color: #16a34a; font-weight: 700;">Includes: ${advice.items.map(i => i.name).join(' + ')}</div>
-          </div>
-          <button class="btn btn-primary" onclick="addAdvisoryKitToCart('${advice.productId}', ${advice.totalCost}); closeModal('advisoryResultModal');" style="padding: 10px 18px;">
-            <i class="fa-solid fa-cart-plus"></i> Add Recommended Kit to Basket (₹${advice.totalCost})
-          </button>
-        </div>
-      </div>
-
-      <div style="margin-top: 16px; text-align: center; font-size: 0.78rem; color: var(--text-muted);">
-        <i class="fa-brands fa-whatsapp" style="color: #25d366;"></i> Weekly WhatsApp crop alerts have been activated for <strong>${phone}</strong>.
-      </div>
-    `;
-  }
-
-  openModal('advisoryResultModal');
-
-  // Update subscriber count in UI
-  const subCount = document.getElementById('advisorySubCount');
-  if (subCount) subCount.textContent = `${(15240 + ADVISORY_SUBSCRIBERS.length).toLocaleString()}+`;
-
-  // Sync with Express backend
-  fetch('http://localhost:5000/api/advisory/subscribe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(newSub)
-  }).catch(() => {});
-};
-
-function generateCropAdvisoryPlan(crop, season, acreage) {
-  const plans = {
-    'Paddy/Rice': {
-      threatAlert: 'High humidity & fluctuating temperatures elevate risk of Rice Blast (Pyricularia oryzae) and Sheath Blight.',
-      timing: 'Tillering stage (25-30 DAS) and pre-flowering panicle initiation.',
-      recommendedKitName: `Kharif Paddy Blast & Root Protection Kit (${acreage} Acres)`,
-      productId: 'sb-01',
-      items: [
-        { name: 'Sathya Bio BlastShield 75 WP', ratePerAcre: '150g', totalDose: `${150 * acreage}g` },
-        { name: 'Sathya Bio RootVigor Gold', ratePerAcre: '500ml', totalDose: `${0.5 * acreage} Litres` }
-      ],
-      totalCost: Math.round((680 * Math.ceil(acreage * 0.3)) + (990 * Math.ceil(acreage * 0.5)))
-    },
-    'Cotton': {
-      threatAlert: 'Heavy sucking pest pressure expected. Whiteflies, Jassids, and Thrips colonizing leaf undersides.',
-      timing: 'Early vegetative to flowering phase (spray early morning before 9 AM).',
-      recommendedKitName: `Cotton Whitefly & Pest Annihilation Kit (${acreage} Acres)`,
-      productId: 'sb-02',
-      items: [
-        { name: 'Sathya Bio FlyKill Ultra', ratePerAcre: '250g', totalDose: `${250 * acreage}g` },
-        { name: 'Sathya Bio RootVigor Gold', ratePerAcre: '500ml', totalDose: `${0.5 * acreage} Litres` }
-      ],
-      totalCost: Math.round((840 * Math.ceil(acreage * 0.5)) + (990 * Math.ceil(acreage * 0.5)))
-    },
-    'Tomato': {
-      threatAlert: 'Late Blight (Phytophthora) and Early Blight spotting risk during rainfall / morning dew.',
-      timing: 'Apply preventive foliar spray every 10-14 days during monsoon.',
-      recommendedKitName: `Tomato Blight & Fruit Fortifier Kit (${acreage} Acres)`,
-      productId: 'sb-03',
-      items: [
-        { name: 'Sathya Bio BlightStop Pro', ratePerAcre: '500g', totalDose: `${500 * acreage}g` },
-        { name: 'Sathya Bio RootVigor Gold', ratePerAcre: '1 Litre', totalDose: `${1 * acreage} Litres` }
-      ],
-      totalCost: Math.round((750 * Math.ceil(acreage * 0.5)) + (990 * Math.ceil(acreage * 1)))
+  const onKey = e => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const list = options();
+      const at = list.indexOf(document.activeElement);
+      const next = e.key === 'ArrowDown' ? (at + 1) % list.length : (at - 1 + list.length) % list.length;
+      list[next]?.focus();
     }
   };
 
-  return plans[crop] || plans['Paddy/Rice'];
-}
+  const closeQuietly = () => close({ restoreFocus: false });
 
-window.addAdvisoryKitToCart = function(productId, price) {
-  const prod = PESTICIDES.find(p => p.id === productId) || PESTICIDES[0];
-  cart.push({ ...prod, qty: 1, name: `${prod.name} (Advisory Kit)`, price });
-  updateCartUI();
-  document.getElementById('cartOverlay')?.classList.add('active');
-};
-
-function renderAdminSubscribers() {
-  const tbody = document.getElementById('adminSubscribersTableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = ADVISORY_SUBSCRIBERS.map((s, idx) => `
-    <tr>
-      <td><strong>${s.name}</strong></td>
-      <td><a href="https://wa.me/${s.phone.replace(/[^0-9]/g, '')}" target="_blank" style="color: #16a34a; font-weight: 600;"><i class="fa-brands fa-whatsapp"></i> ${s.phone}</a></td>
-      <td><span class="status-pill green">${s.crop}</span></td>
-      <td><span class="status-pill blue">${s.season}</span></td>
-      <td><strong>${s.acreage} Acres</strong></td>
-      <td>${s.date}</td>
-      <td>
-        <button class="btn btn-gold" style="padding: 4px 8px; font-size: 0.72rem;" onclick="sendIndividualAdvisory('${s.phone}', '${s.crop}')">
-          <i class="fa-solid fa-paper-plane"></i> Send Advisory
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-window.broadcastAdvisoryModal = function() {
-  const crop = prompt("Select Crop to broadcast weekly advisory to (or type 'All'):", "All");
-  if (!crop) return;
-  const count = crop === 'All' ? ADVISORY_SUBSCRIBERS.length : ADVISORY_SUBSCRIBERS.filter(s => s.crop === crop).length;
-  alert(`📢 Broadcast Dispatched! Sent weekly Kharif disease alerts and bio-pesticide schedule to ${count} registered farmers via WhatsApp & SMS.`);
-};
-
-window.sendIndividualAdvisory = function(phone, crop) {
-  window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=Namaste!%20Here%20is%20your%20weekly%20Sathya%20Bio%20${crop}%20Crop%20Protection%20Schedule:%20Apply%20BlastShield%2075%20WP%20and%20RootVigor%20Gold.%20Order%20online%20at%20sathyambio.in`, '_blank');
-};
-
-// --- EMPLOYEE ERP SYSTEM ---
-function renderErpInventory() {
-  const tbody = document.getElementById('erpInventoryTableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = ERP_INVENTORY.map((item, idx) => {
-    const isLow = item.stockQty <= item.minThreshold;
-    return `
-      <tr>
-        <td><strong>${item.sku}</strong></td>
-        <td>${item.name}</td>
-        <td><span style="font-family: monospace; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${item.batchNo}</span></td>
-        <td>${item.warehouse}</td>
-        <td><strong style="color: ${isLow ? '#dc2626' : '#15803d'}; font-size: 0.9rem;">${item.stockQty} Units</strong></td>
-        <td>${item.minThreshold} Units</td>
-        <td>${item.expiryDate}</td>
-        <td>
-          <span class="status-pill ${isLow ? 'red' : 'green'}">${isLow ? 'LOW STOCK ALERT' : 'OPTIMAL'}</span>
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function renderErpMovements() {
-  const tbody = document.getElementById('erpMovementTableBody');
-  if (!tbody) return;
-
-  tbody.innerHTML = ERP_MOVEMENTS.map(m => `
-    <tr>
-      <td>${m.time}</td>
-      <td><span class="status-pill ${m.type === 'IN' ? 'green' : 'amber'}">${m.type === 'IN' ? '📥 Stock IN' : '📤 Stock OUT'}</span></td>
-      <td><strong>${m.sku}</strong> - ${m.name}</td>
-      <td><strong>${m.qty} Units</strong></td>
-      <td>${m.ref}</td>
-      <td>${m.staff}</td>
-    </tr>
-  `).join('');
-}
-
-window.submitStockMovement = function(e) {
-  e.preventDefault();
-  const sku = document.getElementById('stockSkuSelect')?.value;
-  const type = document.getElementById('stockTypeSelect')?.value;
-  const qty = Number(document.getElementById('stockQtyInput')?.value);
-  const ref = document.getElementById('stockReasonInput')?.value;
-
-  const invItem = ERP_INVENTORY.find(i => i.sku === sku);
-  if (invItem) {
-    if (type === 'IN') invItem.stockQty += qty;
-    else invItem.stockQty = Math.max(0, invItem.stockQty - qty);
+  function close({ restoreFocus = true } = {}) {
+    if (!menu) return;
+    menu.remove();
+    backdrop.remove();
+    menu = backdrop = null;
+    button.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', closeQuietly);
+    if (restoreFocus) button.focus({ preventScroll: true });
   }
 
-  ERP_MOVEMENTS.unshift({
-    time: "Just now",
-    type,
-    sku,
-    name: invItem?.name || sku,
-    qty,
-    ref,
-    staff: "Current User (Staff)"
-  });
+  function open() {
+    backdrop = document.createElement('div');
+    backdrop.className = 'lang-quick-backdrop';
+    backdrop.addEventListener('click', () => close());
 
-  renderErpInventory();
-  renderErpMovements();
-  alert(`✅ Movement logged: ${qty} units of ${sku} (${type === 'IN' ? 'Stock Added' : 'Stock Dispatched'})`);
-};
+    menu = document.createElement('div');
+    menu.id = 'langQuickMenu';
+    menu.className = 'lang-quick-menu notranslate';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', 'Choose language');
 
-function renderErpTasks() {
-  const tbody = document.getElementById('erpTasksTableBody');
-  if (!tbody) return;
+    const title = document.createElement('div');
+    title.className = 'lang-quick-title';
+    title.textContent = 'மொழி · Language';
+    menu.append(title);
 
-  tbody.innerHTML = ERP_TASKS.map((t, idx) => `
-    <tr>
-      <td><strong>${t.id}</strong></td>
-      <td>${t.title}</td>
-      <td><strong style="color: var(--primary-dark);">${t.assignedTo}</strong></td>
-      <td><span class="status-pill ${t.priority === 'Urgent' ? 'red' : (t.priority === 'High' ? 'amber' : 'blue')}">${t.priority}</span></td>
-      <td><span class="status-pill ${t.status === 'Completed' ? 'green' : 'purple'}">${t.status}</span></td>
-      <td>${t.dueDate}</td>
-      <td>
-        <button class="btn" style="padding: 4px 8px; font-size: 0.72rem; background: #e2e8f0;" onclick="toggleTaskStatus(${idx})">
-          ${t.status === 'Completed' ? 'Reopen' : 'Mark Done'}
-        </button>
-      </td>
-    </tr>
-  `).join('');
+    let dividerAdded = false;
+    LANGUAGES.forEach(lang => {
+      const ready = isLanguageReady(lang.code);
+      if (!ready && !dividerAdded) {
+        const divider = document.createElement('div');
+        divider.className = 'lang-quick-divider';
+        menu.append(divider);
+        dividerAdded = true;
+      }
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'lang-quick-option';
+      option.dataset.lang = lang.code;
+      option.disabled = !ready;
+      option.setAttribute('role', 'menuitemradio');
+      option.setAttribute('aria-checked', String(lang.code === currentLang));
+      option.innerHTML = `
+        <span class="lang-quick-glyph" aria-hidden="true">${lang.glyph}</span>
+        <span class="lang-quick-names"><strong>${lang.native}</strong><small>${lang.english}</small></span>
+        ${ready ? '<i class="fa-solid fa-check lang-quick-check" aria-hidden="true"></i>' : '<span class="lang-quick-soon">Coming soon</span>'}`;
+      option.addEventListener('click', () => {
+        close();
+        changeLanguage(lang.code);
+      });
+      menu.append(option);
+    });
+
+    menu.style.top = `${Math.round(button.getBoundingClientRect().bottom + 8)}px`;
+    document.body.append(backdrop, menu);
+    button.setAttribute('aria-expanded', 'true');
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', closeQuietly);
+    (menu.querySelector('[aria-checked="true"]') || options()[0])?.focus({ preventScroll: true });
+  }
+
+  button.addEventListener('click', () => (menu ? close() : open()));
+  syncLanguageControls();
 }
 
-window.toggleTaskStatus = function(idx) {
-  ERP_TASKS[idx].status = ERP_TASKS[idx].status === 'Completed' ? 'In Progress' : 'Completed';
-  renderErpTasks();
-};
 
-window.openAddTaskModal = function() {
-  const title = prompt("Enter Task Title / Field Activity:");
-  if (!title) return;
-  const assigned = prompt("Assign to Agronomist / Staff Name:", "Dr. K. Senthil");
-  ERP_TASKS.unshift({
-    id: `TSK-${Math.floor(300 + Math.random()*700)}`,
-    title,
-    assignedTo: assigned || "Agronomist Team",
-    priority: "High",
-    status: "Pending",
-    dueDate: "2026-09-05"
+function applyTranslations() {
+
+  document
+    .querySelectorAll('[data-i18n]')
+    .forEach(el => {
+
+      const key =
+        el.getAttribute('data-i18n');
+
+      // Keep the text shipped in the HTML, so a key missing from TRANSLATIONS
+      // shows that text instead of the raw key.
+      if (el.dataset.i18nDefault === undefined) el.dataset.i18nDefault = el.textContent;
+
+      el.textContent =
+        translationFor(key) || el.dataset.i18nDefault;
+    });
+
+
+  document
+    .querySelectorAll('[data-i18n-placeholder]')
+    .forEach(el => {
+
+      const key =
+        el.getAttribute('data-i18n-placeholder');
+
+      if (el.dataset.i18nPlaceholderDefault === undefined) el.dataset.i18nPlaceholderDefault = el.placeholder;
+
+      el.placeholder =
+        translationFor(key) || el.dataset.i18nPlaceholderDefault;
+    });
+
+  document.documentElement.lang = currentLang;
+  localizeTree(document.body);
+  watchPageText(Boolean(TEXT_PACKS[currentLang]));
+}
+
+
+// ---- Untagged page text (gettext-style: the English text is the key) ----
+// Leading/trailing punctuation, symbols and emoji stay as written, so
+// "🌾 Paddy / Rice", "Password *" and "Forgot password?" share plain keys.
+const TEXT_AFFIX = /^([\s\p{P}\p{S}\p{M}\u200d]*)([\s\S]*?)([\s\p{P}\p{S}]*)$/u;
+const SKIP_TEXT = 'script, style, noscript, textarea, [data-i18n], .notranslate, #n8nExecutionLog';
+// Text node or element -> { source: English, shown: what we wrote }.
+const localizedSources = new WeakMap();
+
+function translatePageText(english) {
+  const pack = TEXT_PACKS[currentLang];
+  if (!pack) return null;
+  const clean = english.replace(/\s+/g, ' ').trim();
+  if (!clean) return null;
+
+  let translated = pack.text[clean];
+  let before = '';
+  let after = '';
+  if (!translated) {
+    let core;
+    [, before, core, after] = clean.match(TEXT_AFFIX);
+    translated = pack.text[core];
+    if (!translated) {
+      const rule = pack.patterns.find(([pattern]) => pattern.test(core));
+      if (rule) translated = core.replace(rule[0], rule[1]);
+    }
+  }
+  if (!translated) return null;
+  const lead = english.match(/^\s*/)[0];
+  const trail = english.match(/\s*$/)[0];
+  return `${lead}${before}${translated}${after}${trail}`;
+}
+
+// Returns the English source for a node, noticing when page code has since
+// replaced the text we wrote.
+// Text copied from nodes that were already translated (the ticker clones its
+// items to loop) carries no record, so it is mapped back through the packs.
+const reverseTextIndex = new Map();
+
+function englishSource(text) {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (!clean || !/[^\u0000-\u024F\u2000-\u20CF]/.test(clean)) return text;
+  const [, before, core, after] = clean.match(TEXT_AFFIX);
+  for (const pack of Object.values(TEXT_PACKS)) {
+    if (!reverseTextIndex.has(pack)) {
+      reverseTextIndex.set(pack, new Map(Object.entries(pack.text).map(([english, translated]) => [translated, english])));
+    }
+    const index = reverseTextIndex.get(pack);
+    const exact = index.get(clean);
+    const english = exact ? exact : index.get(core) && `${before}${index.get(core)}${after}`;
+    if (english) return `${text.match(/^\s*/)[0]}${english}${text.match(/\s*$/)[0]}`;
+  }
+  return text;
+}
+
+function localizedValue(target, current) {
+  const record = localizedSources.get(target);
+  const source = record && current === record.shown ? record.source : englishSource(current);
+  const translated = translatePageText(source);
+  if (translated) localizedSources.set(target, { source, shown: translated });
+  else localizedSources.delete(target);
+  return translated ?? source;
+}
+
+function localizeTextNode(node) {
+  const parent = node.parentElement;
+  if (!parent || parent.closest(SKIP_TEXT)) return;
+  // An <option> without a value submits its text; keep submitting English.
+  if (parent.tagName === 'OPTION' && !parent.hasAttribute('value')) {
+    parent.setAttribute('value', localizedSources.get(node)?.source ?? node.nodeValue.trim());
+  }
+  const next = localizedValue(node, node.nodeValue);
+  if (node.nodeValue !== next) node.nodeValue = next;
+}
+
+function localizePlaceholder(el) {
+  if (el.closest(SKIP_TEXT) || el.hasAttribute('data-i18n-placeholder')) return;
+  const next = localizedValue(el, el.placeholder);
+  if (el.placeholder !== next) el.placeholder = next;
+}
+
+function localizeTree(root) {
+  if (!root) return;
+  if (root.nodeType === Node.TEXT_NODE) {
+    if (root.nodeValue.trim()) localizeTextNode(root);
+    return;
+  }
+  if (root.nodeType !== Node.ELEMENT_NODE) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: node => (node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
   });
-  renderErpTasks();
-};
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) localizeTextNode(node);
+  if (root.matches('[placeholder]')) localizePlaceholder(root);
+  root.querySelectorAll('[placeholder]').forEach(localizePlaceholder);
+}
 
-// --- DELIVERY BOY LOGISTICS PANEL ---
-function renderDeliveryOrders() {
-  const container = document.getElementById('deliveryOrdersContainer');
-  if (!container) return;
+// While a non-English pack is active, text that page code adds later (product
+// cards, basket, toasts) is translated in the same task, before it paints.
+// English visitors never run the observer.
+let pageTextObserver = null;
 
-  const assigned = ORDERS.filter(o => o.assignedDeliveryBoy === 'Karthik Raja' || o.deliveryStatus !== 'Delivered');
+function watchPageText(on) {
+  if (!on) {
+    pageTextObserver?.disconnect();
+    pageTextObserver = null;
+    return;
+  }
+  if (pageTextObserver) return;
+  pageTextObserver = new MutationObserver(records => {
+    records.forEach(record => {
+      if (record.type === 'characterData') localizeTree(record.target);
+      else record.addedNodes.forEach(localizeTree);
+    });
+    // Our own writes are not new content.
+    pageTextObserver?.takeRecords();
+  });
+  pageTextObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+}
 
-  if (assigned.length === 0) {
-    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted);">No active deliveries in your queue.</div>`;
+
+// --- CORE APPLICATION LOGIC ---
+
+// Signed-out visitors keep a cart in this browser only. Once they sign in the
+// cart lives on the server against their user id, so it is private to them and
+// follows them to any device.
+const GUEST_CART_KEY = 'sathya_cart_guest';
+
+function loadGuestCart() {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCart() {
+  const token = localStorage.getItem('sathya_token');
+
+  if (!token) {
+    try {
+      localStorage.setItem(GUEST_CART_KEY, JSON.stringify(cart));
+    } catch (err) {
+      console.warn('Could not persist cart:', err);
+    }
+    return Promise.resolve();
+  }
+
+  return fetch('/api/cart', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ items: cart }),
+  }).catch(err => console.warn('Could not sync cart:', err));
+}
+
+// Pull the signed-in user's cart from the server, merging anything they added
+// as a guest before signing in.
+async function syncCartFromServer() {
+  const token = localStorage.getItem('sathya_token');
+  if (!token) {
+    cart = loadGuestCart();
+    updateCartUI();
     return;
   }
 
-  container.innerHTML = assigned.map((o, idx) => `
-    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <div>
-          <strong style="font-size: 1rem; color: var(--primary-dark);">${o.id}</strong>
-          <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px;">Order Time: ${new Date(o.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-        </div>
-        <span class="status-pill ${o.deliveryStatus === 'Delivered' ? 'green' : 'amber'}">${o.deliveryStatus}</span>
-      </div>
+  try {
+    const res = await fetch('/api/cart', { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401) {
+      // Expired or revoked session: fall back to being a guest.
+      localStorage.removeItem('sathya_token');
+      localStorage.removeItem('sathya_user');
+      cart = loadGuestCart();
+      updateCartUI();
+      checkStorefrontAuth();
+      return;
+    }
+    const json = await res.json();
+    const serverCart = json.success && Array.isArray(json.data) ? json.data : [];
 
-      <div style="background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
-        <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;"><i class="fa-solid fa-user"></i> ${o.customerName}</div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0;"><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> ${o.address}</div>
-        <div style="display: flex; gap: 10px; margin-top: 8px;">
-          <a href="tel:${o.customerPhone}" class="btn" style="background: #dcfce7; color: #15803d; padding: 6px 12px; font-size: 0.78rem;"><i class="fa-solid fa-phone"></i> Call Farmer</a>
-          <button class="btn" style="background: #dbeafe; color: #1d4ed8; padding: 6px 12px; font-size: 0.78rem;" onclick="simulateMapNavigation('${o.address}')"><i class="fa-solid fa-diamond-turn-right"></i> GPS Navigation</button>
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
-        <div>
-          <span style="color: var(--text-muted);">Collect Amount:</span>
-          <strong style="color: #15803d; font-size: 1.05rem; margin-left: 6px;">₹${o.total} (${o.paymentMethod.includes('Cash') ? 'Collect Cash' : 'Prepaid Online'})</strong>
-        </div>
-        <div>
-          ${o.deliveryStatus === 'Delivered' 
-            ? '<span style="color:#15803d; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Delivery Completed</span>' 
-            : `<button class="btn btn-primary" onclick="verifyDeliveryOtpPrompt('${o.id}')" style="padding: 8px 14px; font-size: 0.82rem;"><i class="fa-solid fa-key"></i> Verify Customer OTP</button>`
-          }
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-window.simulateMapNavigation = function(addr) {
-  alert(`🗺️ Opening Google Maps Directions to:\n${addr}\n(Optimized for rural farm roads & agro centers)`);
-};
-
-window.verifyDeliveryOtpPrompt = function(orderId) {
-  const o = ORDERS.find(item => item.id === orderId);
-  if (!o) return;
-
-  const enteredOtp = prompt(`Enter 4-digit Delivery Confirmation OTP received by customer ${o.customerName} (Default Mock OTP: ${o.otp}):`, o.otp);
-  if (enteredOtp === o.otp || enteredOtp === '1234') {
-    o.deliveryStatus = 'Delivered';
-    o.paymentStatus = 'Paid (Verified by Delivery Agent)';
-    localStorage.setItem('sathya_bio_orders', JSON.stringify(ORDERS));
-    renderDeliveryOrders();
-    renderAdminOrders();
-    alert(`🎉 Success! Delivery verified for order ${orderId}. COD Cash payment recorded in ERP.`);
-  } else {
-    alert('❌ Invalid OTP! Please ask the farmer for the correct 4-digit SMS OTP code.');
-  }
-};
-
-// --- BILLING & POS COUNTER SYSTEM ---
-function initPosBilling() {
-  const select = document.getElementById('posProductSelect');
-  if (!select) return;
-
-  select.innerHTML = PESTICIDES.map(p => `
-    <option value="${p.id}">${p.name} - ₹${p.price} (${p.selectedPack || '500g'})</option>
-  `).join('');
-
-  renderPosCart();
-}
-
-window.addPosItem = function() {
-  const select = document.getElementById('posProductSelect');
-  const qty = Number(document.getElementById('posProductQty')?.value) || 1;
-  const disc = Number(document.getElementById('posProductDisc')?.value) || 0;
-  if (!select) return;
-
-  const prod = PESTICIDES.find(p => p.id === select.value);
-  if (!prod) return;
-
-  POS_CART.push({
-    id: prod.id,
-    name: prod.name,
-    price: prod.price,
-    qty,
-    discount: disc,
-    hsn: prod.hsn || '380899'
-  });
-
-  renderPosCart();
-};
-
-window.removePosItem = function(idx) {
-  POS_CART.splice(idx, 1);
-  renderPosCart();
-};
-
-function renderPosCart() {
-  const tbody = document.getElementById('posItemsTableBody');
-  const itemsCountEl = document.getElementById('posReceiptItemsCount');
-  const taxableEl = document.getElementById('posReceiptTaxable');
-  const cgstEl = document.getElementById('posReceiptCGST');
-  const sgstEl = document.getElementById('posReceiptSGST');
-  const totalTaxEl = document.getElementById('posReceiptTotalTax');
-  const grandTotalEl = document.getElementById('posReceiptGrandTotal');
-
-  if (!tbody) return;
-
-  let subtotal = 0;
-  let totalDiscount = 0;
-
-  tbody.innerHTML = POS_CART.map((item, idx) => {
-    const lineSubtotal = item.price * item.qty;
-    const lineDiscount = (lineSubtotal * item.discount) / 100;
-    const lineFinal = lineSubtotal - lineDiscount;
-    subtotal += lineSubtotal;
-    totalDiscount += lineDiscount;
-
-    return `
-      <tr>
-        <td><strong style="font-size: 0.8rem;">${item.name}</strong></td>
-        <td>${item.qty}</td>
-        <td>₹${item.price}</td>
-        <td><strong>₹${lineFinal.toFixed(2)}</strong></td>
-        <td><button style="background: none; color: #ef4444;" onclick="removePosItem(${idx})"><i class="fa-solid fa-xmark"></i></button></td>
-      </tr>
-    `;
-  }).join('');
-
-  const taxable = subtotal - totalDiscount;
-  const cgst = taxable * 0.09; // 9% CGST
-  const sgst = taxable * 0.09; // 9% SGST
-  const totalTax = cgst + sgst; // 18% Total GST for Agrochemicals
-  const grandTotal = taxable + totalTax;
-
-  if (itemsCountEl) itemsCountEl.textContent = POS_CART.length;
-  if (taxableEl) taxableEl.textContent = `₹${taxable.toFixed(2)}`;
-  if (cgstEl) cgstEl.textContent = `₹${cgst.toFixed(2)}`;
-  if (sgstEl) sgstEl.textContent = `₹${sgst.toFixed(2)}`;
-  if (totalTaxEl) totalTaxEl.textContent = `₹${totalTax.toFixed(2)}`;
-  if (grandTotalEl) grandTotalEl.textContent = `₹${grandTotal.toFixed(2)}`;
-}
-
-window.generateAndPrintPosInvoice = function() {
-  if (POS_CART.length === 0) {
-    alert("Please add at least one product to the POS bill.");
-    return;
+    const guestCart = loadGuestCart();
+    if (guestCart.length) {
+      guestCart.forEach(item => {
+        const existing = serverCart.find(i => i.id === item.id);
+        if (existing) existing.qty += item.qty;
+        else serverCart.push(item);
+      });
+      localStorage.removeItem(GUEST_CART_KEY);
+      cart = serverCart;
+      await saveCart();
+    } else {
+      cart = serverCart;
+    }
+  } catch (err) {
+    console.warn('Could not load cart:', err);
+    cart = [];
   }
 
-  const custName = document.getElementById('posCustomerName')?.value || 'Walk-in Farmer';
-  const custPhone = document.getElementById('posCustomerPhone')?.value || '+91 90000 00000';
-  const paymentMode = document.getElementById('posPaymentMode')?.value || 'Cash';
-
-  const invoiceData = {
-    invoiceNo: `SB-INV-${Date.now().toString().slice(-6)}`,
-    date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    customerName: custName,
-    customerPhone: custPhone,
-    items: [...POS_CART],
-    paymentMode
-  };
-
-  renderInvoiceHTML(invoiceData);
-  openModal('invoiceModal');
-};
-
-function renderInvoiceHTML(inv) {
-  const area = document.getElementById('printInvoiceArea');
-  if (!area) return;
-
-  let subtotal = 0;
-  const rows = inv.items.map((item, idx) => {
-    const lineTotal = item.price * item.qty;
-    subtotal += lineTotal;
-    return `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${idx + 1}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>${item.name}</strong></td>
-        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${item.hsn || '380899'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${item.qty}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">₹${item.price.toFixed(2)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;"><strong>₹${lineTotal.toFixed(2)}</strong></td>
-      </tr>
-    `;
-  }).join('');
-
-  const cgst = subtotal * 0.09;
-  const sgst = subtotal * 0.09;
-  const grandTotal = subtotal + cgst + sgst;
-
-  area.innerHTML = `
-    <div style="border: 2px solid #064e3b; border-radius: 12px; padding: 24px; background: #ffffff;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #064e3b; padding-bottom: 16px;">
-        <div>
-          <h2 style="color: #064e3b; margin: 0; font-size: 1.5rem;">SATHYA BIO AGRO TECHNOLOGIES</h2>
-          <div style="font-size: 0.8rem; color: #475569; margin-top: 4px;">
-            Agro Industrial Tech Park, Coimbatore, TN - 641001<br/>
-            <strong>GSTIN:</strong> 33AABCS1234F1Z8 | <strong>PAN:</strong> AABCS1234F<br/>
-            <strong>Agro License:</strong> AGRO-TN-2026-8899 | <strong>Toll Free:</strong> 1800-425-9999
-          </div>
-        </div>
-        <div style="text-align: right;">
-          <span style="background: #064e3b; color: white; padding: 4px 12px; border-radius: 6px; font-weight: 700; font-size: 0.85rem;">TAX INVOICE</span>
-          <div style="margin-top: 8px; font-size: 0.85rem;"><strong>Invoice #:</strong> ${inv.invoiceNo}</div>
-          <div style="font-size: 0.8rem; color: #64748b;"><strong>Date:</strong> ${inv.date} ${inv.time}</div>
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; margin: 16px 0; font-size: 0.85rem; background: #f8fafc; padding: 12px; border-radius: 8px;">
-        <div>
-          <strong>Billed To:</strong><br/>
-          <span>${inv.customerName}</span><br/>
-          <span>Phone: ${inv.customerPhone}</span>
-        </div>
-        <div style="text-align: right;">
-          <strong>Payment Mode:</strong> ${inv.paymentMode}<br/>
-          <strong>Supply State:</strong> Tamil Nadu (Code: 33)
-        </div>
-      </div>
-
-      <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 16px 0;">
-        <thead>
-          <tr style="background: #064e3b; color: white;">
-            <th style="padding: 8px; text-align: left;">#</th>
-            <th style="padding: 8px; text-align: left;">Product &amp; Specification</th>
-            <th style="padding: 8px; text-align: left;">HSN</th>
-            <th style="padding: 8px; text-align: left;">Qty</th>
-            <th style="padding: 8px; text-align: left;">Rate</th>
-            <th style="padding: 8px; text-align: right;">Amount (₹)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-
-      <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
-        <div style="width: 280px; font-size: 0.85rem;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Taxable Value:</span><strong>₹${subtotal.toFixed(2)}</strong></div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>CGST (9%):</span><strong>₹${cgst.toFixed(2)}</strong></div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>SGST (9%):</span><strong>₹${sgst.toFixed(2)}</strong></div>
-          <div style="display: flex; justify-content: space-between; border-top: 2px solid #064e3b; padding-top: 6px; font-size: 1.1rem; color: #064e3b;">
-            <span>Grand Total:</span><strong>₹${grandTotal.toFixed(2)}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div style="border-top: 1px dashed #cbd5e1; margin-top: 20px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #64748b;">
-        <div>
-          ✓ 100% Bio-Certified Formulations<br/>
-          ✓ E-Way Bill Generated: EWB-9918273645
-        </div>
-        <div style="text-align: center;">
-          <div style="font-family: cursive; font-weight: 700; color: #064e3b; font-size: 1rem;">Sathya Bio Authorized Signatory</div>
-          <span>Computer Generated Tax Invoice</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-window.viewOrderInvoice = function(idx) {
-  const o = ORDERS[idx];
-  if (!o) return;
-
-  const invData = {
-    invoiceNo: `SB-INV-${o.id.replace('SB-ORD-', '')}`,
-    date: new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-    time: new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    customerName: o.customerName,
-    customerPhone: o.customerPhone,
-    items: o.items.map(it => ({ ...it, hsn: '380899' })),
-    paymentMode: o.paymentMethod
-  };
-
-  renderInvoiceHTML(invData);
-  openModal('invoiceModal');
-};
-
-// --- RAZORPAY PAYMENT CHECKOUT FLOW ---
-let pendingOrderData = null;
-
-function handleCheckoutSubmit(e) {
-  e.preventDefault();
-  const form = e.target;
-  const name = form.querySelector('input[type="text"]')?.value || 'Farmer Partner';
-  const phone = form.querySelector('input[type="tel"]')?.value || '+91 98000 00000';
-  const address = form.querySelector('textarea')?.value || 'Farm Delivery Address';
-  const paymentMethod = form.querySelector('select')?.value || 'pay_cod';
-
-  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-  const gst = subtotal * 0.18;
-  const total = subtotal + gst;
-
-  pendingOrderData = {
-    customerName: name,
-    customerPhone: phone,
-    address,
-    items: [...cart],
-    subtotal,
-    gst,
-    total,
-    paymentMethod
-  };
-
-  closeModal('checkoutModal');
-
-  if (paymentMethod.includes('pay_upi') || paymentMethod.includes('Online') || paymentMethod.includes('UPI')) {
-    // Open Razorpay Payment Modal
-    openRazorpayCheckout(total, name, phone, address);
-  } else {
-    // COD Immediate Order Creation
-    createConfirmedOrder('Cash on Delivery (COD)', 'Pending');
-  }
-}
-
-function openRazorpayCheckout(amount, name, phone, address) {
-  const rzpAmountEl = document.getElementById('rzpModalAmount');
-  const rzpOrderEl = document.getElementById('rzpModalOrderId');
-  const orderNumber = `SB-ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-
-  if (rzpAmountEl) rzpAmountEl.textContent = `₹${amount.toFixed(2)}`;
-  if (rzpOrderEl) rzpOrderEl.textContent = `Order Ref: #${orderNumber}`;
-
-  openModal('razorpaySimModal');
-}
-
-window.executeRazorpayPayment = function(mode) {
-  closeModal('razorpaySimModal');
-  const payId = `pay_rzp_${Date.now().toString().slice(-8)}`;
-  createConfirmedOrder(`Razorpay (${mode}) [${payId}]`, 'Paid');
-};
-
-function createConfirmedOrder(payMethod, payStatus) {
-  const newOrder = {
-    id: `SB-ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-    customerName: pendingOrderData?.customerName || 'Farmer Partner',
-    customerPhone: pendingOrderData?.customerPhone || '+91 98450 12345',
-    address: pendingOrderData?.address || 'Farm Delivery Location',
-    items: pendingOrderData?.items || [...cart],
-    subtotal: pendingOrderData?.subtotal || 1000,
-    gst: pendingOrderData?.gst || 180,
-    total: pendingOrderData?.total || 1180,
-    paymentMethod: payMethod,
-    paymentStatus: payStatus,
-    deliveryStatus: 'Confirmed',
-    assignedDeliveryBoy: 'Karthik Raja',
-    deliveryBoyPhone: '+91 97890 11223',
-    otp: Math.floor(1000 + Math.random() * 9000).toString(),
-    createdAt: new Date().toISOString()
-  };
-
-  ORDERS.unshift(newOrder);
-  localStorage.setItem('sathya_bio_orders', JSON.stringify(ORDERS));
-
-  // Clear cart
-  cart = [];
   updateCartUI();
-
-  alert(`🎉 Order Placed Successfully!\nOrder ID: ${newOrder.id}\nStatus: ${newOrder.deliveryStatus}\nDelivery OTP: ${newOrder.otp}`);
-
-  // View invoice immediately
-  viewOrderInvoice(0);
 }
 
-// --- SUPPORT TICKETS SYSTEM ---
-function renderTicketsList() {
-  const container = document.getElementById('ticketsListContainer');
-  if (!container) return;
-
-  container.innerHTML = TICKETS.map((t, idx) => `
-    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <div>
-          <strong style="color: var(--primary-dark); font-size: 0.95rem;">${t.id}: ${t.subject}</strong>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">Farmer: ${t.farmerName} (${t.phone}) | Crop: ${t.crop} | ${t.date}</div>
-        </div>
-        <span class="status-pill ${t.status === 'Resolved' ? 'green' : 'amber'}">${t.status}</span>
-      </div>
-
-      <div style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.82rem;">
-        ${t.messages.map(m => `
-          <div style="margin-bottom: 6px;">
-            <strong style="color: ${m.sender.includes('Farmer') ? '#0284c7' : '#059669'};">${m.sender} (${m.time}):</strong>
-            <p style="margin: 2px 0 0; color: #1e293b;">${m.text}</p>
-          </div>
-        `).join('')}
-      </div>
-
-      <div style="display: flex; gap: 8px;">
-        <input type="text" id="ticketReplyInput_${idx}" placeholder="Type agronomist reply..." class="text-input" style="flex: 1; padding: 6px 10px; font-size: 0.8rem;" />
-        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="replyToTicketPrompt(${idx})"><i class="fa-solid fa-reply"></i> Reply</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-window.replyToTicketPrompt = function(idx) {
-  const input = document.getElementById(`ticketReplyInput_${idx}`);
-  const text = input?.value;
-  if (!text) return;
-
-  TICKETS[idx].messages.push({
-    sender: 'Dr. V. K. Sathyanarayana (Agronomist)',
-    text,
-    time: 'Just now'
-  });
-  TICKETS[idx].status = 'In Progress';
-  renderTicketsList();
-};
-
-// --- CHAT SYSTEM RECORDS & LIVE BOT ---
-function renderChatRecords() {
-  const container = document.getElementById('chatRecordsListContainer');
-  if (!container) return;
-
-  container.innerHTML = CHAT_RECORDS.map(s => `
-    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 10px;">
-        <div>
-          <strong style="color: var(--primary-dark); font-size: 0.95rem;"><i class="fa-solid fa-comment-dots" style="color: #10b981;"></i> ${s.sessionId}</strong>
-          <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px;">${s.farmerName} (${s.farmerPhone}) | ${s.channel}</span>
-        </div>
-        <span class="status-pill green">${s.status}</span>
-      </div>
-
-      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; max-height: 200px; overflow-y: auto;">
-        ${s.messages.map(m => `
-          <div style="margin-bottom: 8px; font-size: 0.8rem;">
-            <strong style="color: ${m.sender.includes('Farmer') ? '#0284c7' : '#15803d'};">${m.sender} <span style="font-size: 0.7rem; color: #94a3b8; font-weight: normal;">(${m.timestamp})</span>:</strong>
-            <div style="color: #1e293b; margin-top: 2px;">${m.text}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `).join('');
-}
-
-// --- CATALOG RENDERING & SHOPPING CART ---
-let cart = [
-  { ...PESTICIDES[0], qty: 1, selectedPack: '500g' }
-];
+let cart = [];
 
 let currentCropFilter = 'all';
 let currentDiseaseFilter = 'all';
 let currentCategoryFilter = 'All';
 let searchQuery = '';
 
-function initCatalog() {
-  const cropFilters = document.getElementById('cropFilters');
-  if (cropFilters) {
-    cropFilters.innerHTML = CROPS.map(c => `
-      <button class="filter-chip ${c.id === 'all' ? 'active' : ''}" onclick="filterByCrop('${c.id}')">
-        <i class="fa-solid ${c.icon}"></i> ${c.name}
-      </button>
-    `).join('');
+
+function initApp() {
+
+  applyTranslations();
+
+  initLanguageSelector();
+  initLanguageQuickSwitch();
+
+  initNavigation();
+
+  initCatalog();
+
+  initCart();
+  initAdvisorySignup();
+  initChatbot();
+
+  initSoilUpload();
+
+  initPhotoScanner();
+
+  initTicketSystem();
+
+  initN8nVisualizer();
+
+  initExpertBooking();
+
+  initModals();
+
+  syncCartFromServer();
+
+  initFormValidation();
+
+  initTicker();
+
+  initDealCountdown();
+
+  initStatsCounter();
+
+  initBackToTop();
+
+  checkStorefrontAuth();
+  checkUrlAuthTriggers();
+
+  fetchLiveProducts();
+
+  fetchLiveCatalogOptions();
+
+  applyCertificationSettings();
+  initPreloaderAndWelcomePoster();
+}
+
+function checkUrlAuthTriggers() {
+  const hash = window.location.hash;
+  const redirectMsg = sessionStorage.getItem('sathya_auth_redirect_msg');
+
+  if ((hash === '#login' || hash === '#auth' || redirectMsg) && !isFarmerLoggedIn()) {
+    const msg = redirectMsg || 'Login or Sign Up is mandatory to access your basket and checkout. Please sign in.';
+    setAuthNotice(msg);
+    switchAuthTab('login');
+    openModal('authModal');
+    sessionStorage.removeItem('sathya_auth_redirect_msg');
+  }
+}
+window.checkUrlAuthTriggers = checkUrlAuthTriggers;
+
+// Two initialisers need the CMS settings, and each was fetching them
+// separately - two round trips on a phone for one payload. Share a single
+// in-flight promise so the request happens once per page load.
+let cmsSettingsRequest = null;
+function loadCmsSettings() {
+  if (!cmsSettingsRequest) {
+    cmsSettingsRequest = fetch('/api/cms')
+      .then(response => (response.ok ? response.json() : null))
+      .then(json => (json && json.data) || {})
+      .catch(() => ({})); // local CMS settings remain available offline
+  }
+  return cmsSettingsRequest;
+}
+
+async function applyCertificationSettings() {
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem('sathya_cms') || '{}'); } catch { return; }
+  settings = { ...settings, ...(await loadCmsSettings()) };
+
+  const title = document.getElementById('certificationsTitle');
+  const subtitle = document.getElementById('certificationsSubtitle');
+  if (title && settings.certificationsTitle) title.textContent = settings.certificationsTitle;
+  if (subtitle) {
+    subtitle.textContent = settings.certificationsSubtitle || '';
+    subtitle.style.display = settings.certificationsSubtitle ? 'block' : 'none';
   }
 
+  for (let index = 1; index <= 5; index += 1) {
+    const image = document.getElementById(`certification${index}Image`);
+    const label = document.getElementById(`certification${index}Label`);
+    if (image && settings[`certification${index}Image`]) image.src = settings[`certification${index}Image`];
+    if (label && settings[`certification${index}Label`]) {
+      label.textContent = settings[`certification${index}Label`];
+      if (image) image.alt = settings[`certification${index}Label`];
+    }
+  }
+}
+
+function initPreloaderAndWelcomePoster() {
+  const preloader = document.getElementById('appPreloader');
+  const shouldShowPoster = applyWelcomePosterSettings();
+  setTimeout(() => {
+    if (preloader) preloader.classList.add('hidden');
+
+    setTimeout(async () => {
+      // Never stack the poster on top of a window the visitor is already using
+      // (for example the sign-in modal opened by a checkout redirect).
+      if (await shouldShowPoster && !document.querySelector('.modal-overlay.active, .modal-overlay.is-opening')) {
+        openModal('welcomePosterModal');
+      }
+    }, 400);
+  }, 1400);
+}
+
+// Resolves to whether the welcome poster should open on this page load.
+async function applyWelcomePosterSettings() {
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem('sathya_cms') || '{}'); } catch {}
+  settings = { ...settings, ...(await loadCmsSettings()) };
+  const user = (() => { try { return JSON.parse(localStorage.getItem('sathya_user') || 'null'); } catch { return null; } })();
+  if (settings.popupAudience === 'farmer' && user?.role !== 'farmer') return false;
+  let seen = false;
+  try { seen = localStorage.getItem('sathya_popup_seen') === '1'; } catch {}
+  if (settings.popupBehavior === 'firstVisit' && seen) return false;
+  if (settings.popupBehavior === 'returning' && !seen) return false;
+  // At most once per browser session: showing it on every page load blocked
+  // the storefront each time a visitor came back from checkout or a product.
+  try {
+    if (sessionStorage.getItem('sathya_popup_session') === '1') return false;
+    sessionStorage.setItem('sathya_popup_session', '1');
+  } catch {}
+  const image = document.getElementById('welcomePosterImage');
+  if (image && settings.popupImage) {
+    image.src = settings.popupImage;
+    image.style.display = 'block';
+  }
+  try { localStorage.setItem('sathya_popup_seen', '1'); } catch {}
+  return true;
+}
+
+function initAdvisorySignup() {
+  const form = document.getElementById('advisorySignupForm');
+  if (!form) return;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const phone = form.querySelector('input[type="tel"]')?.value.trim();
+    const crop = form.querySelector('select')?.value;
+    const button = form.querySelector('button');
+    if (!phone || !crop) return;
+    if (button) button.disabled = true;
+    try {
+      const response = await fetch('/api/advisory/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, crop })
+      });
+      if (!response.ok) throw new Error('Subscription failed');
+      form.innerHTML = '<div style="padding:12px; color:#16a34a; font-weight:600;">Thank you! Your advisory subscription is confirmed.</div>';
+    } catch {
+      if (button) button.disabled = false;
+      showToast('Unable to save your advisory subscription. Please try again.', 'error');
+    }
+  });
+}
+
+
+function initTicker() {
+
+  const track =
+    document.getElementById(
+      'tickerTrack'
+    );
+
+  if (!track) return;
+
+  track.innerHTML +=
+    track.innerHTML;
+}
+
+
+function initDealCountdown() {
+
+  function getSecondsUntilMidnight() {
+
+    const now =
+      new Date();
+
+    const midnight =
+      new Date();
+
+    midnight.setHours(
+      23,
+      59,
+      59,
+      999
+    );
+
+    return Math.floor(
+      (midnight - now) / 1000
+    );
+  }
+
+
+  function formatCountdown(secs) {
+
+    const h =
+      Math.floor(
+        secs / 3600
+      );
+
+    const m =
+      Math.floor(
+        (secs % 3600) / 60
+      );
+
+    const s =
+      secs % 60;
+
+    return {
+      h,
+      m,
+      s
+    };
+  }
+
+
+  const hEl = document.getElementById('dealHours');
+  const mEl = document.getElementById('dealMins');
+  const sEl = document.getElementById('dealSecs');
+  const banner = document.querySelector('.deal-banner');
+
+  // Every text change here lays out and repaints the whole page, so on a
+  // phone a once-a-second write was a regular hitch under scrolling and
+  // sheet slides. Only changed digits are written, and nothing is written
+  // while the banner is off-screen or a sheet/popup covers the page. The time
+  // is read from the clock on each tick, so skipped ticks never drift.
+  let bannerOnScreen = true;
+  if (banner && 'IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      bannerOnScreen = entries[entries.length - 1].isIntersecting;
+      if (bannerOnScreen) tick();
+    }).observe(banner);
+  }
+
+  const setDigits = (el, value) => {
+    const text = String(value).padStart(2, '0');
+    if (el && el.textContent !== text) el.textContent = text;
+  };
+
+  function tick() {
+    if (!bannerOnScreen || document.body.classList.contains('overlay-open')) return;
+
+    let totalSecs = getSecondsUntilMidnight();
+    if (totalSecs <= 0) totalSecs = 86399;
+
+    const { h, m, s } = formatCountdown(totalSecs);
+    setDigits(hEl, h);
+    setDigits(mEl, m);
+    setDigits(sEl, s);
+  }
+
+  tick();
+  setInterval(tick, 1000);
+}
+
+
+function initStatsCounter() {
+
+  const nums =
+    document.querySelectorAll(
+      '.stat-number[data-target]'
+    );
+
+  if (!nums.length) return;
+
+
+  const suffixMap = {
+    15000: '+',
+    48: '',
+    95: '%',
+    12: '+'
+  };
+
+
+  const observer =
+    new IntersectionObserver(
+      (entries) => {
+
+        entries.forEach(
+          entry => {
+
+            if (
+              !entry.isIntersecting
+            ) {
+              return;
+            }
+
+
+            const el =
+              entry.target;
+
+
+            const target =
+              parseInt(
+                el.dataset.target,
+                10
+              );
+
+
+            const suffix =
+              suffixMap[target] ?? '';
+
+
+            el.dataset.suffix =
+              suffix;
+
+
+            const startTime = performance.now();
+            const duration = 1400;
+
+            function animateCount(now) {
+              const elapsed = now - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              // Smooth cubic ease-out curve
+              const ease = 1 - Math.pow(1 - progress, 3);
+              const current = Math.floor(target * ease);
+
+              el.textContent = current.toLocaleString('en-IN');
+
+              if (progress < 1) {
+                requestAnimationFrame(animateCount);
+              } else {
+                el.textContent = target.toLocaleString('en-IN');
+              }
+            }
+
+            requestAnimationFrame(animateCount);
+            observer.unobserve(el);
+
+          }
+        );
+
+      },
+      {
+        threshold: 0.4
+      }
+    );
+
+
+  nums.forEach(
+    n => observer.observe(n)
+  );
+}
+
+
+function initBackToTop() {
+  const btn = document.getElementById('backToTop');
+  if (!btn) return;
+
+  let ticking = false;
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          btn.classList.toggle('visible', window.scrollY > 400);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    },
+    { passive: true }
+  );
+
+  btn.addEventListener('click', () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
+}
+
+
+
+
+function initNavigation() {
+  const headerSearchInput = document.getElementById('headerSearchInput');
+  const headerSearchBtn = document.getElementById('headerSearchBtn');
+  const searchCategorySelect = document.getElementById('searchCategorySelect');
+
+  if (headerSearchInput) {
+    headerSearchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.toLowerCase().trim();
+      renderProducts();
+    });
+    // The keyboard's Search key takes the shopper to the results and closes
+    // the on-screen keyboard.
+    headerSearchInput.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      headerSearchInput.blur();
+      document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  if (searchCategorySelect) {
+    searchCategorySelect.addEventListener('change', (e) => {
+      currentCategoryFilter = e.target.value;
+      const categorySelect = document.getElementById('categorySelect');
+
+      if (categorySelect) {
+        categorySelect.value = e.target.value;
+      }
+
+      renderProducts();
+
+      document
+        .getElementById('catalog')
+        ?.scrollIntoView({
+          behavior: 'smooth'
+        });
+    });
+  }
+
+  if (headerSearchBtn) {
+    headerSearchBtn.addEventListener('click', () => {
+      document
+        .getElementById('catalog')
+        ?.scrollIntoView({
+          behavior: 'smooth'
+        });
+    });
+  }
+}
+
+// --- CATALOG & FILTER ENGINE ---
+function initCatalog() {
+  populateFilterOptions();
+  renderProducts();
+  renderTrendingProducts();
+
+  const cropSelect = document.getElementById('cropSelect');
   const diseaseSelect = document.getElementById('diseaseSelect');
+  const categorySelect = document.getElementById('categorySelect');
+
+  if (cropSelect) {
+    cropSelect.addEventListener('change', (e) => {
+      currentCropFilter = e.target.value;
+      renderProducts();
+    });
+  }
+
   if (diseaseSelect) {
-    diseaseSelect.innerHTML = DISEASES.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
     diseaseSelect.addEventListener('change', (e) => {
       currentDiseaseFilter = e.target.value;
       renderProducts();
     });
   }
 
-  const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) {
-    categorySelect.innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
     categorySelect.addEventListener('change', (e) => {
       currentCategoryFilter = e.target.value;
       renderProducts();
     });
   }
-
-  renderProducts();
 }
 
-window.filterByCrop = function(cropId) {
-  currentCropFilter = cropId;
-  document.querySelectorAll('#cropFilters .filter-chip').forEach(btn => {
-    btn.classList.toggle('active', btn.textContent.includes(cropId === 'all' ? 'All Crops' : cropId));
-  });
-  renderProducts();
-};
+function populateFilterOptions() {
+  const cropSelect = document.getElementById('cropSelect');
+  const diseaseSelect = document.getElementById('diseaseSelect');
+  const categorySelect = document.getElementById('categorySelect');
 
-window.filterByCategory = function(category) {
-  currentCategoryFilter = category;
-  const sel = document.getElementById('categorySelect');
-  if (sel) sel.value = category;
-  renderProducts();
-};
+  if (cropSelect) {
+    cropSelect.innerHTML = CROPS.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  }
 
-window.resetCatalogFilters = function() {
-  currentCropFilter = 'all';
-  currentDiseaseFilter = 'all';
-  currentCategoryFilter = 'All';
-  searchQuery = '';
-  document.getElementById('headerSearchInput').value = '';
-  document.getElementById('categorySelect').value = 'All';
-  document.getElementById('diseaseSelect').value = 'all';
-  renderProducts();
-};
+  if (diseaseSelect) {
+    diseaseSelect.innerHTML = DISEASES.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+  }
+
+  if (categorySelect) {
+    categorySelect.innerHTML = CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+  }
+}
 
 function renderProducts() {
-  const grid = document.getElementById('productsGrid');
-  if (!grid) return;
+  const container = document.getElementById('productsGrid');
+  const counter = document.getElementById('productsCount');
+  if (!container) return;
 
   const filtered = PESTICIDES.filter(p => {
-    const matchCategory = currentCategoryFilter === 'All' || p.category === currentCategoryFilter;
     const matchCrop = currentCropFilter === 'all' || p.crops.includes(currentCropFilter);
     const matchDisease = currentDiseaseFilter === 'all' || p.diseases.includes(currentDiseaseFilter);
-    const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery) || p.description.toLowerCase().includes(searchQuery) || p.activeIngredient.toLowerCase().includes(searchQuery);
-    return matchCategory && matchCrop && matchDisease && matchSearch;
+    const matchCategory = currentCategoryFilter === 'All' || p.category === currentCategoryFilter;
+    const matchSearch = searchQuery === '' ||
+      p.name.toLowerCase().includes(searchQuery) ||
+      p.description.toLowerCase().includes(searchQuery) ||
+      p.activeIngredient.toLowerCase().includes(searchQuery);
+
+    return matchCrop && matchDisease && matchCategory && matchSearch;
   });
 
-  const countEl = document.getElementById('productCount');
-  if (countEl) countEl.textContent = filtered.length;
+  if (counter) {
+    counter.textContent = `${t('showing_products')} ${filtered.length} ${t('of_products')} ${PESTICIDES.length} ${t('products_label')}`;
+  }
+  const mobileCountEl = document.getElementById('mobileCatalogCount');
+  if (mobileCountEl) {
+    mobileCountEl.textContent = `${filtered.length} Products`;
+  }
+  const mobileFilterBadge = document.getElementById('mobileFilterCountBadge');
+  if (mobileFilterBadge) {
+    let activeFilterCount = 0;
+    if (currentCropFilter !== 'all') activeFilterCount++;
+    if (currentDiseaseFilter !== 'all') activeFilterCount++;
+    if (currentCategoryFilter !== 'All') activeFilterCount++;
+    if (searchQuery !== '') activeFilterCount++;
+    if (activeFilterCount > 0) {
+      mobileFilterBadge.textContent = activeFilterCount;
+      mobileFilterBadge.style.display = 'inline-flex';
+    } else {
+      mobileFilterBadge.style.display = 'none';
+    }
+  }
 
   if (filtered.length === 0) {
-    grid.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 50px 20px; color: var(--text-muted);">
-        <i class="fa-solid fa-flask-vial" style="font-size: 3rem; margin-bottom: 12px; opacity: 0.4;"></i>
-        <h3>No Agro Formulations Found</h3>
-        <p>Try resetting filters or searching with another crop/disease name.</p>
-        <button class="btn btn-primary" onclick="resetCatalogFilters()" style="margin-top: 14px;">Reset All Filters</button>
+    container.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 50px 20px; background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+        <i class="fa-solid fa-leaf" style="font-size: 3rem; color: var(--text-dim); margin-bottom: 12px;"></i>
+        <h3 style="color: var(--primary-dark);">No products found</h3>
+        <p style="color: var(--text-muted); margin-top: 6px;">Try adjusting crop or disease filters.</p>
+        <button class="btn btn-outline" style="margin-top: 16px;" onclick="resetFilters()"><i class="fa-solid fa-rotate-left"></i> ${t('reset_filters')}</button>
       </div>
     `;
     return;
   }
 
-  grid.innerHTML = filtered.map(p => `
+  const currentUser = getStoredUser();
+
+  container.innerHTML = filtered.map(p => {
+    const isUserTargeted = currentUser && p.targetUserId === currentUser.id;
+    const isCropMatch = currentUser && currentUser.crop && p.crops && p.crops.some(c => currentUser.crop.toLowerCase().includes(c.toLowerCase()));
+
+    let personalBadge = '';
+    if (isUserTargeted) {
+      personalBadge = `<div style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-star"></i> Recommended for You</div>`;
+    } else if (isCropMatch) {
+      personalBadge = `<div style="background: rgba(16, 185, 129, 0.12); color: #10b981; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; margin-bottom: 6px; border: 1px solid rgba(16, 185, 129, 0.3); display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-seedling"></i> Tailored for ${currentUser.crop}</div>`;
+    }
+
+    return `
     <div class="product-card">
-      <div class="card-badge">${p.badge}</div>
-      <div class="product-card-img" onclick="openProductModal('${p.id}')">
-        <img src="${p.image}" alt="${p.name}" loading="lazy" />
+      <span class="discount-tag">${p.discount || 'Special Offer'}</span>
+      <div class="product-img-box">
+        <img loading="lazy" decoding="async" src="${productImage(p)}" alt="${p.name}" />
       </div>
-      <div class="product-card-body">
-        <span class="product-category">${p.category}</span>
-        <h3 class="product-title" onclick="openProductModal('${p.id}')">${p.name}</h3>
+      <div class="card-content">
+        <span class="product-category-tag">${p.category}</span>
+        ${personalBadge}
+        <h3 class="product-name">${p.name}</h3>
+        <p class="product-tagline">${p.tagline || ''}</p>
+
+        ${p.reviewsEnabled && p.reviewsCount > 0 ? `<div class="rating-row"><i class="fa-solid fa-star"></i><span style="font-weight: 700;">${Number(p.rating).toFixed(1)}</span><span style="color: var(--text-muted);">(${p.reviewsCount} ${t('reviews')})</span></div>` : '<div class="rating-row" style="color: var(--text-muted);">No verified reviews yet</div>'}
+
+        <div class="price-row">
+          <span class="current-price">₹${p.price}</span>
+          <span class="original-price">₹${p.originalPrice || p.mrp || p.price}</span>
+        </div>
+
+        <div class="pack-sizes-row">
+          ${(Array.isArray(p.packSizes) && p.packSizes.length ? p.packSizes : ['250g', '500g', '1kg']).map((pack, idx) => `
+            <span class="pack-chip ${idx === 0 ? 'active' : ''}">${pack}</span>
+          `).join('')}
+        </div>
+
+        <div class="card-btn-row">
+          <button class="btn btn-primary add-to-cart-btn" data-id="${p.id}" style="flex: 1;">
+            <i class="fa-solid fa-cart-shopping"></i> ${t('add_to_cart')}
+          </button>
+          <button class="btn btn-outline view-details-btn" data-id="${p.id}">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  `}).join('');
+
+  document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+    btn.addEventListener('click', () => addToCart(btn.dataset.id));
+  });
+
+  document.querySelectorAll('.view-details-btn').forEach(btn => {
+    btn.addEventListener('click', () => openProductPage(btn.dataset.id));
+  });
+}
+
+function renderTrendingProducts() {
+  const container = document.getElementById('trendingProductsGrid');
+  if (!container) return;
+
+  const trending = PESTICIDES.filter(p => p.badge === 'Best Seller' || p.badge === '100% Organic' || p.rating >= 4.8).slice(0, 4);
+
+  container.innerHTML = trending.map(p => `
+    <div class="product-card">
+      <span class="discount-tag">${p.discount}</span>
+      <div class="product-img-box">
+        <img loading="lazy" decoding="async" src="${productImage(p)}" alt="${p.name}" />
+      </div>
+      <div class="card-content">
+        <span class="product-category-tag">${p.category}</span>
+        <h3 class="product-name">${p.name}</h3>
         <p class="product-tagline">${p.tagline}</p>
-        <div class="product-rating">
-          <span style="color: var(--accent-amber);">★★★★★</span>
-          <span style="font-size: 0.75rem; color: var(--text-muted);">(${p.reviewsCount})</span>
+
+        ${p.reviewsEnabled && p.reviewsCount ? `<div class="rating-row"><i class="fa-solid fa-star"></i><span style="font-weight: 700;">${Number(p.rating).toFixed(1)}</span><span style="color: var(--text-muted);">(${p.reviewsCount} ${t('reviews')})</span></div>` : '<div class="rating-row" style="color: var(--text-muted);">No verified reviews yet</div>'}
+
+        <div class="price-row">
+          <span class="current-price">₹${p.price}</span>
+          <span class="original-price">₹${p.originalPrice}</span>
         </div>
-        <div class="product-price-row">
-          <div>
-            <span class="price-current">₹${p.price}</span>
-            <span class="price-original">₹${p.originalPrice}</span>
-          </div>
-          <span class="discount-badge">${p.discount}</span>
+
+        <div class="pack-sizes-row">
+          ${p.packSizes.map((pack, idx) => `
+            <span class="pack-chip ${idx === 0 ? 'active' : ''}">${pack}</span>
+          `).join('')}
         </div>
-        <button class="btn btn-primary btn-add-cart" onclick="addToCart('${p.id}')">
-          <i class="fa-solid fa-cart-plus"></i> <span data-i18n="add_to_cart">${t('add_to_cart')}</span>
-        </button>
+
+        <div class="card-btn-row">
+          <button class="btn btn-primary trending-add-btn" data-id="${p.id}" style="flex: 1;">
+            <i class="fa-solid fa-cart-shopping"></i> ${t('add_to_cart')}
+          </button>
+          <button class="btn btn-outline trending-view-btn" data-id="${p.id}">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
       </div>
     </div>
   `).join('');
+
+  document.querySelectorAll('.trending-add-btn').forEach(btn => {
+    btn.addEventListener('click', () => addToCart(btn.dataset.id));
+  });
+
+  document.querySelectorAll('.trending-view-btn').forEach(btn => {
+    btn.addEventListener('click', () => openProductPage(btn.dataset.id));
+  });
+}
+
+window.toggleMobileFilterDrawer = function(open) {
+  const panel = document.getElementById('sidebarPanel');
+  const overlay = document.getElementById('sidebarPanelOverlay');
+  if (!panel || !overlay) return;
+  const isOpen = open !== undefined ? open : !panel.classList.contains('active');
+  if (isOpen) {
+    panel.classList.add('active');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  } else {
+    panel.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  syncOverlayState();
+};
+
+window.resetFilters = function() {
+  currentCropFilter = 'all';
+  currentDiseaseFilter = 'all';
+  currentCategoryFilter = 'All';
+  searchQuery = '';
+  const cs = document.getElementById('cropSelect');
+  const ds = document.getElementById('diseaseSelect');
+  const cats = document.getElementById('categorySelect');
+  const hs = document.getElementById('headerSearchInput');
+  if (cs) cs.value = 'all';
+  if (ds) ds.value = 'all';
+  if (cats) cats.value = 'All';
+  if (hs) hs.value = '';
+  document.querySelectorAll('.mobile-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === 'All');
+  });
+  renderProducts();
+};
+
+window.renderProducts = renderProducts;
+
+window.filterByCategory = function(cat) {
+  currentCategoryFilter = cat;
+  const categorySelect = document.getElementById('categorySelect');
+  if (categorySelect) categorySelect.value = cat;
+  document.querySelectorAll('.mobile-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === cat);
+  });
+  renderProducts();
+  document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+};
+
+window.filterByCrop = function(crop) {
+  currentCropFilter = crop;
+  const cropSelect = document.getElementById('cropSelect');
+  if (cropSelect) cropSelect.value = crop;
+  renderProducts();
+  document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+};
+
+// --- SHOPPING CART & BASKET ACCESS CONTROL ---
+
+function isFarmerLoggedIn() {
+  try {
+    const token = localStorage.getItem('sathya_token');
+    const userRaw = localStorage.getItem('sathya_user');
+    const user = userRaw ? JSON.parse(userRaw) : null;
+    return Boolean(user && (token || user.id || user.phone));
+  } catch {
+    return false;
+  }
+}
+window.isFarmerLoggedIn = isFarmerLoggedIn;
+
+function setAuthNotice(msg) {
+  const banner = document.getElementById('authNoticeBanner');
+  const bannerText = document.getElementById('authNoticeBannerText');
+  if (banner && bannerText) {
+    bannerText.textContent = msg || 'Login or Sign Up is mandatory to access your basket and checkout.';
+    banner.style.display = 'flex';
+  }
+}
+window.setAuthNotice = setAuthNotice;
+
+function clearAuthNotice() {
+  const banner = document.getElementById('authNoticeBanner');
+  if (banner) {
+    banner.style.display = 'none';
+  }
+}
+window.clearAuthNotice = clearAuthNotice;
+
+// Unified Basket Click Handler for desktop (#cartTrigger) & mobile (#mobileNavCart)
+window.handleBasketClick = function(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  if (!isFarmerLoggedIn()) {
+    setAuthNotice('Login or Sign Up is mandatory to access your basket and checkout.');
+    switchAuthTab('login');
+    openModal('authModal');
+    document.getElementById('cartOverlay')?.classList.remove('active');
+    return false;
+  }
+
+  const cartOverlay = document.getElementById('cartOverlay');
+  if (cartOverlay) {
+    cartOverlay.classList.add('active');
+  }
+  updateCartUI();
+  return true;
+};
+
+// The storefront may run inside an iframe on "/", so navigate the top window.
+function goToCartPage() {
+  if (!isFarmerLoggedIn()) {
+    setAuthNotice('Login or Sign Up is mandatory to access checkout.');
+    switchAuthTab('login');
+    openModal('authModal');
+    document.getElementById('cartOverlay')?.classList.remove('active');
+    return;
+  }
+
+  if (cart.length === 0) {
+    showToast('Your basket is empty. Add products from the catalog first.', 'warning');
+    return;
+  }
+
+  // Persist first so checkout.html reads the same cart (server for signed-in
+  // users), then hand off to the checkout page.
+  Promise.resolve(saveCart()).finally(() => {
+    window.top.location.href = '/checkout.html';
+  });
+}
+
+function initCart() {
+  const cartTrigger = document.getElementById('cartTrigger');
+  const cartDrawer = document.getElementById('cartOverlay');
+  const cartClose = document.getElementById('cartCloseBtn');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  const mobileNavCart = document.getElementById('mobileNavCart');
+
+  if (cartTrigger) {
+    cartTrigger.onclick = (e) => window.handleBasketClick(e);
+  }
+
+  if (mobileNavCart) {
+    mobileNavCart.onclick = (e) => window.handleBasketClick(e);
+  }
+
+  if (cartClose) {
+    cartClose.onclick = () => cartDrawer?.classList.remove('active');
+  }
+
+  if (cartDrawer) {
+    cartDrawer.onclick = (e) => {
+      if (e.target === cartDrawer) {
+        cartDrawer.classList.remove('active');
+      }
+    };
+  }
+
+  if (checkoutBtn) {
+    checkoutBtn.onclick = (e) => {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      if (!isFarmerLoggedIn()) {
+        setAuthNotice('Login or Sign Up is mandatory to access checkout.');
+        cartDrawer?.classList.remove('active');
+        switchAuthTab('login');
+        openModal('authModal');
+        return;
+      }
+
+      if (cart.length === 0) {
+        showToast('Your basket is empty. Add products from the catalog first.', 'warning');
+        return;
+      }
+      goToCartPage();
+    };
+  }
 }
 
 window.addToCart = function(productId) {
@@ -1781,41 +1947,64 @@ window.addToCart = function(productId) {
   if (existing) {
     existing.qty += 1;
   } else {
-    cart.push({ ...p, qty: 1, selectedPack: p.selectedPack || p.packSizes[0] });
+    // _id mirrors id so the React cart page keys off the same value.
+    cart.push({ ...p, _id: p.id, qty: 1, selectedPack: p.selectedPack || p.packSizes[0] });
   }
 
+  saveCart();
   updateCartUI();
-  document.getElementById('cartOverlay')?.classList.add('active');
-};
 
-window.openCartDrawer = function() {
-  document.getElementById('cartOverlay')?.classList.add('active');
+  if (!isFarmerLoggedIn()) {
+    showToast(`"${p.name}" added to cart!`, 'success');
+    setAuthNotice('Login or Sign Up is mandatory to access your basket and complete checkout.');
+    switchAuthTab('login');
+    openModal('authModal');
+    document.getElementById('cartOverlay')?.classList.remove('active');
+  } else {
+    showToast(`"${p.name}" added to basket!`, 'success');
+    document.getElementById('cartOverlay')?.classList.add('active');
+  }
 };
 
 function updateCartUI() {
   const cartBadge = document.getElementById('cartBadge');
-  const mobileCartBadge = document.getElementById('mobileCartBadge');
   const cartContainer = document.getElementById('cartItemsContainer');
   const subtotalEl = document.getElementById('cartSubtotal');
+  const gstEl = document.getElementById('cartGst');
   const drawerTotalEl = document.getElementById('cartDrawerTotal');
+  const checkoutAmountEl = document.getElementById('cartCheckoutAmount');
+  const itemCountEl = document.getElementById('cartItemCount');
   const grandTotalEl = document.getElementById('cartGrandTotal');
+  const drawer = document.querySelector('#cartOverlay .cart-drawer');
+  const rupees = value => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
   const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
   if (cartBadge) cartBadge.textContent = totalItems;
+  const mobileCartBadge = document.getElementById('mobileCartBadge');
   if (mobileCartBadge) mobileCartBadge.textContent = totalItems;
 
+  // Same rule as checkout.html and the server: GST is 18% of the subtotal,
+  // rounded. The basket used to show the subtotal as the "Grand Total".
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-  if (subtotalEl) subtotalEl.textContent = `₹${subtotal}`;
-  if (drawerTotalEl) drawerTotalEl.textContent = `₹${subtotal}`;
-  if (grandTotalEl) grandTotalEl.textContent = `₹${subtotal}`;
+  const gst = Math.round(subtotal * 0.18);
+  const total = subtotal + gst;
+  if (subtotalEl) subtotalEl.textContent = rupees(subtotal);
+  if (gstEl) gstEl.textContent = rupees(gst);
+  if (drawerTotalEl) drawerTotalEl.textContent = rupees(total);
+  if (checkoutAmountEl) checkoutAmountEl.textContent = rupees(total);
+  if (grandTotalEl) grandTotalEl.textContent = rupees(total);
+  if (itemCountEl) itemCountEl.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'items'}`;
+  if (drawer) drawer.classList.toggle('is-empty', cart.length === 0);
 
   if (!cartContainer) return;
 
   if (cart.length === 0) {
     cartContainer.innerHTML = `
-      <div style="text-align: center; padding: 40px 10px; color: var(--text-muted);">
-        <i class="fa-solid fa-basket-shopping" style="font-size: 2.5rem; margin-bottom: 10px; opacity: 0.5;"></i>
-        <p>Your shopping basket is empty</p>
+      <div class="cart-empty">
+        <div class="cart-empty-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+        <h4>Your basket is empty</h4>
+        <p>Add crop protection products to get started.</p>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('cartOverlay')?.classList.remove('active'); document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });">Browse products</button>
       </div>
     `;
     return;
@@ -1823,17 +2012,20 @@ function updateCartUI() {
 
   cartContainer.innerHTML = cart.map((item, idx) => `
     <div class="cart-item">
-      <img src="${item.image}" alt="${item.name}" />
-      <div style="flex-grow: 1;">
-        <h4 style="font-size: 0.9rem; line-height: 1.2;">${item.name}</h4>
-        <span style="font-size: 0.78rem; color: var(--text-muted);">${item.selectedPack} | ₹${item.price}</span>
-        <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
-          <button class="qty-btn" onclick="updateQty(${idx}, -1)">-</button>
-          <span style="font-weight: 700; font-size: 0.85rem;">${item.qty}</span>
-          <button class="qty-btn" onclick="updateQty(${idx}, 1)">+</button>
+      <div class="cart-item-thumb"><img loading="lazy" decoding="async" src="${productImage(item)}" alt="${item.name}" /></div>
+      <div class="cart-item-body">
+        <h4 class="cart-item-name">${item.name}</h4>
+        <div class="cart-item-meta">${item.selectedPack ? `<span class="cart-item-pack">${item.selectedPack}</span>` : ''}<span>${rupees(item.price)} each</span></div>
+        <div class="cart-item-foot">
+          <div class="cart-stepper" role="group" aria-label="Quantity">
+            <button type="button" onclick="updateQty(${idx}, -1)" aria-label="${item.qty <= 1 ? 'Remove item' : 'Decrease quantity'}"><i class="fa-solid ${item.qty <= 1 ? 'fa-trash-can' : 'fa-minus'}"></i></button>
+            <span>${item.qty}</span>
+            <button type="button" onclick="updateQty(${idx}, 1)" aria-label="Increase quantity"><i class="fa-solid fa-plus"></i></button>
+          </div>
+          <strong class="cart-item-total">${rupees(item.price * item.qty)}</strong>
         </div>
       </div>
-      <button style="background: transparent; color: #ef4444;" onclick="removeFromCart(${idx})"><i class="fa-solid fa-trash-can"></i></button>
+      <button type="button" class="cart-item-remove" onclick="removeFromCart(${idx})" aria-label="Remove from basket"><i class="fa-solid fa-xmark"></i></button>
     </div>
   `).join('');
 }
@@ -1841,17 +2033,21 @@ function updateCartUI() {
 window.updateQty = function(index, change) {
   if (cart[index]) {
     cart[index].qty += change;
-    if (cart[index].qty <= 0) cart.splice(index, 1);
+    if (cart[index].qty <= 0) {
+      cart.splice(index, 1);
+    }
+    saveCart();
     updateCartUI();
   }
 };
 
 window.removeFromCart = function(index) {
   cart.splice(index, 1);
+  saveCart();
   updateCartUI();
 };
 
-window.openProductModal = function(productId) {
+function openProductModal(productId) {
   const p = PESTICIDES.find(item => item.id === productId);
   if (!p) return;
 
@@ -1859,145 +2055,2179 @@ window.openProductModal = function(productId) {
   const container = document.getElementById('productModalContent');
   if (!modal || !container) return;
 
+  modal.querySelector('.modal-card')?.scrollTo(0, 0);
+  // Reopening the same product reuses what is already rendered: building it is
+  // the popup's one large layout. A catalogue refresh replaces the product
+  // objects, so stale content is never reused.
+  if (container.renderedProduct === p) {
+    openModal('productModal');
+    return;
+  }
+  container.renderedProduct = p;
+
+  const relatedProducts = PESTICIDES.filter(item =>
+    item.id !== p.id && (item.category === p.category || item.crops.some(c => p.crops.includes(c)))
+  ).slice(0, 4);
+
+  let relatedHTML = '';
+  if (relatedProducts.length > 0) {
+    relatedHTML = `
+      <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-light);">
+        <h4 style="color: var(--primary-dark); margin-bottom: 12px;"><i class="fa-solid fa-sparkles" style="color: var(--accent-amber);"></i> Frequently Bought Together</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px;">
+          ${relatedProducts.map(rel => `
+            <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: 10px; padding: 8px; text-align: center; cursor: pointer;" onclick="openProductModal('${rel.id}')">
+              <img loading="lazy" decoding="async" src="${productImage(rel)}" style="width: 60px; height: 60px; object-fit: contain; margin: 0 auto 4px;" />
+              <h5 style="font-size: 0.75rem; color: var(--text-main); margin-bottom: 2px; line-height: 1.2; height: 2.4em; overflow: hidden;">${rel.name}</h5>
+              <span style="font-size: 0.82rem; font-weight: 800; color: var(--primary-dark);">₹${rel.price}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   container.innerHTML = `
-    <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px;">
-      <div style="background: #f8fafc; padding: 20px; border-radius: 16px; text-align: center;">
-        <img src="${p.image}" style="max-height: 260px; object-fit: contain; margin: 0 auto;" />
+    <div class="product-modal-hero" style="display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; margin-bottom: 16px;">
+      <div style="background: #f8fafc; border-radius: 12px; padding: 10px; text-align: center; border: 1px solid var(--border-light);">
+        <img loading="lazy" decoding="async" src="${productImage(p)}" style="width: 100%; max-height: 140px; object-fit: contain; margin: 0 auto;" />
       </div>
       <div>
-        <span class="status-pill green">${p.category}</span>
-        <h3 style="color: var(--primary-dark); font-size: 1.3rem; margin: 6px 0;">${p.name}</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">${p.tagline}</p>
-        <div style="font-size: 1.4rem; font-weight: 800; color: #15803d; margin-bottom: 12px;">
-          ₹${p.price} <span style="font-size: 0.85rem; color: #94a3b8; text-decoration: line-through;">₹${p.originalPrice}</span>
+        <span style="background: #ecfdf5; color: var(--primary); padding: 3px 8px; border-radius: 12px; font-weight: 700; font-size: 0.75rem; border: 1px solid #34d399;">${p.category}</span>
+        <h2 style="font-size: 1.3rem; margin-top: 4px; color: var(--primary-dark);">${p.name}</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 6px;">${p.tagline}</p>
+
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; margin-bottom: 8px;">
+          ${p.reviewsEnabled && p.reviewsCount ? `<span style="color: var(--accent-amber);">★★★★★</span><strong>${Number(p.rating).toFixed(1)}</strong><span style="color: var(--text-muted);">(${p.reviewsCount} reviews)</span>` : '<span style="color: var(--text-muted);">No verified reviews yet</span>'}
         </div>
-        <div style="font-size: 0.82rem; margin-bottom: 12px; line-height: 1.5;">
-          <strong>Active Ingredient:</strong> ${p.activeIngredient}<br/>
-          <strong>Dosage:</strong> ${p.dosage}<br/>
-          <strong>Target Crops:</strong> ${p.crops.join(', ')}
+
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span style="font-size: 1.4rem; font-weight: 800; color: var(--primary-dark);">₹${p.price}</span>
+          <span style="color: var(--text-dim); text-decoration: line-through;">₹${p.originalPrice}</span>
+          <span style="color: #ef4444; font-weight: 700; font-size: 0.82rem;">${p.discount}</span>
         </div>
-        <button class="btn btn-primary" onclick="addToCart('${p.id}'); closeModal('productModal');" style="width: 100%; justify-content: center; padding: 12px;">
-          <i class="fa-solid fa-cart-plus"></i> Add to Cart Now
-        </button>
       </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div>
+        <h4 style="color: var(--primary-dark); margin-bottom: 4px; font-size: 0.9rem;"><i class="fa-solid fa-file-lines"></i> Description</h4>
+        <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;">${p.detailedDescription || p.description}</p>
+      </div>
+
+      <div style="background: #f8fafc; padding: 10px; border-radius: 8px; font-size: 0.8rem; border: 1px solid var(--border-light); display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div><strong>Active Ingredient:</strong><br/>${p.activeIngredient}</div>
+        <div><strong>Dosage per Acre:</strong><br/>${p.dosage}</div>
+      </div>
+
+      <div class="product-modal-actions" style="border-top: 1px solid var(--border-light); padding-top: 12px; display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="addToCart('${p.id}'); closeModal('productModal');" style="flex: 1; justify-content: center;"><i class="fa-solid fa-cart-plus"></i> Add to Cart</button>
+        <button class="btn btn-gold" onclick="window.open('https://api.whatsapp.com/send?text=Hi%20Sathya%20Bio!%20I%20want%20to%20order%20' + encodeURIComponent('${p.name}'), '_blank')" style="justify-content: center;"><i class="fa-brands fa-whatsapp"></i> Buy via WhatsApp</button>
+      </div>
+
+      ${relatedHTML}
     </div>
   `;
 
   openModal('productModal');
-};
+}
 
-// --- CHATBOT FLOATING CONTROLLER ---
-window.toggleChatbot = function(force) {
-  const win = document.getElementById('chatbotWindow');
-  if (!win) return;
-  if (typeof force === 'boolean') {
-    win.classList.toggle('active', force);
+function openProductPage(productId) {
+  window.location.href = `/product/${encodeURIComponent(productId)}`;
+}
+
+window.openProductModal = openProductModal;
+window.openProductPage = openProductPage;
+
+
+// --- CHATBOT LOGIC ---
+window.toggleChatbot = function(forceState) {
+  const trigger = document.getElementById('chatbotTriggerBtn');
+  const windowEl = document.getElementById('chatbotWindow');
+  if (!trigger || !windowEl) return;
+
+  const isActive = typeof forceState === 'boolean'
+    ? forceState
+    : !windowEl.classList.contains('active');
+
+  if (isActive) {
+    windowEl.classList.add('active');
+    trigger.querySelector('i').className = 'fa-solid fa-xmark';
+    document.getElementById('chatbotInput')?.focus();
   } else {
-    win.classList.toggle('active');
+    windowEl.classList.remove('active');
+    trigger.querySelector('i').className = 'fa-solid fa-comments';
   }
 };
 
 window.sendQuickChat = function(text) {
-  const input = document.getElementById('chatbotInput');
-  if (input) input.value = text;
-  handleChatSend();
+  const windowEl = document.getElementById('chatbotWindow');
+  if (windowEl && !windowEl.classList.contains('active')) {
+    window.toggleChatbot(true);
+  }
+  addChatMessage('user', text);
+  setTimeout(() => respondAutoChatbot(text), 500);
 };
 
-function handleChatSend() {
-  const input = document.getElementById('chatbotInput');
-  const msgContainer = document.getElementById('chatbotMessages');
-  if (!input || !msgContainer || !input.value.trim()) return;
+function initChatbot() {
+  const sendBtn  = document.getElementById('chatbotSendBtn');
+  const chatInput = document.getElementById('chatbotInput');
 
-  const userText = input.value.trim();
-  input.value = '';
-
-  const userMsg = document.createElement('div');
-  userMsg.className = 'chat-msg user-msg';
-  userMsg.textContent = userText;
-  msgContainer.appendChild(userMsg);
-
-  // Save to chat records
-  if (CHAT_RECORDS[0]) {
-    CHAT_RECORDS[0].messages.push({
-      sender: 'Farmer (Live)',
-      text: userText,
-      timestamp: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
-    });
+  function sendMessage() {
+    const text = chatInput?.value.trim();
+    if (!text) return;
+    addChatMessage('user', text);
+    chatInput.value = '';
+    setTimeout(() => respondAutoChatbot(text), 500);
   }
 
-  setTimeout(() => {
-    const botMsg = document.createElement('div');
-    botMsg.className = 'chat-msg bot-msg';
-    
-    if (userText.toLowerCase().includes('blast') || userText.toLowerCase().includes('paddy')) {
-      botMsg.innerHTML = `🌾 For Paddy Blast & Neck Rot, apply <strong>Sathya Bio BlastShield 75 WP</strong> @ 120g/acre. <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.72rem; margin-top: 6px;" onclick="addToCart('sb-01')">Add to Cart ₹680</button>`;
-    } else if (userText.toLowerCase().includes('whitefly') || userText.toLowerCase().includes('cotton')) {
-      botMsg.innerHTML = `🐛 For Cotton Whitefly & sucking pests, use <strong>Sathya Bio FlyKill Ultra</strong> @ 250g/acre. <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.72rem; margin-top: 6px;" onclick="addToCart('sb-02')">Add to Cart ₹840</button>`;
-    } else {
-      botMsg.textContent = `Thank you for consulting Sathya Bio. Our agronomist specialist has received your query regarding "${userText}" and is ready to advise you.`;
-    }
-    msgContainer.appendChild(botMsg);
-    msgContainer.scrollTop = msgContainer.scrollHeight;
-  }, 600);
+  sendBtn?.addEventListener('click', sendMessage);
+  chatInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
 }
 
-// --- INITIALIZE APPLICATION ---
-function initApp() {
-  applyTranslations();
-  initCatalog();
-  updateCartUI();
+function addChatMessage(sender, text) {
+  const messagesContainer = document.getElementById('chatbotMessages');
+  if (!messagesContainer) return;
 
-  // Cart Drawer
-  const cartTrigger = document.getElementById('cartTrigger');
-  const cartOverlay = document.getElementById('cartOverlay');
-  const cartClose = document.getElementById('cartCloseBtn');
-  const checkoutBtn = document.getElementById('checkoutBtn');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `chat-msg ${sender === 'user' ? 'user-msg' : 'bot-msg'}`;
+  msgDiv.innerHTML = text;
 
-  if (cartTrigger) cartTrigger.addEventListener('click', () => cartOverlay?.classList.add('active'));
-  if (cartClose) cartClose.addEventListener('click', () => cartOverlay?.classList.remove('active'));
-  if (checkoutBtn) {
-    checkoutBtn.addEventListener('click', () => {
-      if (cart.length === 0) {
-        alert('Your shopping basket is empty!');
+  messagesContainer.appendChild(msgDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function respondAutoChatbot(userText) {
+  const lower = userText.toLowerCase();
+  let reply = '';
+
+  if (lower.includes('blast') || lower.includes('paddy')) {
+    reply = `🌾 <strong>Paddy Blast Defense:</strong> We recommend <strong>Sathya Bio BlastShield 75 WP</strong> (₹680) or <strong>Pseudomonas 1% WP</strong>.<br/>
+    <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem; margin-top: 6px;" onclick="addToCart('sb-01')"><i class="fa-solid fa-cart-plus"></i> Add BlastShield to Cart</button>`;
+  } else if (lower.includes('whitefly') || lower.includes('cotton')) {
+    reply = `🐛 <strong>Cotton Whitefly Defense:</strong> Use <strong>Sathya Bio FlyKill Ultra</strong> (₹840) or <strong>NeemGuard 10000 PPM</strong> (₹580). Spray early morning.<br/>
+    <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem; margin-top: 6px;" onclick="addToCart('sb-02')"><i class="fa-solid fa-cart-plus"></i> Add FlyKill Ultra to Cart</button>`;
+  } else if (lower.includes('soil')) {
+    reply = `🌱 <strong>Soil Analyzer:</strong> Upload your soil test lab PDF/image in our Soil Analyzer section to get N-P-K nutrient recommendations.<br/>
+    <button class="btn btn-gold" style="padding: 4px 10px; font-size: 0.75rem; margin-top: 6px;" onclick="document.getElementById('soil').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-flask"></i> Go to Soil Analyzer</button>`;
+  } else if (lower.includes('agronomist') || lower.includes('speak') || lower.includes('doctor')) {
+    reply = `📞 <strong>Senior Agronomist Consultation:</strong> Call toll-free <strong>1800-425-9999</strong> or book a 1-on-1 consultation video call.<br/>
+    <button class="btn btn-gold" style="padding: 4px 10px; font-size: 0.75rem; margin-top: 6px;" onclick="openModal('expertModal')"><i class="fa-solid fa-calendar-check"></i> Book Agronomist Call</button>`;
+  } else if (lower.includes('weed') || lower.includes('herbicide')) {
+    reply = `🌿 <strong>Weed Control:</strong> Use <strong>WeedClear 24-D</strong> (₹340) for broadleaf weeds or <strong>GrassOut 10 EC</strong> (₹480) for grass weeds.<br/>
+    <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem; margin-top: 6px;" onclick="addToCart('sb-26')"><i class="fa-solid fa-cart-plus"></i> Add WeedClear to Cart</button>`;
+  } else {
+    reply = `🌿 <strong>Sathya Bio Crop Assistant:</strong> We offer 35+ bio-certified pesticides and crop nutrients for Paddy, Cotton, Tomato, Wheat, Sugarcane, and Grapes. Filter products by crop or disease above!`;
+  }
+
+  addChatMessage('bot', reply);
+}
+
+
+// --- SOIL TEST UPLOAD & ANALYSIS ---
+function initSoilUpload() {
+  const dropzone = document.getElementById('soilDropzone');
+  const fileInput = document.getElementById('soilFileInput');
+
+  if (dropzone && fileInput) {
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        processSoilDocument(e.target.files[0].name);
+      }
+    });
+  }
+}
+
+window.processSoilDocument = function(filename) {
+  const resultDiv = document.getElementById('soilAnalysisResult');
+  if (!resultDiv) return;
+
+  resultDiv.innerHTML = `
+    <div style="text-align: center; padding: 16px;">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: var(--primary); margin-bottom: 8px;"></i>
+      <p style="color: var(--text-muted); font-size: 0.88rem;">Analyzing "${filename}" with Sathya Bio AI Soil Engine...</p>
+    </div>
+  `;
+
+  setTimeout(() => {
+    resultDiv.innerHTML = `
+      <div style="background: #f0fdf4; border: 1px solid var(--border-green); border-radius: 8px; padding: 14px; margin-top: 12px;">
+        <h4 style="color: var(--primary-dark); margin-bottom: 8px;"><i class="fa-solid fa-square-check" style="color: var(--primary);"></i> Soil Report Processed</h4>
+        <p style="font-size: 0.85rem; color: var(--text-main);">Prescription: Apply <strong>Sathya Bio RootVigor Gold (₹990)</strong> to boost root growth and soil organic matter.</p>
+        <button class="btn btn-primary" onclick="addToCart('sb-04')" style="margin-top: 10px; font-size: 0.8rem;"><i class="fa-solid fa-cart-plus"></i> Add RootVigor to Cart</button>
+      </div>
+    `;
+  }, 1200);
+};
+
+
+
+// --- PHOTO SCANNER ---
+function initPhotoScanner() {
+  const photoFileInput = document.getElementById('diseasePhotoInput');
+  const analyzeBtn = document.getElementById('analyzePhotoBtn');
+
+  if (analyzeBtn && photoFileInput) {
+    analyzeBtn.addEventListener('click', () => {
+      if (photoFileInput.files.length > 0) {
+        processPhotoScan(photoFileInput.files[0]);
+      } else {
+        showToast('Please select a leaf photo first.', 'warning');
+      }
+    });
+  }
+}
+
+function processPhotoScan(file) {
+  const scanResult = document.getElementById('photoScannerResult');
+  if (!scanResult) return;
+
+  scanResult.innerHTML = `
+    <div style="text-align: center; padding: 16px;">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: var(--primary); margin-bottom: 8px;"></i>
+      <p style="color: var(--primary); font-weight: 700; margin-top: 8px;">Scanning leaf structure for fungal spores...</p>
+    </div>
+  `;
+
+  setTimeout(() => {
+    const diag = SAMPLE_DISEASE_DIAGNOSES[0];
+    scanResult.innerHTML = `
+      <div style="background: #ffffff; border: 1px solid var(--border-light); padding: 14px; border-radius: 8px; margin-top: 12px;">
+        <span style="background: #fef2f2; color: #ef4444; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">Match: ${diag.confidence}</span>
+        <h3 style="margin: 8px 0 4px 0; font-size: 1.05rem; color: var(--primary-dark);">${diag.diseaseName}</h3>
+        <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 8px;">${diag.symptoms}</p>
+        <div style="background: #f0fdf4; padding: 8px; border-radius: 6px; font-size: 0.82rem; margin-bottom: 10px;">
+          <strong>Remedy:</strong> ${diag.recommendedProduct}
+        </div>
+        <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="addToCart('${diag.productId}'); closeModal('photoScannerModal');">
+          <i class="fa-solid fa-cart-plus"></i> Add Remedy to Cart
+        </button>
+      </div>
+    `;
+  }, 1200);
+}
+
+
+// --- TICKETS & N8N & EXPERT ---
+let tickets = [...INITIAL_TICKETS];
+
+function initTicketSystem() {
+  renderTickets();
+  document.getElementById('newTicketForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const newId = `TK-${Math.floor(1000 + Math.random() * 9000)}`;
+    tickets.unshift({
+      id: newId,
+      subject: e.target.querySelector('input[type="text"]')?.value || 'Field Inquiry',
+      category: 'Field Advisory',
+      crop: 'Paddy/Rice',
+
+
+            severity: 'High',
+      status: 'In Progress',
+      date: new Date().toISOString().split('T')[0],
+      assignedExpert: 'Sathya Bio Advisory Team'
+    });
+    renderTickets();
+    closeModal('ticketModal');
+    showToast(`Support ticket ${newId} created successfully.`, 'success');
+  });
+}
+
+function renderTickets() {
+  const container = document.getElementById('ticketListContainer');
+  if (!container) return;
+
+  container.innerHTML = tickets.map(t => `
+    <div style="background: #ffffff; border: 1px solid var(--border-light); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <strong style="color: var(--text-main); font-size: 0.9rem;">${t.subject}</strong>
+        <span style="display: block; font-size: 0.78rem; color: var(--text-muted);">${t.id} | ${t.crop} | ${t.date}</span>
+      </div>
+      <span style="background: #ecfdf5; color: var(--primary); padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.75rem;">${t.status}</span>
+    </div>
+  `).join('');
+}
+
+function initN8nVisualizer() {
+  const container = document.getElementById('n8nNodesContainer');
+  const testBtn = document.getElementById('testN8nBtn');
+  const logEl = document.getElementById('n8nExecutionLog');
+
+  if (container) {
+    container.innerHTML = N8N_WORKFLOW_NODES.map(node => `
+      <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <strong style="font-size: 0.85rem; color: var(--primary-dark);">${node.name}</strong>
+          <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">${node.desc}</span>
+        </div>
+        <span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700;">${node.status}</span>
+      </div>
+    `).join('');
+  }
+
+  if (testBtn && logEl) {
+    testBtn.addEventListener('click', () => {
+      logEl.innerHTML = '// Connecting to WhatsApp Webhook...<br/>';
+      setTimeout(() => { logEl.innerHTML += '[OK] Incoming message: "My paddy leaves have yellow spots"<br/>'; }, 500);
+      setTimeout(() => { logEl.innerHTML += '[OK] AI LLM Node: Extracted Crop="Paddy", Symptoms="Yellow Blast Spots"<br/>'; }, 1000);
+      setTimeout(() => { logEl.innerHTML += '[OK] Catalog Node: Matched "BlastShield 75 WP"<br/>'; }, 1500);
+      setTimeout(() => { logEl.innerHTML += '<strong style="color:#16a34a;">[SUCCESS] Sent WhatsApp remedy guide & 1-click buy button to +91-9876543210</strong>'; }, 2000);
+    });
+  }
+}
+
+function initExpertBooking() {
+  const grid = document.getElementById('expertsGrid');
+  if (!grid) return;
+
+  grid.innerHTML = EXPERTS.map(exp => `
+    <div style="background: #ffffff; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; display: flex; gap: 14px; align-items: center;">
+      <img loading="lazy" decoding="async" src="${exp.avatar}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);" />
+      <div>
+        <h4 style="font-size: 0.95rem; color: var(--primary-dark);">${exp.name}</h4>
+        <span style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px;">${exp.title}</span>
+        <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">${exp.rating}</div>
+        <button class="btn btn-outline" style="padding: 4px 12px; font-size: 0.75rem; margin-top: 8px;" onclick="openModal('expertModal')">Book Consultation</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+
+// --- MODALS ENGINE ---
+function initModals() {
+  initModalPrewarm();
+  document.querySelectorAll('[data-modal-target]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-modal-target');
+      if (targetId) openModal(targetId);
+    });
+  });
+
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
+
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    // On phones the "×" text is hidden and drawn as an icon, so name the button.
+    if (!btn.hasAttribute('aria-label')) btn.setAttribute('aria-label', 'Close');
+    btn.addEventListener('click', () => {
+      const overlay = btn.closest('.modal-overlay');
+      if (overlay) closeModal(overlay.id);
+    });
+  });
+
+  // Escape closes the top-most open window (and the cart drawer).
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const open = [...document.querySelectorAll('.modal-overlay.active')].pop();
+    if (open) closeModal(open.id);
+    else document.getElementById('cartOverlay')?.classList.remove('active');
+  });
+
+  initPosterSwipeToDismiss();
+  initMobileMenu();
+  initFooterAccordions();
+  initMobileNavActiveState();
+  initNavDebugPanel();
+}
+
+// On-device diagnostics for the bottom bar. Open the storefront with
+// ?debug=nav to overlay live viewport numbers and outline the bar in red, then
+// screenshot it while the bar is hidden. Does nothing without the parameter.
+function initNavDebugPanel() {
+  if (new URLSearchParams(location.search).get('debug') !== 'nav') return;
+  const nav = document.getElementById('mobileBottomNav');
+  const vv = window.visualViewport;
+
+  const probe = unit => {
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;top:0;left:-9999px;width:1px;height:100${unit};visibility:hidden;pointer-events:none`;
+    document.body.appendChild(el);
+    return el;
+  };
+  const vhProbe = probe('vh');
+  const dvhProbe = CSS.supports('height', '100dvh') ? probe('dvh') : null;
+
+  const panel = document.createElement('pre');
+  panel.id = 'navDebugPanel';
+  panel.style.cssText = 'position:fixed;top:130px;left:8px;right:8px;z-index:2147483647;margin:0;padding:8px 10px;background:rgba(0,0,0,0.85);color:#7cfc00;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;border-radius:8px;pointer-events:none';
+  document.body.appendChild(panel);
+  if (nav) nav.style.outline = '3px solid #ff2d55';
+
+  const describe = el => {
+    if (!el) return 'none';
+    const cls = typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/)[0] : '';
+    return `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${cls}`;
+  };
+
+  const render = () => {
+    const rect = nav?.getBoundingClientRect();
+    const css = nav ? getComputedStyle(nav) : null;
+    const visibleBottom = vv ? vv.offsetTop + vv.height : innerHeight;
+    // elementFromPoint skips this panel (pointer-events: none).
+    const hit = document.elementFromPoint(innerWidth / 2, Math.max(0, visibleBottom - 8));
+    const ua = (navigator.userAgent.match(/(SamsungBrowser|Chrome|CriOS|Firefox|Version)\/[\d.]+/g) || []).join(' ');
+    const fixed = n => (typeof n === 'number' ? n.toFixed(1) : '-');
+    panel.textContent = [
+      `ua         ${ua}`,
+      `url        ${location.pathname}  top=${window.top === window}`,
+      `screen     ${screen.width}x${screen.height} dpr=${devicePixelRatio}`,
+      `inner      ${innerWidth}x${innerHeight}  client=${document.documentElement.clientHeight}`,
+      `visualVP   h=${fixed(vv?.height)} top=${fixed(vv?.offsetTop)} scale=${vv ? vv.scale.toFixed(2) : '-'}`,
+      `100vh=${vhProbe.offsetHeight}  100dvh=${dvhProbe ? dvhProbe.offsetHeight : 'n/a'}`,
+      `scrollY    ${Math.round(scrollY)} / ${document.documentElement.scrollHeight}`,
+      `nav rect   top=${fixed(rect?.top)} bottom=${fixed(rect?.bottom)} visibleBottom=${fixed(visibleBottom)}`,
+      `nav css    bottom=${css?.bottom} margin-bottom=${css?.marginBottom} display=${css?.display}`,
+      `bottom hit ${describe(hit)} ${nav && nav.contains(hit) ? '(nav OK)' : '(NOT nav)'}`,
+    ].join('\n');
+  };
+
+  let queued = false;
+  const queue = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      render();
+    });
+  };
+  window.addEventListener('scroll', queue, { passive: true });
+  window.addEventListener('resize', queue);
+  vv?.addEventListener('resize', queue);
+  vv?.addEventListener('scroll', queue);
+  // Toolbar animations do not always fire events; keep the numbers fresh.
+  setInterval(render, 500);
+  render();
+}
+
+
+// A downward swipe dismisses a bottom card or sheet, like a native bottom
+// sheet. `scroller` keeps its own scrolling until it is back at the top.
+function enableSwipeToDismiss(card, onDismiss, scroller = card) {
+  if (!card) return;
+  let startX = 0;
+  let startY = 0;
+  let dy = 0;
+  let tracking = false;
+  let decided = false;
+
+  const resetDrag = () => {
+    card.style.removeProperty('transform');
+    card.style.removeProperty('transition');
+    card.style.removeProperty('opacity');
+  };
+
+  card.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || e.target.closest('select, input, textarea')) return;
+    if (scroller && scroller.contains(e.target) && scroller.scrollTop > 0) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    dy = 0;
+    tracking = true;
+    decided = false;
+  }, { passive: true });
+
+  card.addEventListener('touchmove', e => {
+    if (!tracking) return;
+    const moveX = e.touches[0].clientX - startX;
+    const moveY = e.touches[0].clientY - startY;
+    if (!decided) {
+      if (Math.abs(moveX) < 6 && Math.abs(moveY) < 6) return;
+      decided = true;
+      // Sideways is a chip row scrolling; upward is not a dismiss.
+      if (Math.abs(moveX) > Math.abs(moveY) || moveY < 0) {
+        tracking = false;
         return;
       }
-      cartOverlay?.classList.remove('active');
-      openModal('checkoutModal');
+    }
+    dy = Math.max(0, moveY);
+    // Stylesheets position these with !important, so the drag must too.
+    card.style.setProperty('transition', 'none', 'important');
+    card.style.setProperty('transform', `translateY(${dy}px)`, 'important');
+    card.style.setProperty('opacity', String(Math.max(0.4, 1 - dy / 320)));
+  }, { passive: true });
+
+  const endDrag = () => {
+    if (!tracking) return;
+    tracking = false;
+    if (dy > 70) {
+      onDismiss();
+      setTimeout(resetDrag, 350);
+    } else {
+      resetDrag();
+    }
+  };
+  card.addEventListener('touchend', endDrag);
+  card.addEventListener('touchcancel', endDrag);
+}
+
+// On phones the welcome poster is a card docked above the bottom nav.
+function initPosterSwipeToDismiss() {
+  const card = document.querySelector('#welcomePosterModal .welcome-poster-card');
+  enableSwipeToDismiss(card, () => closeModal('welcomePosterModal'), card?.querySelector('.welcome-poster-body'));
+
+  // Every other popup is a bottom sheet on phones (grab handle at the top);
+  // a downward swipe from the top of its content closes it too.
+  document.querySelectorAll('.modal-overlay:not(#welcomePosterModal) .modal-card').forEach(sheet => {
+    const overlay = sheet.closest('.modal-overlay');
+    enableSwipeToDismiss(sheet, () => closeModal(overlay.id), sheet);
+  });
+}
+
+// ==================== MOBILE MENU SHEET (phones) ====================
+
+// 'is-opening' counts as open, so a second tap during the warm-up frame closes.
+function isMobileMenuOpen() {
+  const sheet = document.getElementById('mobileMenuSheet');
+  return Boolean(sheet && (sheet.classList.contains('active') || sheet.classList.contains('is-opening')));
+}
+
+window.toggleMobileMenu = function(open) {
+  const sheet = document.getElementById('mobileMenuSheet');
+  const backdrop = document.getElementById('mobileMenuBackdrop');
+  if (!sheet || !backdrop) return;
+  const next = typeof open === 'boolean' ? open : !isMobileMenuOpen();
+  if (next === isMobileMenuOpen()) return;
+
+  if (next) {
+    refreshMobileMenuAccount();
+    closeModal('welcomePosterModal');
+    // No scrollTop reset here: touching scroll position forced a layout of the
+    // whole page (1,191 objects) on the tap frame. It is reset after closing.
+  } else {
+    // Back to the top for next time, once the slide-out has finished.
+    setTimeout(() => {
+      if (!isMobileMenuOpen() && sheet.scrollTop !== 0) sheet.scrollTop = 0;
+    }, 450);
+  }
+  // The closed sheet stays painted just below the screen (responsive.css 7d),
+  // so there is nothing to warm up: the slide starts on the next frame.
+  sheet.classList.remove('is-opening');
+  backdrop.classList.remove('is-opening');
+  sheet.classList.toggle('active', next);
+  backdrop.classList.toggle('active', next);
+  sheet.toggleAttribute('inert', !next);
+  sheet.setAttribute('aria-hidden', String(!next));
+
+  const menuBtn = document.getElementById('mobileNavMenu');
+  if (menuBtn) {
+    menuBtn.setAttribute('aria-expanded', String(next));
+    menuBtn.classList.toggle('is-open', next);
+    const icon = menuBtn.querySelector('i');
+    if (icon) icon.className = next ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+  }
+  syncOverlayState();
+  // The tab highlight reads layout; doing it in this frame forced a style and
+  // layout pass right as the sheet starts to slide.
+  requestAnimationFrame(updateMobileNavActive);
+};
+
+// Menu chips filter the catalogue and take the shopper straight to it.
+window.shopFromMenu = function(kind, value) {
+  if (kind === 'crop') window.filterByCrop(value);
+  else window.filterByCategory(value);
+  toggleMobileMenu(false);
+  document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+};
+
+function refreshMobileMenuAccount() {
+  const user = getStoredUser();
+  const name = document.getElementById('mmsAccountName');
+  const sub = document.getElementById('mmsAccountSub');
+  const btn = document.getElementById('mmsAccountBtn');
+  if (!name || !sub || !btn) return;
+  // Runs on the tap that opens the sheet: rewriting unchanged text replaced the
+  // text nodes and forced style and layout right as the slide begins.
+  const setText = (el, value) => {
+    const shown = localizedSources.get(el.firstChild)?.source ?? el.textContent;
+    if (shown !== value) el.textContent = value;
+  };
+  if (user) {
+    setText(name, `Hi, ${user.name || 'Farmer'}`);
+    setText(sub, [user.crop, user.village || user.district].filter(Boolean).join(' · ') || 'Signed in');
+    setText(btn, 'My Account');
+  } else {
+    setText(name, 'Welcome to Sathya Bio');
+    setText(sub, 'Sign in to track orders & get crop advice');
+    setText(btn, 'Sign In');
+  }
+}
+
+function initMobileMenu() {
+  const sheet = document.getElementById('mobileMenuSheet');
+  const nav = document.getElementById('mobileBottomNav');
+  if (!sheet) return;
+  // Painted below the screen while closed; keep it out of focus order.
+  sheet.toggleAttribute('inert', !isMobileMenuOpen());
+
+  // Tiles and links in the sheet do their job, then the sheet closes.
+  sheet.addEventListener('click', e => {
+    if (e.target.closest('a, [data-close-menu]')) toggleMobileMenu(false);
+  });
+
+  // Any other bottom-bar tab closes the sheet first. Capture phase, because
+  // the basket handler stops propagation.
+  nav?.addEventListener('click', e => {
+    const item = e.target.closest('.mobile-nav-item');
+    if (item && item.id !== 'mobileNavMenu') toggleMobileMenu(false);
+  }, true);
+
+  enableSwipeToDismiss(sheet, () => toggleMobileMenu(false));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && isMobileMenuOpen()) toggleMobileMenu(false);
+  });
+
+  // Rotating or resizing to the desktop layout must not leave it open.
+  const desktop = window.matchMedia('(min-width: 769px)');
+  const onChange = ev => { if (ev.matches) toggleMobileMenu(false); };
+  if (desktop.addEventListener) desktop.addEventListener('change', onChange);
+}
+
+// Highlights the bottom-bar tab for where the shopper is.
+function updateMobileNavActive() {
+  const nav = document.getElementById('mobileBottomNav');
+  if (!nav || getComputedStyle(nav).display === 'none') return;
+  let key = 'home';
+  if (isMobileMenuOpen()) {
+    key = 'menu';
+  } else {
+    const rect = document.getElementById('catalog')?.getBoundingClientRect();
+    if (rect && rect.top < window.innerHeight * 0.45 && rect.bottom > 140) key = 'shop';
+  }
+  nav.querySelectorAll('.mobile-nav-item[data-nav]').forEach(item => {
+    const on = item.dataset.nav === key;
+    item.classList.toggle('active', on);
+    if (on) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+}
+
+function initMobileNavActiveState() {
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      updateMobileNavActive();
+    });
+  }, { passive: true });
+  updateMobileNavActive();
+}
+
+// Footer link groups collapse into accordions on phones.
+function initFooterAccordions() {
+  document.querySelectorAll('.footer-col-title').forEach(title => {
+    const toggle = () => {
+      if (!window.matchMedia('(max-width: 768px)').matches) return;
+      const open = title.closest('.footer-col').classList.toggle('open');
+      title.setAttribute('aria-expanded', String(open));
+    };
+    title.addEventListener('click', toggle);
+    title.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+  });
+}
+
+// --- TOAST NOTIFICATIONS ---
+// js/toast.js (loaded before this file) provides window.toast: stacked,
+// swipeable, accessible notifications shared with checkout and order status,
+// styled like the Sonner toasts in the React app. showToast() keeps the
+// storefront's call signature. type: 'success' | 'error' | 'warning' | 'info'.
+// Returns a function that dismisses the toast.
+function showToast(message, type = 'info', duration) {
+  const api = window.toast;
+  if (!api) {
+    console.warn(message);
+    return () => {};
+  }
+  const show = typeof api[type] === 'function' ? api[type] : api;
+  const id = show(message, duration ? { duration } : {});
+  return () => api.dismiss(id);
+}
+
+window.showToast = showToast;
+
+// --- LIVE FORM VALIDATION ---
+// Validates while the user types and shows the message directly under the
+// field, instead of waiting for submit and firing a toast.
+
+function ensureFieldErrorStyles() {
+  if (document.getElementById('sbFieldErrorStyles')) return;
+  const style = document.createElement('style');
+  style.id = 'sbFieldErrorStyles';
+  style.textContent = `
+    .sb-field-error {
+      display: block;
+      margin-top: 4px;
+      color: #dc2626;
+      font-size: 0.76rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .sb-field-ok {
+      display: block;
+      margin-top: 4px;
+      color: #16a34a;
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    .sb-input-invalid {
+      border-color: #dc2626 !important;
+      background: rgba(220, 38, 38, 0.04);
+    }
+    .sb-input-valid {
+      border-color: #16a34a !important;
+    }
+    .sb-password-rules {
+      list-style: none;
+      margin: 6px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 2px;
+      font-size: 0.74rem;
+      color: #6b7280;
+      line-height: 1.35;
+    }
+    .sb-password-rules li.ok {
+      color: #16a34a;
+      font-weight: 600;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function setFieldError(el, message) {
+  if (!el) return;
+  ensureFieldErrorStyles();
+  el.classList.add('sb-input-invalid');
+  el.classList.remove('sb-input-valid');
+  el.setAttribute('aria-invalid', 'true');
+
+  let hint = el.parentElement?.querySelector('.sb-field-error, .sb-field-ok');
+  if (!hint) {
+    hint = document.createElement('small');
+    el.parentElement?.appendChild(hint);
+  }
+  hint.className = 'sb-field-error';
+  hint.textContent = message;
+}
+
+function setFieldValid(el, message = '') {
+  if (!el) return;
+  ensureFieldErrorStyles();
+  el.classList.remove('sb-input-invalid');
+  el.classList.add('sb-input-valid');
+  el.removeAttribute('aria-invalid');
+
+  const hint = el.parentElement?.querySelector('.sb-field-error, .sb-field-ok');
+  if (!hint) return;
+  if (message) {
+    hint.className = 'sb-field-ok';
+    hint.textContent = message;
+  } else {
+    hint.remove();
+  }
+}
+
+function clearField(el) {
+  if (!el) return;
+  el.classList.remove('sb-input-invalid', 'sb-input-valid');
+  el.removeAttribute('aria-invalid');
+  el.parentElement?.querySelector('.sb-field-error, .sb-field-ok')?.remove();
+}
+
+// Returns true when the field currently holds a valid value.
+function validatePhoneField(el) {
+  const v = el.value;
+  if (!v) { clearField(el); return false; }
+  // A bad first digit is wrong from the very first keystroke — say so straight
+  // away rather than making them type all ten first.
+  if (!/^[6-9]/.test(v)) {
+    setFieldError(el, 'An Indian mobile number must start with 6, 7, 8 or 9.');
+    return false;
+  }
+  if (v.length < 10) {
+    setFieldError(el, `Enter all 10 digits (${v.length}/10).`);
+    return false;
+  }
+  setFieldValid(el, 'Looks good.');
+  return true;
+}
+
+// Farmer password rules. The server enforces the same rules in
+// server/security.js (passwordRules) - keep the two in step.
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password12', 'password123', 'passw0rd', 'admin123', 'admin1234', 'welcome1',
+  'welcome123', 'qwerty123', 'qwertyuiop', 'asdfghjkl', 'iloveyou', 'abc12345', 'abcd1234', 'india123',
+  'farmer123', 'sathyabio', 'sathya123', '12345678', '123456789', '1234567890', '11111111', '00000000',
+  '87654321', 'test1234', 'letmein1',
+]);
+
+function farmerPasswordChecks(password, phone) {
+  return [
+    { label: 'At least 8 characters', ok: password.length >= 8 },
+    { label: 'At least one letter (a-z)', ok: /[A-Za-z]/.test(password) },
+    { label: 'At least one number (0-9)', ok: /\d/.test(password) },
+    {
+      label: 'Not a common password or your mobile number',
+      ok: password.length > 0 && !COMMON_PASSWORDS.has(password.toLowerCase()) && !(phone && password.includes(phone)),
+    },
+  ];
+}
+
+// Shows the password rules under the field, ticking each one off as it is met,
+// so people know what to type before they are told it is wrong.
+function renderPasswordChecklist(el) {
+  ensureFieldErrorStyles();
+  let list = el.parentElement?.querySelector('.sb-password-rules');
+  if (!list) {
+    list = document.createElement('ul');
+    list.className = 'sb-password-rules';
+    list.setAttribute('aria-live', 'polite');
+    el.insertAdjacentElement('afterend', list);
+  }
+
+  const phone = document.getElementById('regPhone')?.value?.trim() || '';
+  const checks = farmerPasswordChecks(el.value, phone);
+  list.replaceChildren(...checks.map(check => {
+    const item = document.createElement('li');
+    if (check.ok) item.className = 'ok';
+    item.textContent = `${check.ok ? '✓' : '○'} ${check.label}`;
+    return item;
+  }));
+  return checks.every(check => check.ok);
+}
+
+function validatePasswordField(el) {
+  const ok = renderPasswordChecklist(el);
+  el.parentElement?.querySelector('.sb-field-error, .sb-field-ok')?.remove();
+  el.classList.remove('sb-input-invalid');
+  el.removeAttribute('aria-invalid');
+  el.classList.toggle('sb-input-valid', ok);
+  return ok;
+}
+
+function validateNameField(el) {
+  const v = el.value.trim();
+  if (!v) { clearField(el); return false; }
+  if (v.replace(/[^A-Za-zÀ-ɏ]/g, '').length < 2) {
+    setFieldError(el, 'Please enter your name, not a number.');
+    return false;
+  }
+  setFieldValid(el);
+  return true;
+}
+
+// Keeps only the characters a field accepts, as the user types.
+function restrictToDigits(el, maxLength) {
+  el.setAttribute('inputmode', 'numeric');
+  el.addEventListener('input', () => {
+    const cleaned = el.value.replace(/\D/g, '').slice(0, maxLength);
+    if (cleaned !== el.value) {
+      const atEnd = el.selectionStart === el.value.length;
+      el.value = cleaned;
+      if (!atEnd) el.setSelectionRange(cleaned.length, cleaned.length);
+    }
+  });
+  el.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+    el.value = text.replace(/\D/g, '').slice(0, maxLength);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+function initFormValidation() {
+  const regPhone = document.getElementById('regPhone');
+  if (regPhone) {
+    restrictToDigits(regPhone, 10);
+    regPhone.setAttribute('maxlength', '10');
+    regPhone.addEventListener('input', () => validatePhoneField(regPhone));
+    regPhone.addEventListener('blur', () => {
+      if (!regPhone.value) setFieldError(regPhone, 'Mobile number is required.');
     });
   }
 
-  // Checkout Form
-  const checkoutForm = document.getElementById('checkoutForm');
-  if (checkoutForm) checkoutForm.addEventListener('submit', handleCheckoutSubmit);
+  const regPassword = document.getElementById('regPassword');
+  if (regPassword) {
+    regPassword.addEventListener('focus', () => renderPasswordChecklist(regPassword));
+    regPassword.addEventListener('input', () => validatePasswordField(regPassword));
+    // "Not your mobile number" depends on the number, so refresh the list when it changes.
+    regPhone?.addEventListener('input', () => {
+      if (regPassword.parentElement?.querySelector('.sb-password-rules')) validatePasswordField(regPassword);
+    });
+  }
 
-  // Search
-  const headerSearchInput = document.getElementById('headerSearchInput');
-  if (headerSearchInput) {
-    headerSearchInput.addEventListener('input', (e) => {
-      searchQuery = e.target.value.toLowerCase().trim();
+  const regName = document.getElementById('regName');
+  if (regName) {
+    regName.addEventListener('input', () => validateNameField(regName));
+  }
+
+  const otpInput = document.getElementById('storefrontOtpInput');
+  if (otpInput) {
+    restrictToDigits(otpInput, 6);
+    otpInput.setAttribute('maxlength', '6');
+  }
+
+  const acreage = document.getElementById('regAcreage');
+  if (acreage) restrictToDigits(acreage, 4);
+
+  // Sign-in accepts either a mobile number or an email, so characters aren't
+  // filtered — only the shape is checked once something has been typed.
+  const loginId = document.getElementById('loginIdentifier');
+  if (loginId) {
+    loginId.addEventListener('input', () => {
+      const v = loginId.value.trim();
+      if (!v) { clearField(loginId); return; }
+      const isPhone = /^\d+$/.test(v);
+      if (isPhone && v.length !== 10) setFieldError(loginId, `Mobile number needs 10 digits (${v.length}/10).`);
+      else if (isPhone && !/^[6-9]/.test(v)) setFieldError(loginId, 'Number must start with 6, 7, 8 or 9.');
+      else if (!isPhone && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) setFieldError(loginId, 'Enter a valid mobile number or email address.');
+      else setFieldValid(loginId);
+    });
+  }
+}
+
+window.clearStorefrontFieldErrors = function() {
+  ['regName', 'regPhone', 'regPassword', 'loginIdentifier', 'loginPassword']
+    .forEach(id => clearField(document.getElementById(id)));
+  document.querySelectorAll('.sb-password-rules').forEach(list => list.remove());
+};
+
+// Body classes other styles key off, instead of a document-wide :has()
+// selector that made every class change re-check the whole page.
+function syncOverlayState() {
+  const body = document.body;
+  const blocking = document.querySelector('.modal-overlay.active:not(#welcomePosterModal), .modal-overlay.is-opening:not(#welcomePosterModal), .mobile-menu-sheet.active, .mobile-menu-sheet.is-opening, .sidebar-panel.active');
+  body.classList.toggle('overlay-open', Boolean(blocking));
+  body.classList.toggle('poster-open', Boolean(document.getElementById('welcomePosterModal')?.classList.contains('active')));
+}
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal || modal.classList.contains('active')) return;
+  const prewarmedAt = Number(modal.dataset.prewarmAt || 0);
+  if (modal.classList.contains('is-opening') && !prewarmedAt) return; // already opening
+  delete modal.dataset.prewarmAt;
+
+  const start = () => {
+    if (!modal.classList.contains('is-opening')) return; // closed meanwhile
+    modal.classList.add('active');
+    modal.classList.remove('is-opening');
+    syncOverlayState();
+  };
+
+  // Paint the (still transparent) overlay and promote the card at least one
+  // frame before the slide starts, so the animation's first frame is not
+  // spent creating and rasterising the layer - the stutter on phones.
+  modal.classList.add('is-opening');
+  syncOverlayState();
+  if (prewarmedAt && performance.now() - prewarmedAt > 20) {
+    // Warmed on touch-down (prewarmModal) - the layer is ready: slide now.
+    start();
+  } else {
+    requestAnimationFrame(() => requestAnimationFrame(start));
+  }
+}
+
+// Touch-down on anything that opens a popup starts its warm-up, so by the time
+// the finger lifts (~80-150ms later) the sheet can slide straight away instead
+// of waiting two more frames. Not tapped after all (a scroll): cools down.
+function prewarmModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal || modal.classList.contains('active') || modal.classList.contains('is-opening')) return;
+  modal.dataset.prewarmAt = String(performance.now());
+  modal.classList.add('is-opening');
+  clearTimeout(modal._prewarmCooldown);
+  modal._prewarmCooldown = setTimeout(() => {
+    if (!modal.dataset.prewarmAt) return;
+    delete modal.dataset.prewarmAt;
+    modal.classList.remove('is-opening');
+    syncOverlayState();
+  }, 800);
+}
+
+function initModalPrewarm() {
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || !(e.target instanceof Element)) return;
+    const trigger = e.target.closest('[data-modal-target]');
+    if (trigger) {
+      prewarmModal(trigger.getAttribute('data-modal-target'));
+    } else if (e.target.closest('#headerAccountBtn') || (e.target.closest('#mobileNavCart') && !isFarmerLoggedIn())) {
+      prewarmModal('authModal');
+    }
+  }, { passive: true, capture: true });
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.remove('active', 'is-opening');
+    delete modal.dataset.prewarmAt;
+  }
+  if (id === 'authModal' && typeof clearAuthNotice === 'function') clearAuthNotice();
+  syncOverlayState();
+}
+
+window.openModal = openModal;
+window.closeModal = closeModal;
+
+
+// ==================== AUTHENTICATION & LIVE DATABASE ENGINE ====================
+
+function getStoredUser() {
+  try {
+    const raw = localStorage.getItem('sathya_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchLiveProducts() {
+  const currentUser = getStoredUser();
+  const userId = currentUser ? currentUser.id : '';
+
+  try {
+    const res = await fetch(`/api/products?userId=${encodeURIComponent(userId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.success && Array.isArray(json.data)) {
+      PESTICIDES = json.data;
       renderProducts();
-    });
+      renderTrendingProducts();
+    }
+  } catch (err) {
+    console.warn('Backend database loading fallback:', err);
+    renderProducts();
+    renderTrendingProducts();
+  }
+}
+
+async function fetchLiveCatalogOptions() {
+  try {
+    const res = await fetch('/api/catalog-options');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (!json.success) return;
+
+    const categories = ['All', ...(json.data.categories || [])];
+    const crops = [{ id: 'all', name: 'All Crops' }, ...(json.data.crops || []).map(crop => ({ id: crop, name: crop }))];
+    const categorySelect = document.getElementById('categorySelect');
+    const searchCategorySelect = document.getElementById('searchCategorySelect');
+    const cropSelect = document.getElementById('cropSelect');
+
+    if (categorySelect) categorySelect.innerHTML = categories.map(value => `<option value="${value}">${value}</option>`).join('');
+    if (searchCategorySelect) searchCategorySelect.innerHTML = categories.map(value => `<option value="${value}">${value === 'All' ? 'All Categories' : value}</option>`).join('');
+    if (cropSelect) cropSelect.innerHTML = crops.map(crop => `<option value="${crop.id}">${crop.name}</option>`).join('');
+  } catch (err) {
+    console.warn('Catalog options unavailable:', err);
+  }
+}
+
+function checkStorefrontAuth() {
+  const user = getStoredUser();
+  const accountSub = document.getElementById('headerAccountSub');
+  const accountTitle = document.getElementById('headerAccountTitle');
+  const accountIcon = document.getElementById('headerAccountIcon');
+  const greeting = document.getElementById('topbarUserGreeting');
+  const loggedInView = document.getElementById('authLoggedInView');
+  const loggedOutView = document.getElementById('authLoggedOutView');
+  const adminLink = document.getElementById('adminPortalLink');
+
+  if (user) {
+    const role = user.role || 'farmer';
+    const crop = user.crop || user.primaryCrop || 'All Crops';
+    const acreage = user.acreage || user.landAcres || 1;
+    if (accountSub) accountSub.textContent = crop;
+    if (accountTitle) accountTitle.textContent = (user.name ? user.name.split(' ')[0] : 'Farmer') + ' ▾';
+    if (accountIcon) {
+      accountIcon.className = 'fa-solid fa-circle-check action-icon';
+      accountIcon.style.color = '#10b981';
+    }
+
+    if (greeting) {
+      greeting.style.display = 'inline-block';
+      // Built from nodes, not HTML, because the name and crop are user-entered text.
+      const leaf = document.createElement('i');
+      leaf.className = 'fa-solid fa-leaf';
+      const name = document.createElement('strong');
+      name.textContent = user.name || 'Farmer';
+      greeting.replaceChildren(leaf, ' Welcome, ', name, ` (${crop})`);
+    }
+
+    // Populate logged in modal view
+    const initialEl = document.getElementById('loggedInUserInitial');
+    const nameEl = document.getElementById('loggedInUserName');
+    const roleBadge = document.getElementById('loggedInUserRoleBadge');
+    const phoneEl = document.getElementById('loggedInUserPhone');
+    const cropEl = document.getElementById('loggedInUserCrop');
+    const locEl = document.getElementById('loggedInUserLocation');
+
+    if (initialEl) initialEl.textContent = (user.name || 'U').charAt(0).toUpperCase();
+    if (nameEl) nameEl.textContent = user.name;
+
+    if (roleBadge) {
+      roleBadge.textContent = role === 'farmer' ? `🌾 ${crop} Farmer` : `🛡️ ${role.toUpperCase()} Staff`;
+    }
+    if (phoneEl) phoneEl.textContent = user.phone || user.mobile || 'Verified Customer';
+    if (cropEl) cropEl.textContent = `${crop} (${acreage} Acres)`;
+    if (locEl) locEl.textContent = `${user.village || 'Farm'}, ${user.district || 'Tamil Nadu'}`;
+
+    if (adminLink) {
+      adminLink.style.display = user.role === 'admin' ? 'inline-flex' : 'none';
+    }
+
+    if (loggedInView) loggedInView.style.display = 'block';
+    if (loggedOutView) loggedOutView.style.display = 'none';
+
+  } else {
+    if (accountSub) accountSub.textContent = 'Account';
+    if (accountTitle) accountTitle.textContent = 'Sign In / Register';
+
+    if (accountIcon) {
+      accountIcon.className = 'fa-regular fa-circle-user action-icon';
+      accountIcon.style.color = '';
+    }
+
+    if (greeting) greeting.style.display = 'none';
+
+    if (loggedInView) loggedInView.style.display = 'none';
+    if (loggedOutView) loggedOutView.style.display = 'block';
+  }
+}
+
+window.addEventListener('storage', event => {
+  if (event.key === 'sathya_user' || event.key === 'sathya_token') checkStorefrontAuth();
+});
+
+// The admin Products page (src/pages/admin/Products.jsx) announces changes on this channel.
+if ('BroadcastChannel' in window) {
+  new BroadcastChannel('sathya_catalog').addEventListener('message', event => {
+    if (event.data === 'products-changed') {
+      fetchLiveProducts();
+      fetchLiveCatalogOptions();
+    }
+  });
+}
+
+// Admin may be working in another browser, where the channel can't reach; catch up on return to this tab.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') fetchLiveProducts();
+});
+
+window.handleAccountClick = function() {
+  if (typeof clearAuthNotice === 'function') clearAuthNotice();
+  checkStorefrontAuth();
+  openModal('authModal');
+};
+
+function switchAuthTab(tab) {
+  const loginTabBtn = document.getElementById('authTabLogin');
+  const regTabBtn = document.getElementById('authTabRegister');
+  const loginForm = document.getElementById('storefrontLoginForm');
+  const regForm = document.getElementById('storefrontRegisterForm');
+
+  // Leaving the forgot-password view brings the tabs back.
+  const forgotForm = document.getElementById('storefrontForgotForm');
+  if (forgotForm) forgotForm.style.display = 'none';
+  const tabsBar = document.getElementById('authTabsBar');
+  if (tabsBar) tabsBar.style.display = 'flex';
+
+  if (tab === 'login') {
+    if (loginTabBtn) {
+      loginTabBtn.style.background = 'rgba(52, 211, 153, 0.15)';
+      loginTabBtn.style.color = 'var(--primary)';
+    }
+
+    if (regTabBtn) {
+      regTabBtn.style.background = 'transparent';
+      regTabBtn.style.color = 'var(--text-main)';
+    }
+
+    if (loginForm) loginForm.style.display = 'flex';
+    if (regForm) regForm.style.display = 'none';
+
+  } else {
+    if (regTabBtn) {
+      regTabBtn.style.background = 'rgba(52, 211, 153, 0.15)';
+      regTabBtn.style.color = 'var(--primary)';
+    }
+
+    if (loginTabBtn) {
+      loginTabBtn.style.background = 'transparent';
+      loginTabBtn.style.color = 'var(--text-main)';
+    }
+
+    if (loginForm) loginForm.style.display = 'none';
+    if (regForm) regForm.style.display = 'flex';
+  }
+}
+window.switchAuthTab = switchAuthTab;
+
+// ============================================================
+// FORGOT PASSWORD - WhatsApp code to the registered number
+// Step 1: mobile number -> /api/auth/forgot-password/send-otp
+// Step 2: code + new password -> /api/auth/forgot-password/reset, which
+// signs the user in (and signs every other device out).
+// ============================================================
+
+let forgotPhone = '';
+let forgotResendTimer = null;
+let forgotResendDeadline = 0;
+let forgotResendShown = null;
+
+function forgotEls() {
+  return {
+    form: document.getElementById('storefrontForgotForm'),
+    tabs: document.getElementById('authTabsBar'),
+    intro: document.getElementById('forgotIntro'),
+    stepPhone: document.getElementById('forgotStepPhone'),
+    stepReset: document.getElementById('forgotStepReset'),
+    phone: document.getElementById('forgotPhone'),
+    otp: document.getElementById('forgotOtp'),
+    password: document.getElementById('forgotNewPassword'),
+    confirm: document.getElementById('forgotConfirmPassword'),
+    sendBtn: document.getElementById('forgotSendBtn'),
+    resetBtn: document.getElementById('forgotResetBtn'),
+    resendBtn: document.getElementById('forgotResendBtn'),
+    resendText: document.getElementById('forgotResendText'),
+  };
+}
+
+function showForgotStep(step) {
+  const els = forgotEls();
+  if (!els.form) return;
+  els.stepPhone.hidden = step !== 'phone';
+  els.stepReset.hidden = step !== 'reset';
+  els.intro.textContent = step === 'phone'
+    ? "Enter your registered mobile number. We'll send a 6-digit code to its WhatsApp."
+    : `Enter the code sent to WhatsApp on +91 ${forgotPhone}, then choose a new password.`;
+}
+
+function resetForgotForm() {
+  const els = forgotEls();
+  forgotPhone = '';
+  stopForgotResendCountdown();
+  ['phone', 'otp', 'password', 'confirm'].forEach(key => {
+    if (els[key]) { els[key].value = ''; clearField(els[key]); }
+  });
+  els.form?.querySelectorAll('.sb-password-rules').forEach(list => list.remove());
+}
+
+window.openForgotPassword = function() {
+  const els = forgotEls();
+  if (!els.form) return;
+  document.getElementById('storefrontLoginForm').style.display = 'none';
+  document.getElementById('storefrontRegisterForm').style.display = 'none';
+  if (els.tabs) els.tabs.style.display = 'none';
+  els.form.style.display = 'flex';
+  // Carry over a mobile number already typed into the sign-in form.
+  const typed = (document.getElementById('loginIdentifier')?.value || '').replace(/\D/g, '');
+  if (!els.phone.value && /^[6-9]\d{9}$/.test(typed)) els.phone.value = typed;
+  showForgotStep(forgotPhone ? 'reset' : 'phone');
+  (forgotPhone ? els.otp : els.phone)?.focus();
+};
+
+window.closeForgotPassword = function() {
+  const els = forgotEls();
+  if (els.form) els.form.style.display = 'none';
+  if (els.tabs) els.tabs.style.display = 'flex';
+  switchAuthTab('login');
+};
+
+window.forgotChangeNumber = function() {
+  resetForgotForm();
+  showForgotStep('phone');
+  forgotEls().phone?.focus();
+};
+
+// Counts to a deadline, not by ticks: timers slow down or stop in a background
+// tab or on a locked phone, and a tick count would then show too much time
+// left. Same rules as src/shared/useResendCountdown.js.
+function stopForgotResendCountdown() {
+  clearInterval(forgotResendTimer);
+  document.removeEventListener('visibilitychange', renderForgotResendCountdown);
+}
+
+function renderForgotResendCountdown() {
+  const left = Math.max(0, Math.ceil((forgotResendDeadline - Date.now()) / 1000));
+  if (left === 0) stopForgotResendCountdown();
+  const els = forgotEls();
+  if (!els.resendBtn || left === forgotResendShown) return;
+  forgotResendShown = left;
+  els.resendBtn.disabled = left > 0;
+  // An hourly limit is shown in minutes.
+  els.resendBtn.textContent = left > 60 ? `Try again in ${Math.ceil(left / 60)} min`
+    : left > 0 ? `Resend in ${left}s` : 'Resend code';
+  els.resendText.textContent = left > 0 ? 'Code sent on WhatsApp.' : "Didn't get it?";
+}
+
+function startForgotResendCountdown(seconds) {
+  stopForgotResendCountdown();
+  // No number from the server: its longest wait (60s), never a shorter one.
+  const wait = Number.isFinite(seconds) ? Math.min(3600, Math.max(1, Math.ceil(seconds))) : 60;
+  forgotResendDeadline = Date.now() + wait * 1000;
+  forgotResendShown = null;
+  forgotResendTimer = setInterval(renderForgotResendCountdown, 250);
+  // Back in the tab: the right number straight away.
+  document.addEventListener('visibilitychange', renderForgotResendCountdown);
+  renderForgotResendCountdown();
+}
+
+window.sendForgotPasswordCode = async function(isResend = false) {
+  const els = forgotEls();
+  const phone = isResend ? forgotPhone : (els.phone?.value || '').replace(/\D/g, '');
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    if (!isResend) {
+      setFieldError(els.phone, 'Enter your 10-digit registered mobile number.');
+      els.phone?.focus();
+    }
+    return;
+  }
+  if (!isResend) clearField(els.phone);
+
+  if (isResend) {
+    if (els.resendBtn) els.resendBtn.disabled = true;
+  } else if (els.sendBtn) {
+    els.sendBtn.disabled = true;
+    els.sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending code...';
   }
 
-  // Chat Send
-  const chatSend = document.getElementById('chatbotSendBtn');
-  const chatInput = document.getElementById('chatbotInput');
-  if (chatSend) chatSend.addEventListener('click', handleChatSend);
-  if (chatInput) {
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleChatSend();
+  try {
+    const res = await fetch('/api/auth/forgot-password/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
     });
+    const data = await res.json().catch(() => ({}));
+
+    // A code was sent moments ago: go straight to entering it.
+    if (res.status === 429) {
+      forgotPhone = phone;
+      showForgotStep('reset');
+      startForgotResendCountdown(data.retryAfter);
+      showToast(data.message, 'warning');
+      return;
+    }
+    if (!res.ok || !data.success) {
+      showToast(data.message || 'Could not send the reset code. Please try again.', 'error');
+      if (isResend && els.resendBtn) els.resendBtn.disabled = false;
+      return;
+    }
+
+    forgotPhone = phone;
+    showForgotStep('reset');
+    startForgotResendCountdown(data.resendAfter);
+    showToast(data.message || 'Reset code sent on WhatsApp.', 'success', 6000);
+    els.otp?.focus();
+  } catch (err) {
+    showToast('Could not reach the server. Please check your connection.', 'error');
+    if (isResend && els.resendBtn) els.resendBtn.disabled = false;
+  } finally {
+    if (!isResend && els.sendBtn) {
+      els.sendBtn.disabled = false;
+      els.sendBtn.innerHTML = '<i class="fa-brands fa-whatsapp"></i> Send reset code';
+    }
+  }
+};
+
+// Live checklist under the new password (farmer rules; the server applies the
+// stricter staff rules and explains them if they are not met).
+function validateResetPassword() {
+  const el = document.getElementById('forgotNewPassword');
+  if (!el) return false;
+  ensureFieldErrorStyles();
+  let list = el.nextElementSibling?.classList?.contains('sb-password-rules') ? el.nextElementSibling : null;
+  if (!list) {
+    list = document.createElement('ul');
+    list.className = 'sb-password-rules';
+    list.setAttribute('aria-live', 'polite');
+    el.insertAdjacentElement('afterend', list);
+  }
+  const checks = farmerPasswordChecks(el.value, forgotPhone);
+  list.replaceChildren(...checks.map(check => {
+    const item = document.createElement('li');
+    if (check.ok) item.className = 'ok';
+    item.textContent = `${check.ok ? '✓' : '○'} ${check.label}`;
+    return item;
+  }));
+  const ok = checks.every(check => check.ok);
+  el.classList.toggle('sb-input-valid', ok);
+  return ok;
+}
+
+window.submitForgotPassword = async function(e) {
+  e.preventDefault();
+  const els = forgotEls();
+  if (!els.stepReset || els.stepReset.hidden) {
+    sendForgotPasswordCode(false);
+    return;
   }
 
-  // Preloader & welcome poster
-  const preloader = document.getElementById('appPreloader');
-  setTimeout(() => {
-    if (preloader) preloader.classList.add('hidden');
+  const otp = (els.otp?.value || '').replace(/\D/g, '');
+  const password = els.password?.value || '';
+  const confirm = els.confirm?.value || '';
+  let bad = null;
+
+  if (otp.length !== 6) { setFieldError(els.otp, 'Enter the 6-digit code from WhatsApp.'); bad = bad || els.otp; }
+  else clearField(els.otp);
+  if (!validateResetPassword()) { setFieldError(els.password, 'Your new password does not meet all the rules above.'); bad = bad || els.password; }
+  if (!confirm || confirm !== password) { setFieldError(els.confirm, 'Passwords do not match.'); bad = bad || els.confirm; }
+  else clearField(els.confirm);
+  if (bad) {
+    bad.focus();
+    return;
+  }
+
+  if (els.resetBtn) {
+    els.resetBtn.disabled = true;
+    els.resetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Resetting...';
+  }
+
+  try {
+    const res = await fetch('/api/auth/forgot-password/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: forgotPhone, otp, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      showToast(data.message || 'Could not reset your password. Please try again.', 'error', 6000);
+      if (/expired|request a new code/i.test(data.message || '')) els.otp.value = '';
+      return;
+    }
+
+    localStorage.setItem('sathya_token', data.token);
+    localStorage.setItem('sathya_user', JSON.stringify(data.user));
+    resetForgotForm();
+    closeForgotPassword();
+    checkStorefrontAuth();
+    closeModal('authModal');
+    showToast(data.message || 'Your password has been reset. You are now signed in.', 'success', 5000);
+
+    await syncCartFromServer();
+
+    const ROLE_HOME = { admin: '/admin', employee: '/employee', delivery: '/delivery', billing: '/billing' };
+    const home = ROLE_HOME[data.user?.role];
+    if (home) {
+      window.top.location.href = home;
+      return;
+    }
+    fetchLiveProducts();
+  } catch (err) {
+    showToast('Could not reach the server. Please check your connection.', 'error');
+  } finally {
+    if (els.resetBtn) {
+      els.resetBtn.disabled = false;
+      els.resetBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Reset password &amp; sign in';
+    }
+  }
+};
+
+// Clears "Passwords do not match" as soon as the two fields agree.
+function syncResetConfirm() {
+  const password = document.getElementById('forgotNewPassword');
+  const confirm = document.getElementById('forgotConfirmPassword');
+  if (confirm?.value && confirm.value === password?.value) clearField(confirm);
+}
+
+document.getElementById('forgotNewPassword')?.addEventListener('input', () => {
+  validateResetPassword();
+  syncResetConfirm();
+});
+document.getElementById('forgotConfirmPassword')?.addEventListener('input', syncResetConfirm);
+document.getElementById('forgotOtp')?.addEventListener('input', event => {
+  event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6);
+});
+document.getElementById('forgotPhone')?.addEventListener('input', event => {
+  event.target.value = event.target.value.replace(/\D/g, '').slice(0, 10);
+});
+
+window.submitStorefrontLogin = async function(e) {
+  e.preventDefault();
+
+  const identifier = document.getElementById('loginIdentifier')?.value?.trim();
+  const password = document.getElementById('loginPassword')?.value;
+  const btn = document.getElementById('loginSubmitBtn');
+
+  const idEl = document.getElementById('loginIdentifier');
+  const pwEl = document.getElementById('loginPassword');
+  let bad = null;
+
+  if (!identifier) { setFieldError(idEl, 'Enter your mobile number or email.'); bad = bad || idEl; }
+  if (!password) { setFieldError(pwEl, 'Enter your password.'); bad = bad || pwEl; }
+
+  if (bad) {
+    bad.focus();
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+  }
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showToast(data.message || 'Login failed. Please check your credentials.', 'error');
+      return;
+    }
+
+    localStorage.setItem('sathya_token', data.token);
+    localStorage.setItem('sathya_user', JSON.stringify(data.user));
+
+    checkStorefrontAuth();
+    closeModal('authModal');
+
+    // Carry anything added as a guest into this user's own cart before leaving.
+    await syncCartFromServer();
+
+    // Staff roles each have their own portal. Farmers have no separate portal
+    // any more - they shop, and stay, on the storefront homepage.
+    const ROLE_HOME = {
+      admin: '/admin',
+      employee: '/employee',
+      delivery: '/delivery',
+      billing: '/billing',
+    };
+
+    const home = ROLE_HOME[data.user.role];
+    if (home) {
+      window.top.location.href = home;
+      return;
+    }
+
+    fetchLiveProducts();
+
+  } catch (err) {
+    showToast('Could not reach the server. Please check your connection.', 'error');
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Sign In to Sathya Bio';
+    }
+  }
+};
+
+window.handleStorefrontLogout = function() {
+  localStorage.removeItem('sathya_token');
+  localStorage.removeItem('sathya_user');
+
+  // Never leave one user's cart on screen for the next person on this device.
+  cart = [];
+  localStorage.removeItem(GUEST_CART_KEY);
+  updateCartUI();
+
+  checkStorefrontAuth();
+  fetchLiveProducts();
+  closeModal('authModal');
+};
+
+
+// ============================================================
+// STOREFRONT REGISTRATION STATE (WhatsApp OTP)
+// ============================================================
+
+let storefrontPendingRegistration = null;
+let storefrontOtpTimer = null;
+let storefrontOtpSeconds = 30;
+
+
+// ============================================================
+// SUBMIT STOREFRONT REGISTRATION (SENDS OTP)
+// ============================================================
+
+window.submitStorefrontRegister = async function(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('regName')?.value?.trim();
+  const phone = document.getElementById('regPhone')?.value?.trim();
+  const password = document.getElementById('regPassword')?.value;
+  const crop = document.getElementById('regCrop')?.value;
+  const acreage = document.getElementById('regAcreage')?.value;
+  const village = document.getElementById('regVillage')?.value?.trim();
+  const btn = document.getElementById('regSubmitBtn');
+
+  // Show problems under each field rather than as one generic message.
+  const nameEl = document.getElementById('regName');
+  const phoneEl = document.getElementById('regPhone');
+  const passEl = document.getElementById('regPassword');
+  let firstBad = null;
+
+  if (!name) { setFieldError(nameEl, 'Please enter your name.'); firstBad = firstBad || nameEl; }
+  else if (!validateNameField(nameEl)) { firstBad = firstBad || nameEl; }
+
+  if (!phone) { setFieldError(phoneEl, 'Mobile number is required.'); firstBad = firstBad || phoneEl; }
+  else if (!validatePhoneField(phoneEl)) { firstBad = firstBad || phoneEl; }
+
+  if (!password) { setFieldError(passEl, 'Please create a password.'); firstBad = firstBad || passEl; }
+  else if (!validatePasswordField(passEl)) {
+    setFieldError(passEl, 'Your password does not meet all the rules above.');
+    firstBad = firstBad || passEl;
+  }
+
+  if (firstBad) {
+    firstBad.focus();
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending OTP...';
+  }
+
+  try {
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      // The number already has an account — send them straight to Sign In with
+      // the number filled in, rather than leaving them stuck on an error.
+      if (data.alreadyRegistered) {
+        switchAuthTab('login');
+
+        const identifier = document.getElementById('loginIdentifier');
+        const password = document.getElementById('loginPassword');
+        if (identifier) identifier.value = phone;
+        if (password) {
+          password.value = '';
+          password.focus();
+        }
+
+        showToast('This number is already registered. Please sign in with your password.', 'info', 6000);
+        return;
+      }
+
+      showToast(data.message || 'Failed to send OTP. Please check your mobile number.', 'error');
+      return;
+    }
+
+    storefrontPendingRegistration = {
+      name,
+      phone,
+      password,
+      crop,
+      acreage: Number(acreage) || 1,
+      village: village || 'Coimbatore'
+    };
+
+    showStorefrontOtpForm(phone, data.resendAfter);
+
+  } catch (err) {
+    console.error('Send OTP error:', err);
+    showToast('Could not reach the OTP server. Please try again.', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-seedling"></i> Register & Access Deals';
+    }
+  }
+};
+
+
+// ============================================================
+// VERIFY STOREFRONT OTP & COMPLETE REGISTRATION
+// ============================================================
+
+window.verifyStorefrontOtp = async function() {
+
+  if (!storefrontPendingRegistration) {
+    showToast('Registration session expired. Please register again.', 'warning');
+    return;
+  }
+
+  const otpInput = document.getElementById('storefrontOtpInput');
+  const otp = otpInput?.value?.trim();
+  const verifyBtn = document.getElementById('storefrontOtpVerifyBtn');
+  const phone = storefrontPendingRegistration.phone;
+
+  if (!otp || otp.length !== 6) {
+    showToast('Please enter the 6-digit OTP sent to your WhatsApp.', 'warning');
+    return;
+  }
+
+  if (verifyBtn) {
+    verifyBtn.disabled = true;
+    verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+  }
+
+  try {
+
+    const verifyRes = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp })
+    });
+
+    const verifyData = await verifyRes.json();
+
+    if (!verifyRes.ok || !verifyData.success) {
+      showToast(verifyData.message || 'Invalid OTP. Please try again.', 'error');
+      return;
+    }
+
+    const regRes = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: storefrontPendingRegistration.name,
+        phone: storefrontPendingRegistration.phone,
+        password: storefrontPendingRegistration.password,
+        crop: storefrontPendingRegistration.crop,
+        acreage: storefrontPendingRegistration.acreage,
+        village: storefrontPendingRegistration.village,
+        role: 'farmer'
+      })
+    });
+
+    const regData = await regRes.json();
+
+    if (!regRes.ok || !regData.success) {
+      showToast(regData.message || 'Registration failed after OTP verification.', 'error');
+      return;
+    }
+
+    clearInterval(storefrontOtpTimer);
+    storefrontPendingRegistration = null;
+
+    const otpContainer = document.getElementById('storefrontOtpContainer');
+    if (otpContainer) otpContainer.remove();
+
+    const regForm = document.getElementById('storefrontRegisterForm');
+    if (regForm) regForm.style.display = 'flex';
+
+    // --------------------------------------------------------
+    // SWITCH TO LOGIN
+    // --------------------------------------------------------
+
+    switchAuthTab('login');
+
+    // Fill mobile number automatically
+    const loginIdentifier =
+      document.getElementById('loginIdentifier');
+
+    if (loginIdentifier) {
+      loginIdentifier.value = phone;
+    }
+
+    // Do NOT automatically login.
+    // User must enter password and click Sign In.
+
+    showToast(
+      'Registration successful! Please sign in with your mobile number and password.',
+      'success',
+      6000
+    );
+
+  } catch (err) {
+
+    console.error(
+      'OTP verification error:',
+      err
+    );
+
+    showToast(
+      'Could not reach the server. Please try again.',
+      'error'
+    );
+
+  } finally {
+
+    if (verifyBtn) {
+      verifyBtn.disabled = false;
+
+      verifyBtn.innerHTML =
+        '🔐 Verify OTP';
+    }
+  }
+};
+
+
+// ============================================================
+// RESEND STOREFRONT OTP
+// ============================================================
+
+window.resendStorefrontOtp = async function() {
+
+  if (!storefrontPendingRegistration) {
+    showToast(
+      'Registration session expired. Please register again.',
+      'warning'
+    );
+    return;
+  }
+
+  const resendBtn =
+    document.getElementById(
+      'storefrontOtpResendBtn'
+    );
+
+  const phone =
+    storefrontPendingRegistration.phone;
+
+  if (resendBtn) {
+    resendBtn.disabled = true;
+
+    resendBtn.innerHTML =
+      '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+  }
+
+  try {
+
+    const res = await fetch(
+      '/api/auth/send-otp',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify({
+          name:
+            storefrontPendingRegistration.name,
+
+          phone
+        })
+      }
+    );
+
+    const data =
+      await res.json();
+
+    if (!res.ok || !data.success) {
+
+      showToast(
+        data.message || 'Failed to resend OTP.',
+        'error'
+      );
+
+      return;
+    }
+
+    showToast(
+      'A new OTP has been sent to your WhatsApp.',
+      'success'
+    );
+
+    startStorefrontOtpTimer(data.resendAfter);
+
+  } catch (err) {
+
+    console.error(
+      'Resend OTP error:',
+      err
+    );
+
+    showToast(
+      'Could not reach the OTP server.',
+      'error'
+    );
+
+  } finally {
+
+    if (resendBtn) {
+
+      // Timer controls when it becomes enabled again.
+      if (storefrontOtpSeconds > 0) {
+        resendBtn.disabled = true;
+      }
+
+      resendBtn.innerHTML =
+        '🔄 Resend OTP';
+    }
+  }
+};
+
+
+// ============================================================
+// CHANGE STOREFRONT MOBILE NUMBER
+// ============================================================
+
+window.changeStorefrontNumber = function() {
+
+  clearInterval(storefrontOtpTimer);
+  storefrontPendingRegistration = null;
+
+  const otpContainer =
+    document.getElementById(
+      'storefrontOtpContainer'
+    );
+
+  if (otpContainer) {
+    otpContainer.remove();
+  }
+
+  const regForm =
+    document.getElementById(
+      'storefrontRegisterForm'
+    );
+
+  if (regForm) {
+    regForm.style.display = 'flex';
+  }
+
+  const phoneInput =
+    document.getElementById('regPhone');
+
+  if (phoneInput) {
+    phoneInput.focus();
+  }
+};
+
+
+// ============================================================
+// SHOW STOREFRONT OTP FORM
+// ============================================================
+
+function showStorefrontOtpForm(phone, resendAfter) {
+
+  const regForm =
+    document.getElementById('storefrontRegisterForm');
+
+  if (!regForm) {
+    console.error('storefrontRegisterForm not found');
+    return;
+  }
+
+  // Hide registration form
+  regForm.style.display = 'none';
+
+  // Remove old OTP container if it exists
+  const oldOtp =
+    document.getElementById(
+      'storefrontOtpContainer'
+    );
+
+  if (oldOtp) {
+    oldOtp.remove();
+  }
+
+  // Create OTP container
+  const otpContainer =
+    document.createElement('div');
+
+  otpContainer.id =
+    'storefrontOtpContainer';
+
+  otpContainer.innerHTML = `
+    <div style="
+      padding: 10px 0;
+      text-align: center;
+    ">
+
+      <div style="
+        font-size: 42px;
+        margin-bottom: 10px;
+      ">
+        🔐
+      </div>
+
+      <h3 style="
+        margin-bottom: 8px;
+      ">
+        Verify Your Mobile Number
+      </h3>
+
+      <p style="
+        margin-bottom: 20px;
+        color: #666;
+      ">
+        We sent a 6-digit OTP to
+        <strong>+91 ${phone}</strong>
+      </p>
+
+      <input
+        type="text"
+        id="storefrontOtpInput"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        maxlength="6"
+        placeholder="Enter 6-digit OTP"
+        style="
+          width: 100%;
+          padding: 14px;
+          text-align: center;
+          font-size: 24px;
+          letter-spacing: 8px;
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          box-sizing: border-box;
+          margin-bottom: 15px;
+        "
+      >
+
+      <button
+        type="button"
+        id="storefrontOtpVerifyBtn"
+        onclick="verifyStorefrontOtp()"
+        class="btn btn-primary"
+        style="
+          width: 100%;
+          margin-bottom: 12px;
+        "
+      >
+        🔐 Verify OTP
+      </button>
+
+      <div style="
+        margin: 10px 0;
+        color: #666;
+      ">
+        <span id="storefrontOtpTimer">
+          Resend OTP in 00:30
+        </span>
+      </div>
+
+      <button
+        type="button"
+        id="storefrontOtpResendBtn"
+        onclick="resendStorefrontOtp()"
+        class="btn"
+        disabled
+        style="
+          width: 100%;
+          margin-bottom: 10px;
+        "
+      >
+        🔄 Resend OTP
+      </button>
+
+      <button
+        type="button"
+        onclick="changeStorefrontNumber()"
+        class="btn"
+        style="
+          width: 100%;
+        "
+      >
+        ← Change Mobile Number
+      </button>
+
+    </div>
+  `;
+
+  regForm.parentNode.insertBefore(
+    otpContainer,
+    regForm
+  );
+
+  const otpInput =
+    document.getElementById(
+      'storefrontOtpInput'
+    );
+
+  if (otpInput) {
+    otpInput.focus();
+
+    otpInput.addEventListener(
+      'input',
+      () => {
+        otpInput.value =
+          otpInput.value
+            .replace(/\D/g, '')
+            .slice(0, 6);
+      }
+    );
+
+    otpInput.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          verifyStorefrontOtp();
+        }
+      }
+    );
+  }
+
+  startStorefrontOtpTimer(resendAfter);
+}
+
+
+// ============================================================
+// STOREFRONT OTP RESEND TIMER
+// ============================================================
+
+// The wait is decided by the server and varies per request, so it is passed in
+// rather than assumed. Falls back to 30s only if the server didn't say.
+function startStorefrontOtpTimer(seconds) {
+
+  clearInterval(storefrontOtpTimer);
+  storefrontOtpSeconds = Number(seconds) > 0 ? Math.ceil(Number(seconds)) : 30;
+
+  const timerEl = document.getElementById('storefrontOtpTimer');
+  const resendBtn = document.getElementById('storefrontOtpResendBtn');
+
+  if (resendBtn) resendBtn.disabled = true;
+
+  function render() {
+    if (!timerEl) return;
+    if (storefrontOtpSeconds <= 0) {
+      timerEl.textContent = 'You can resend the OTP now.';
+      return;
+    }
+    // Can exceed 60s, so render as mm:ss.
+    const mm = String(Math.floor(storefrontOtpSeconds / 60)).padStart(2, '0');
+    const ss = String(storefrontOtpSeconds % 60).padStart(2, '0');
+    timerEl.textContent = `Resend OTP in ${mm}:${ss}`;
+  }
+
+  render();
+
+  storefrontOtpTimer = setInterval(() => {
+    storefrontOtpSeconds -= 1;
+
+    if (storefrontOtpSeconds <= 0) {
+      clearInterval(storefrontOtpTimer);
+      if (resendBtn) resendBtn.disabled = false;
+    }
+
+    render();
   }, 1000);
 }
 
-if (document.readyState === 'interactive' || document.readyState === 'complete') {
-  initApp();
-} else {
+// ---------------------------------------------------------------------------
+// Bootstrap.
+//
+// This must stay the LAST thing in the file. The script is deferred, so by the
+// time it runs document.readyState is already "interactive" and initApp() is
+// called on the spot. Anywhere earlier in the file that call would happen
+// before the top-level let/const declarations below it had initialised, and
+// the first one it touched would throw a TDZ error and abort the rest of the
+// script.
+// ---------------------------------------------------------------------------
+if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }
